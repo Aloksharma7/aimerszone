@@ -1,0 +1,5680 @@
+openapi: 3.1.0
+info:
+  title: Institution LMS API
+  version: 1.2.0
+  summary: Production frontend contract for the Laravel API and Next.js LMS.
+  description: 'Production V1 API for one Nepal-based educational institution. Browser
+
+    authentication uses Laravel Sanctum stateful cookies and CSRF protection.
+
+    This baseline contract must be expanded in the same commit as each feature.
+
+
+    This revision enumerates every endpoint currently consumed by the production-ready frontend. Feature-specific
+    DTOs remain documented in the frontend data adapters and API integration guide; Laravel must preserve the common
+    response envelope and authorization rules.
+
+    '
+servers:
+- url: /
+  description: Same-origin browser gateway
+- url: http://127.0.0.1:8000
+  description: Local Laravel origin for server-side development only
+tags:
+- name: Health
+- name: Authentication
+- name: Public
+- name: Student
+- name: Teacher
+- name: Enrollment Officer
+- name: Accounting
+- name: Administration
+- name: Integrations
+security: []
+paths:
+  /up:
+    get:
+      tags:
+      - Health
+      operationId: getApiHealth
+      summary: Check Laravel API health
+      responses:
+        '200':
+          description: API is operational
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /sanctum/csrf-cookie:
+    get:
+      tags:
+      - Authentication
+      operationId: initializeCsrfCookie
+      summary: Initialize Sanctum CSRF and session cookies
+      responses:
+        '204':
+          description: CSRF cookie initialized
+  /api/v1/auth/register:
+    post:
+      tags:
+      - Authentication
+      operationId: registerStudent
+      summary: Register a student account
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthMeResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/auth/login:
+    post:
+      tags:
+      - Authentication
+      operationId: login
+      summary: Authenticate with email or mobile and password
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated or next authentication action returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthMeResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - Authentication
+      operationId: logout
+      summary: Invalidate the current session
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      responses:
+        '204':
+          description: Logged out
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+  /api/v1/auth/me:
+    get:
+      tags:
+      - Authentication
+      operationId: getCurrentUser
+      summary: Return safe current-user identity and capabilities
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthMeResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/auth/forgot-password:
+    post:
+      tags:
+      - Authentication
+      operationId: requestPasswordReset
+      summary: Request a password reset without account enumeration
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - email
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Neutral completion response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/auth/reset-password:
+    post:
+      tags:
+      - Authentication
+      operationId: resetPassword
+      summary: Reset password using a valid reset token
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: Password reset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/v1/public/settings:
+    get:
+      tags:
+      - Public
+      operationId: getPublicSettings
+      summary: Return published institution identity/contact settings
+      responses:
+        '200':
+          description: Public settings
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PublicSettings'
+  /api/v1/public/payment-methods:
+    get:
+      tags:
+      - Public
+      operationId: listPublicPaymentMethods
+      summary: List institution-approved public payment methods
+      responses:
+        '200':
+          description: Published payment methods
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PublicPaymentMethod'
+  /api/v1/public/categories:
+    get:
+      tags:
+      - Public
+      operationId: listPublicCategories
+      summary: List published course categories
+      responses:
+        '200':
+          description: Category collection
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+  /api/v1/public/courses:
+    get:
+      tags:
+      - Public
+      operationId: listPublicCourses
+      summary: List published courses and available batches
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PerPage'
+      - name: search
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      - name: filter[category]
+        in: query
+        schema:
+          type: string
+      - name: filter[access]
+        in: query
+        schema:
+          type: string
+          enum:
+          - free
+          - paid
+      responses:
+        '200':
+          description: Published courses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCoursesResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/v1/public/courses/{slug}:
+    get:
+      tags:
+      - Public
+      operationId: getPublicCourse
+      summary: Get a published course with public batches
+      parameters:
+      - name: slug
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Published course detail
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CourseDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/student/dashboard:
+    get:
+      tags:
+      - Student
+      operationId: getStudentDashboard
+      summary: Return the authenticated student's dashboard
+      security:
+      - cookieAuth: []
+      x-permission: student.portal.access
+      responses:
+        '200':
+          description: Student dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StudentDashboard'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/student/courses:
+    get:
+      tags:
+      - Student
+      operationId: listStudentCourses
+      summary: List authenticated student's enrollments
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Student enrollments
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/EnrollmentSummary'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+  /api/v1/student/classes/{sessionId}/join:
+    post:
+      tags:
+      - Student
+      operationId: joinClassSession
+      summary: Authorize and create an immediate class join redirect
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Authorized redirect data
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: Must prevent caching
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RedirectAction'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/student/payments:
+    get:
+      tags:
+      - Student
+      operationId: listStudentPayments
+      summary: List authenticated student's payments
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: Payments
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+    post:
+      tags:
+      - Student
+      operationId: submitStudentPayment
+      summary: Submit a manual payment and proof
+      security:
+      - cookieAuth: []
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentSubmissionRequest'
+      responses:
+        '201':
+          description: Payment submitted for review
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Payment'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+  /api/v1/teacher/dashboard:
+    get:
+      tags:
+      - Teacher
+      operationId: getTeacherDashboard
+      summary: Return assigned classes and pending teaching actions
+      security:
+      - cookieAuth: []
+      x-permission: teacher.portal.access
+      responses:
+        '200':
+          description: Teacher dashboard
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/TeacherDashboard'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/teacher/classes/{sessionId}/start:
+    post:
+      tags:
+      - Teacher
+      operationId: startClassSession
+      summary: Authorize assigned teacher and return host start redirect
+      security:
+      - cookieAuth: []
+      x-permission: classes.start
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Authorized teacher-only redirect data
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RedirectAction'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+  /api/v1/teacher/classes/{sessionId}/attendance/finalize:
+    post:
+      tags:
+      - Teacher
+      operationId: finalizeAttendance
+      summary: Finalize attendance for an assigned class session
+      security:
+      - cookieAuth: []
+      x-permission: attendance.finalize
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinalizeAttendanceRequest'
+      responses:
+        '200':
+          description: Attendance finalized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/v1/staff/students:
+    get:
+      tags:
+      - Enrollment Officer
+      operationId: listStudentsForStaff
+      summary: Search and paginate students for enrollment support
+      security:
+      - cookieAuth: []
+      x-permission: students.view
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PerPage'
+      - name: search
+        in: query
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Student collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedStudentsResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Enrollment Officer
+      operationId: createStudentByStaff
+      summary: Create a student from WhatsApp or physical enrollment
+      security:
+      - cookieAuth: []
+      x-permission: students.create
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StaffCreateStudentRequest'
+      responses:
+        '201':
+          description: Student created with forced password change
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/StudentSummary'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/v1/accounting/payments:
+    get:
+      tags:
+      - Accounting
+      operationId: listAccountingPayments
+      summary: Paginate payment review queue
+      security:
+      - cookieAuth: []
+      x-permission: payments.view
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PerPage'
+      - name: filter[status]
+        in: query
+        schema:
+          $ref: '#/components/schemas/PaymentStatus'
+      responses:
+        '200':
+          description: Payment queue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPaymentsResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/accounting/payments/{paymentId}/approve:
+    post:
+      tags:
+      - Accounting
+      operationId: approvePayment
+      summary: Approve payment, issue receipt, and activate enrollment atomically
+      security:
+      - cookieAuth: []
+      x-permission: payments.approve
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovePaymentRequest'
+      responses:
+        '200':
+          description: Approved payment and enrollment result
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/PaymentApprovalResult'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/v1/accounting/payments/{paymentId}/reject:
+    post:
+      tags:
+      - Accounting
+      operationId: rejectPayment
+      summary: Reject a submitted payment with a documented reason
+      security:
+      - cookieAuth: []
+      x-permission: payments.reject
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+      responses:
+        '200':
+          description: Payment rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Payment'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/v1/admin/courses:
+    get:
+      tags:
+      - Administration
+      operationId: listAdminCourses
+      summary: Paginate courses for administration
+      security:
+      - cookieAuth: []
+      x-permission: courses.manage
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Administrative course list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCoursesResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+      - Administration
+      operationId: createCourse
+      summary: Create a course draft
+      security:
+      - cookieAuth: []
+      x-permission: courses.manage
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CourseUpsertRequest'
+      responses:
+        '201':
+          description: Course created
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/CourseDetail'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/v1/admin/audit-logs:
+    get:
+      tags:
+      - Administration
+      operationId: listAuditLogs
+      summary: Paginate append-only audit evidence
+      security:
+      - cookieAuth: []
+      x-permission: audit.view
+      parameters:
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/PerPage'
+      responses:
+        '200':
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/account/profile:
+    get:
+      tags:
+      - Authentication
+      operationId: getAccountProfile
+      summary: Read or update the current account profile
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+    patch:
+      tags:
+      - Authentication
+      operationId: patchAccountProfile
+      summary: Read or update the current account profile
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/account/password:
+    put:
+      tags:
+      - Authentication
+      operationId: putAccountPassword
+      summary: Change the current account password
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/account/sessions/revoke-others:
+    post:
+      tags:
+      - Authentication
+      operationId: postAccountSessionsRevokeOthers
+      summary: Revoke every session except the current one
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/account/two-factor/setup:
+    post:
+      tags:
+      - Authentication
+      operationId: postAccountTwoFactorSetup
+      summary: Begin two-factor authentication setup
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/auth/change-password:
+    post:
+      tags:
+      - Authentication
+      operationId: postAuthChangePassword
+      summary: Complete a required password change
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/auth/two-factor-challenge:
+    post:
+      tags:
+      - Authentication
+      operationId: postAuthTwoFactorChallenge
+      summary: Complete a two-factor challenge
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/auth/email/verification-notification:
+    post:
+      tags:
+      - Authentication
+      operationId: postAuthEmailVerificationNotification
+      summary: Send a new email-verification notification
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/public/teachers:
+    get:
+      tags:
+      - Public
+      operationId: getPublicTeachers
+      summary: List published teachers
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/v1/public/faqs:
+    get:
+      tags:
+      - Public
+      operationId: getPublicFaqs
+      summary: List published frequently asked questions
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /api/v1/public/support-requests:
+    post:
+      tags:
+      - Public
+      operationId: postPublicSupportRequests
+      summary: Create a rate-limited public support request
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+  /api/v1/student/courses/{enrollmentId}:
+    get:
+      tags:
+      - Student
+      operationId: getStudentCoursesEnrollmentId
+      summary: Get an enrolled course
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: enrollmentId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/student/courses/{enrollmentId}/classes:
+    get:
+      tags:
+      - Student
+      operationId: getStudentCoursesEnrollmentIdClasses
+      summary: List course classes
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: enrollmentId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/student/courses/{enrollmentId}/recordings:
+    get:
+      tags:
+      - Student
+      operationId: getStudentCoursesEnrollmentIdRecordings
+      summary: List course recordings
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: enrollmentId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/student/courses/{enrollmentId}/resources:
+    get:
+      tags:
+      - Student
+      operationId: getStudentCoursesEnrollmentIdResources
+      summary: List course resources
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: enrollmentId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/student/courses/{enrollmentId}/syllabus:
+    get:
+      tags:
+      - Student
+      operationId: getStudentCoursesEnrollmentIdSyllabus
+      summary: Get course syllabus
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: enrollmentId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/student/courses/{enrollmentId}/tests:
+    get:
+      tags:
+      - Student
+      operationId: getStudentCoursesEnrollmentIdTests
+      summary: List course tests
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: enrollmentId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/student/courses/{enrollmentId}/announcements:
+    get:
+      tags:
+      - Student
+      operationId: getStudentCoursesEnrollmentIdAnnouncements
+      summary: List course announcements
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: enrollmentId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/student/recordings:
+    get:
+      tags:
+      - Student
+      operationId: getStudentRecordings
+      summary: List authorized recordings
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/student/recordings/{recordingId}:
+    get:
+      tags:
+      - Student
+      operationId: getStudentRecordingsRecordingId
+      summary: Get an authorized recording
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: recordingId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/student/resources:
+    get:
+      tags:
+      - Student
+      operationId: getStudentResources
+      summary: List authorized resources
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/student/tests:
+    get:
+      tags:
+      - Student
+      operationId: getStudentTests
+      summary: List student tests
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/student/tests/{testId}/launch:
+    get:
+      tags:
+      - Student
+      operationId: getStudentTestsTestIdLaunch
+      summary: Get safe test launch information
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: testId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/student/attempts/{attemptId}/result:
+    get:
+      tags:
+      - Student
+      operationId: getStudentAttemptsAttemptIdResult
+      summary: Get a released or pending attempt result
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: attemptId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/student/notifications:
+    get:
+      tags:
+      - Student
+      operationId: getStudentNotifications
+      summary: List student notifications
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/student/announcements:
+    get:
+      tags:
+      - Student
+      operationId: getStudentAnnouncements
+      summary: List student announcements
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/student/payment-options:
+    get:
+      tags:
+      - Student
+      operationId: getStudentPaymentOptions
+      summary: Get current payment instructions
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/student/support:
+    get:
+      tags:
+      - Student
+      operationId: getStudentSupport
+      summary: Get support options and recent tickets
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/student/recordings/{recordingId}/playback:
+    post:
+      tags:
+      - Student
+      operationId: postStudentRecordingsRecordingIdPlayback
+      summary: Authorize a short-lived recording playback URL
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: recordingId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/student/resources/{resourceId}/download:
+    post:
+      tags:
+      - Student
+      operationId: postStudentResourcesResourceIdDownload
+      summary: Authorize a short-lived resource download URL
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: resourceId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/student/tests/{testId}/attempts:
+    post:
+      tags:
+      - Student
+      operationId: postStudentTestsTestIdAttempts
+      summary: Start an authoritative test attempt
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: testId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/student/attempts/{attemptId}/submit:
+    post:
+      tags:
+      - Student
+      operationId: postStudentAttemptsAttemptIdSubmit
+      summary: Submit a test attempt
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: attemptId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/student/support-tickets:
+    post:
+      tags:
+      - Student
+      operationId: postStudentSupportTickets
+      summary: Create an authenticated support ticket
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/student/attempts/{attemptId}/responses:
+    patch:
+      tags:
+      - Student
+      operationId: patchStudentAttemptsAttemptIdResponses
+      summary: Autosave test answers and review flags
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: attemptId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/batches:
+    get:
+      tags:
+      - Teacher
+      operationId: getTeacherBatches
+      summary: List assigned batches
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/batches/{batchId}:
+    get:
+      tags:
+      - Teacher
+      operationId: getTeacherBatchesBatchId
+      summary: Get an assigned batch
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: batchId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/batches/{batchId}/recordings:
+    get:
+      tags:
+      - Teacher
+      operationId: getTeacherBatchesBatchIdRecordings
+      summary: List assigned-batch recordings
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: batchId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+    post:
+      tags:
+      - Teacher
+      operationId: postTeacherBatchesBatchIdRecordings
+      summary: Create a recording for an assigned batch
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: batchId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/batches/{batchId}/tests:
+    get:
+      tags:
+      - Teacher
+      operationId: getTeacherBatchesBatchIdTests
+      summary: List assigned-batch tests
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: batchId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/classes:
+    get:
+      tags:
+      - Teacher
+      operationId: getTeacherClasses
+      summary: List assigned class sessions
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+    post:
+      tags:
+      - Teacher
+      operationId: postTeacherClasses
+      summary: Create a class session for an assigned batch
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/classes/{sessionId}:
+    get:
+      tags:
+      - Teacher
+      operationId: getTeacherClassesSessionId
+      summary: Get an assigned class session
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+    patch:
+      tags:
+      - Teacher
+      operationId: patchTeacherClassesSessionId
+      summary: Reschedule or update an assigned class session
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/attendance:
+    get:
+      tags:
+      - Teacher
+      operationId: getTeacherAttendance
+      summary: Get attendance work queue
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/classes/{sessionId}/attendance:
+    get:
+      tags:
+      - Teacher
+      operationId: getTeacherClassesSessionIdAttendance
+      summary: Get attendance detail
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+    patch:
+      tags:
+      - Teacher
+      operationId: patchTeacherClassesSessionIdAttendance
+      summary: Save attendance review changes
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/announcements:
+    get:
+      tags:
+      - Teacher
+      operationId: getTeacherAnnouncements
+      summary: List teacher announcements
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+    post:
+      tags:
+      - Teacher
+      operationId: postTeacherAnnouncements
+      summary: Publish an announcement to an assigned audience
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/content-summary:
+    get:
+      tags:
+      - Teacher
+      operationId: getTeacherContentSummary
+      summary: Get teacher content summary
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/tests/new-context:
+    get:
+      tags:
+      - Teacher
+      operationId: getTeacherTestsNewContext
+      summary: Get authorized test creation context
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/tests/{testId}/builder:
+    get:
+      tags:
+      - Teacher
+      operationId: getTeacherTestsTestIdBuilder
+      summary: Get authorized test builder data
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: testId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/classes/{sessionId}/attendance/import:
+    post:
+      tags:
+      - Teacher
+      operationId: postTeacherClassesSessionIdAttendanceImport
+      summary: Import provider attendance evidence
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/tests:
+    post:
+      tags:
+      - Teacher
+      operationId: postTeacherTests
+      summary: Create a test draft
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/tests/{testId}:
+    patch:
+      tags:
+      - Teacher
+      operationId: patchTeacherTestsTestId
+      summary: Update a test draft or published test
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: testId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/tests/{testId}/publish:
+    post:
+      tags:
+      - Teacher
+      operationId: postTeacherTestsTestIdPublish
+      summary: Publish a validated test
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: testId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/staff/students/{studentId}:
+    get:
+      tags:
+      - Enrollment Officer
+      operationId: getStaffStudentsStudentId
+      summary: Get student account detail
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: studentId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/staff/payment-submissions:
+    get:
+      tags:
+      - Enrollment Officer
+      operationId: getStaffPaymentSubmissions
+      summary: List submitted payment evidence
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+    post:
+      tags:
+      - Enrollment Officer
+      operationId: postStaffPaymentSubmissions
+      summary: Create or submit payment evidence
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/staff/payment-submissions/{paymentId}:
+    get:
+      tags:
+      - Enrollment Officer
+      operationId: getStaffPaymentSubmissionsPaymentId
+      summary: Get submitted payment detail
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/staff/enrollments:
+    get:
+      tags:
+      - Enrollment Officer
+      operationId: getStaffEnrollments
+      summary: List enrollments
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/staff/courses:
+    get:
+      tags:
+      - Enrollment Officer
+      operationId: getStaffCourses
+      summary: List manageable courses
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+    post:
+      tags:
+      - Enrollment Officer
+      operationId: postStaffCourses
+      summary: Create a course draft
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/staff/courses/{courseId}:
+    get:
+      tags:
+      - Enrollment Officer
+      operationId: getStaffCoursesCourseId
+      summary: Get a manageable course
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: courseId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+    patch:
+      tags:
+      - Enrollment Officer
+      operationId: patchStaffCoursesCourseId
+      summary: Update or publish a manageable course
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: courseId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/staff/enrollment-requests:
+    post:
+      tags:
+      - Enrollment Officer
+      operationId: postStaffEnrollmentRequests
+      summary: Create an enrollment exception request
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/staff/students/{studentId}/support-actions:
+    post:
+      tags:
+      - Enrollment Officer
+      operationId: postStaffStudentsStudentIdSupportActions
+      summary: Request an audited student support action
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: studentId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/accounting/dashboard:
+    get:
+      tags:
+      - Accounting
+      operationId: getAccountingDashboard
+      summary: Get the payment-review dashboard
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/accounting/payments/{paymentId}:
+    get:
+      tags:
+      - Accounting
+      operationId: getAccountingPaymentsPaymentId
+      summary: Get payment review detail
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/accounting/receipts:
+    get:
+      tags:
+      - Accounting
+      operationId: getAccountingReceipts
+      summary: List authoritative receipts
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/accounting/adjustments:
+    get:
+      tags:
+      - Accounting
+      operationId: getAccountingAdjustments
+      summary: List financial adjustments
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+    post:
+      tags:
+      - Accounting
+      operationId: postAccountingAdjustments
+      summary: Create an audited payment adjustment
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/accounting/refunds:
+    get:
+      tags:
+      - Accounting
+      operationId: getAccountingRefunds
+      summary: List refunds
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/accounting/reports/collections:
+    get:
+      tags:
+      - Accounting
+      operationId: getAccountingReportsCollections
+      summary: Get collections report
+      parameters:
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: course_id
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/accounting/reports/outstanding:
+    get:
+      tags:
+      - Accounting
+      operationId: getAccountingReportsOutstanding
+      summary: Get outstanding and exception report
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/accounting/payments/{paymentId}/proof:
+    post:
+      tags:
+      - Accounting
+      operationId: postAccountingPaymentsPaymentIdProof
+      summary: Authorize a short-lived payment-proof view
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/accounting/payments/{paymentId}/decision:
+    post:
+      tags:
+      - Accounting
+      operationId: postAccountingPaymentsPaymentIdDecision
+      summary: Approve or reject payment evidence atomically
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/dashboard:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminDashboard
+      summary: Get system overview
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/courses/{courseId}:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminCoursesCourseId
+      summary: Get course administration detail
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: courseId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+    patch:
+      tags:
+      - Administration
+      operationId: patchAdminCoursesCourseId
+      summary: Update a course
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: courseId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/batches:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminBatches
+      summary: List batches
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+    post:
+      tags:
+      - Administration
+      operationId: postAdminBatches
+      summary: Create a batch
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/batches/{batchId}:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminBatchesBatchId
+      summary: Get batch detail
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: batchId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+    patch:
+      tags:
+      - Administration
+      operationId: patchAdminBatchesBatchId
+      summary: Update a batch
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: batchId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/teachers:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminTeachers
+      summary: List teachers available for assignment
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/users:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminUsers
+      summary: List users
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/users/{userId}:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminUsersUserId
+      summary: Get user administration detail
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+    patch:
+      tags:
+      - Administration
+      operationId: patchAdminUsersUserId
+      summary: Update an administered user
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/roles:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminRoles
+      summary: List role definitions
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/announcements:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminAnnouncements
+      summary: List system announcements
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+    post:
+      tags:
+      - Administration
+      operationId: postAdminAnnouncements
+      summary: Create or schedule a system announcement
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/finance-overview:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminFinanceOverview
+      summary: Get finance overview
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/reports/academic:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminReportsAcademic
+      summary: Get academic report
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/reports/enrollments:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminReportsEnrollments
+      summary: Get enrollment report
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/reports/finance:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminReportsFinance
+      summary: Get finance report
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/integrations/{provider}/records:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminIntegrationsProviderRecords
+      summary: List integration records
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      parameters:
+      - name: provider
+        in: path
+        required: true
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+  /api/v1/admin/learning-operations:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminLearningOperations
+      summary: Get learning-operation health
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/settings:
+    get:
+      tags:
+      - Administration
+      operationId: getAdminSettings
+      summary: Get system settings
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                oneOf:
+                - $ref: '#/components/schemas/GenericApiResponse'
+                - $ref: '#/components/schemas/GenericCollectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      security:
+      - cookieAuth: []
+    patch:
+      tags:
+      - Administration
+      operationId: patchAdminSettings
+      summary: Update institution, payment and security settings
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/users/{userId}/actions/{action}:
+    post:
+      tags:
+      - Administration
+      operationId: postAdminUsersUserIdActionsAction
+      summary: Run an audited user account action
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: action
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/integrations/{provider}/{action}:
+    post:
+      tags:
+      - Integrations
+      operationId: postAdminIntegrationsProviderAction
+      summary: Connect, disconnect or health-check an integration
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: provider
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: action
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/staff/enrollments/export:
+    get:
+      tags:
+      - Enrollment Officer
+      operationId: exportStaffEnrollments
+      summary: Export the authorized enrollment register
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      - name: status
+        in: query
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/staff/students/export:
+    get:
+      tags:
+      - Enrollment Officer
+      operationId: exportStaffStudents
+      summary: Export the authorized student register
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      - name: status
+        in: query
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/admin/users/export:
+    get:
+      tags:
+      - Administration
+      operationId: exportAdminUsers
+      summary: Export the filtered user register
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      - name: role
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: mfa
+        in: query
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/admin/audit-logs/export:
+    get:
+      tags:
+      - Administration
+      operationId: exportAdminAuditLogs
+      summary: Export the filtered immutable audit log
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/admin/courses/export:
+    get:
+      tags:
+      - Administration
+      operationId: exportAdminCourses
+      summary: Export the course catalogue register
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      - name: category
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/admin/announcements/export:
+    get:
+      tags:
+      - Administration
+      operationId: exportAdminAnnouncements
+      summary: Export announcement history
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/admin/batches/export:
+    get:
+      tags:
+      - Administration
+      operationId: exportAdminBatches
+      summary: Export the batch register
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      - name: status
+        in: query
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/accounting/payments/export:
+    get:
+      tags:
+      - Accounting
+      operationId: exportAccountingPayments
+      summary: Export the authorized payment queue
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: method
+        in: query
+        schema:
+          type: string
+      - name: sort
+        in: query
+        schema:
+          type: string
+          enum:
+          - newest
+          - oldest
+          - highest
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/accounting/receipts/export:
+    get:
+      tags:
+      - Accounting
+      operationId: exportAccountingReceipts
+      summary: Export the receipt register
+      parameters:
+      - name: q
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      - name: status
+        in: query
+        schema:
+          type: string
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/accounting/reports/outstanding/export:
+    get:
+      tags:
+      - Accounting
+      operationId: exportAccountingOutstanding
+      summary: Export outstanding payments and exceptions
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/accounting/reports/collections/export:
+    get:
+      tags:
+      - Accounting
+      operationId: exportAccountingCollections
+      summary: Export the collections report
+      parameters:
+      - name: from
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: to
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: course_id
+        in: query
+        schema:
+          type: string
+          maxLength: 100
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/student/receipts/{receiptId}:
+    get:
+      tags:
+      - Student
+      operationId: getStudentReceipt
+      summary: Return one receipt owned by the authenticated student
+      security:
+      - cookieAuth: []
+      parameters:
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: Authorized receipt record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/v1/student/receipts/{receiptId}/download:
+    post:
+      tags:
+      - Student
+      operationId: authorizeStudentReceiptDownload
+      summary: Authorize a short-lived receipt PDF download
+      security:
+      - cookieAuth: []
+      parameters:
+      - name: receiptId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '200':
+          description: Authorized short-lived download destination
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/StateConflict'
+  /api/v1/teacher/classes/{sessionId}/sync:
+    post:
+      tags:
+      - Teacher
+      operationId: postTeacherClassesSessionIdSync
+      summary: Synchronize the class session with Zoom
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/classes/{sessionId}/fallback:
+    post:
+      tags:
+      - Teacher
+      operationId: postTeacherClassesSessionIdFallback
+      summary: Configure an audited class fallback
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: sessionId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/teacher/batches/{batchId}/students/export:
+    get:
+      tags:
+      - Teacher
+      operationId: exportTeacherBatchStudents
+      summary: Export the authorized assigned-batch student list
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+      parameters:
+      - name: batchId
+        in: path
+        required: true
+        schema:
+          type: string
+  /api/v1/staff/payment-submissions/{paymentId}/proof:
+    post:
+      tags:
+      - Enrollment Officer
+      operationId: postStaffPaymentSubmissionsPaymentIdProof
+      summary: Authorize a short-lived payment-proof viewer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/staff/payment-submissions/{paymentId}/notify:
+    post:
+      tags:
+      - Enrollment Officer
+      operationId: postStaffPaymentSubmissionsPaymentIdNotify
+      summary: Resend a payment-submission status notification
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenericApiResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenericMutationRequest'
+      parameters:
+      - name: paymentId
+        in: path
+        required: true
+        schema:
+          type: string
+      - $ref: '#/components/parameters/XsrfToken'
+      - $ref: '#/components/parameters/IdempotencyKey'
+      security:
+      - cookieAuth: []
+  /api/v1/admin/reports/academic/export:
+    get:
+      tags:
+      - Administration
+      operationId: exportAdminReportsAcademic
+      summary: Export the filtered academic report
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/admin/reports/enrollments/export:
+    get:
+      tags:
+      - Administration
+      operationId: exportAdminReportsEnrollments
+      summary: Export the filtered enrollments report
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/admin/reports/finance/export:
+    get:
+      tags:
+      - Administration
+      operationId: exportAdminReportsFinance
+      summary: Export the filtered finance report
+      security:
+      - cookieAuth: []
+      responses:
+        '200':
+          description: CSV export
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+components:
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: laravel_session
+      description: Laravel Sanctum stateful session cookie. Actual cookie name is environment-configured.
+  parameters:
+    XsrfToken:
+      name: X-XSRF-TOKEN
+      in: header
+      required: true
+      description: Value derived by the browser client from the XSRF-TOKEN cookie.
+      schema:
+        type: string
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Client-generated unique key for a critical mutation.
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 100
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPage:
+      name: per_page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+  responses:
+    Unauthenticated:
+      description: Session is absent or expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            message: Authentication is required.
+            code: unauthenticated
+    Forbidden:
+      description: Authenticated actor is not allowed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            message: You are not allowed to perform this action.
+            code: forbidden
+    NotFound:
+      description: Resource not found or deliberately concealed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            message: The requested resource was not found.
+            code: not_found
+    StateConflict:
+      description: Current state does not allow the operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            message: This action cannot be completed in the current state.
+            code: state_conflict
+    ValidationError:
+      description: Input validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+    RateLimited:
+      description: Too many requests
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+          example:
+            message: Too many requests. Please try again later.
+            code: rate_limited
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+      - status
+      properties:
+        status:
+          type: string
+          const: ok
+    MessageResponse:
+      type: object
+      required:
+      - message
+      properties:
+        message:
+          type: string
+    ApiError:
+      type: object
+      required:
+      - message
+      - code
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        request_id:
+          type:
+          - string
+          - 'null'
+    ValidationError:
+      allOf:
+      - $ref: '#/components/schemas/ApiError'
+      - type: object
+        required:
+        - errors
+        properties:
+          errors:
+            type: object
+            additionalProperties:
+              type: array
+              items:
+                type: string
+    PaginationMeta:
+      type: object
+      required:
+      - current_page
+      - last_page
+      - per_page
+      - total
+      properties:
+        current_page:
+          type: integer
+        last_page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+    PaginationLinks:
+      type: object
+      required:
+      - next
+      - previous
+      properties:
+        next:
+          type:
+          - string
+          - 'null'
+        previous:
+          type:
+          - string
+          - 'null'
+    RegisterRequest:
+      type: object
+      required:
+      - name
+      - mobile
+      - password
+      - password_confirmation
+      - terms_accepted
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        mobile:
+          type: string
+          minLength: 7
+          maxLength: 20
+        email:
+          type:
+          - string
+          - 'null'
+          format: email
+        password:
+          type: string
+          minLength: 8
+        password_confirmation:
+          type: string
+        preferred_language:
+          type: string
+          enum:
+          - en
+          - ne
+          default: en
+        terms_accepted:
+          type: boolean
+          const: true
+        recording_policy_acknowledged:
+          type: boolean
+          default: false
+    LoginRequest:
+      type: object
+      required:
+      - identifier
+      - password
+      properties:
+        identifier:
+          type: string
+          maxLength: 190
+        password:
+          type: string
+        remember:
+          type: boolean
+          default: false
+    ResetPasswordRequest:
+      type: object
+      required:
+      - token
+      - email
+      - password
+      - password_confirmation
+      properties:
+        token:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 8
+        password_confirmation:
+          type: string
+    AuthMeResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/AuthMe'
+    AuthMe:
+      type: object
+      required:
+      - user
+      - roles
+      - permissions
+      - required_action
+      - portal_home
+      properties:
+        user:
+          $ref: '#/components/schemas/UserSummary'
+        roles:
+          type: array
+          items:
+            type: string
+        permissions:
+          type: array
+          items:
+            type: string
+        required_action:
+          type:
+          - string
+          - 'null'
+          enum:
+          - null
+          - change_password
+          - two_factor_challenge
+          - verify_email
+        portal_home:
+          type: string
+          pattern: ^/
+    UserSummary:
+      type: object
+      required:
+      - id
+      - name
+      - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        mobile:
+          type:
+          - string
+          - 'null'
+        email:
+          type:
+          - string
+          - 'null'
+          format: email
+        student_code:
+          type:
+          - string
+          - 'null'
+        avatar_url:
+          type:
+          - string
+          - 'null'
+          format: uri
+        status:
+          type: string
+          enum:
+          - active
+          - suspended
+    PublicSettings:
+      type: object
+      required:
+      - institution_name
+      - timezone
+      - currency
+      - support
+      properties:
+        institution_name:
+          type: string
+        logo_url:
+          type:
+          - string
+          - 'null'
+        timezone:
+          type: string
+          const: Asia/Kathmandu
+        currency:
+          type: string
+          const: NPR
+        support:
+          type: object
+          required:
+          - whatsapp
+          - phone
+          - email
+          properties:
+            whatsapp:
+              type:
+              - string
+              - 'null'
+            phone:
+              type:
+              - string
+              - 'null'
+            email:
+              type:
+              - string
+              - 'null'
+    PublicPaymentMethod:
+      type: object
+      required:
+      - id
+      - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        account_name:
+          type:
+          - string
+          - 'null'
+        account_identifier:
+          type:
+          - string
+          - 'null'
+        qr_image_url:
+          type:
+          - string
+          - 'null'
+          format: uri
+        instructions:
+          type:
+          - string
+          - 'null'
+    Category:
+      type: object
+      required:
+      - id
+      - name
+      - slug
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+    CourseSummary:
+      type: object
+      required:
+      - id
+      - slug
+      - title
+      - access_type
+      - starting_price_npr
+      - published
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        title:
+          type: string
+        short_description:
+          type:
+          - string
+          - 'null'
+        category:
+          oneOf:
+          - $ref: '#/components/schemas/Category'
+          - type: 'null'
+        thumbnail_url:
+          type:
+          - string
+          - 'null'
+        access_type:
+          type: string
+          enum:
+          - free
+          - paid
+        starting_price_npr:
+          type: integer
+          minimum: 0
+        published:
+          type: boolean
+        available_batches:
+          type: integer
+          minimum: 0
+    CourseDetail:
+      allOf:
+      - $ref: '#/components/schemas/CourseSummary'
+      - type: object
+        required:
+        - description
+        - syllabus
+        - batches
+        properties:
+          description:
+            type: string
+          syllabus:
+            type: array
+            items:
+              $ref: '#/components/schemas/SyllabusModule'
+          batches:
+            type: array
+            items:
+              $ref: '#/components/schemas/BatchSummary'
+    CourseUpsertRequest:
+      type: object
+      required:
+      - title
+      - slug
+      - access_type
+      properties:
+        title:
+          type: string
+          minLength: 2
+          maxLength: 180
+        slug:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        category_id:
+          type:
+          - string
+          - 'null'
+        short_description:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+        description:
+          type:
+          - string
+          - 'null'
+        access_type:
+          type: string
+          enum:
+          - free
+          - paid
+        published:
+          type: boolean
+          default: false
+    SyllabusModule:
+      type: object
+      required:
+      - id
+      - title
+      - order
+      - lessons
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        order:
+          type: integer
+        lessons:
+          type: array
+          items:
+            type: object
+            required:
+            - id
+            - title
+            - order
+            properties:
+              id:
+                type: string
+              title:
+                type: string
+              order:
+                type: integer
+    BatchSummary:
+      type: object
+      required:
+      - id
+      - title
+      - status
+      - start_at
+      - end_at
+      - price_npr
+      - access_until
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum:
+          - draft
+          - open
+          - ongoing
+          - completed
+          - closed
+          - cancelled
+        start_at:
+          type: string
+          format: date-time
+        end_at:
+          type: string
+          format: date-time
+        access_until:
+          type: string
+          format: date-time
+        schedule_summary:
+          type:
+          - string
+          - 'null'
+        price_npr:
+          type: integer
+          minimum: 0
+        capacity:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        teacher_names:
+          type: array
+          items:
+            type: string
+    PaginatedCoursesResponse:
+      type: object
+      required:
+      - data
+      - meta
+      - links
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CourseSummary'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+    EnrollmentStatus:
+      type: string
+      enum:
+      - pending
+      - active
+      - paused
+      - completed
+      - cancelled
+      - expired
+    EnrollmentSummary:
+      type: object
+      required:
+      - id
+      - status
+      - course
+      - batch
+      - access_start_at
+      - access_end_at
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/EnrollmentStatus'
+        course:
+          $ref: '#/components/schemas/CourseSummary'
+        batch:
+          $ref: '#/components/schemas/BatchSummary'
+        access_start_at:
+          type: string
+          format: date-time
+        access_end_at:
+          type: string
+          format: date-time
+        progress:
+          $ref: '#/components/schemas/ProgressSummary'
+    ProgressSummary:
+      type: object
+      required:
+      - attendance_percentage
+      - recordings_watched
+      - recordings_total
+      - tests_completed
+      - tests_total
+      - syllabus_completed
+      - syllabus_total
+      properties:
+        attendance_percentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        recordings_watched:
+          type: integer
+        recordings_total:
+          type: integer
+        tests_completed:
+          type: integer
+        tests_total:
+          type: integer
+        syllabus_completed:
+          type: integer
+        syllabus_total:
+          type: integer
+    StudentDashboard:
+      type: object
+      required:
+      - next_class
+      - active_courses
+      - upcoming_tests
+      - announcements
+      properties:
+        next_class:
+          oneOf:
+          - $ref: '#/components/schemas/ClassSessionSummary'
+          - type: 'null'
+        active_courses:
+          type: array
+          items:
+            $ref: '#/components/schemas/EnrollmentSummary'
+        upcoming_tests:
+          type: array
+          items:
+            $ref: '#/components/schemas/TestSummary'
+        announcements:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnnouncementSummary'
+    TeacherDashboard:
+      type: object
+      required:
+      - today_classes
+      - pending_attendance
+      - pending_recordings
+      properties:
+        today_classes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ClassSessionSummary'
+        pending_attendance:
+          type: integer
+        pending_recordings:
+          type: integer
+    ClassSessionSummary:
+      type: object
+      required:
+      - id
+      - topic
+      - status
+      - starts_at
+      - ends_at
+      - join_available
+      properties:
+        id:
+          type: string
+        topic:
+          type: string
+        status:
+          type: string
+          enum:
+          - scheduled
+          - live
+          - completed
+          - cancelled
+          - rescheduled
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        join_available:
+          type: boolean
+        action_reason:
+          type:
+          - string
+          - 'null'
+    RedirectAction:
+      type: object
+      required:
+      - redirect_url
+      - expires_at
+      properties:
+        redirect_url:
+          type: string
+          format: uri
+        expires_at:
+          type: string
+          format: date-time
+    PaymentStatus:
+      type: string
+      enum:
+      - draft
+      - submitted
+      - under_review
+      - approved
+      - rejected
+      - refunded
+      - cancelled
+    Payment:
+      type: object
+      required:
+      - id
+      - status
+      - expected_amount_npr
+      - submitted_amount_npr
+      - payment_method
+      - submitted_at
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/PaymentStatus'
+        expected_amount_npr:
+          type: integer
+          minimum: 0
+        submitted_amount_npr:
+          type: integer
+          minimum: 0
+        payment_method:
+          type: string
+        transaction_reference:
+          type:
+          - string
+          - 'null'
+        submitted_at:
+          type: string
+          format: date-time
+        rejection_reason:
+          type:
+          - string
+          - 'null'
+        proof_preview_available:
+          type: boolean
+    PaymentSubmissionRequest:
+      type: object
+      required:
+      - batch_id
+      - payment_method_id
+      - amount_npr
+      - payer_name
+      - paid_at
+      - proof_file
+      properties:
+        batch_id:
+          type: string
+        payment_method_id:
+          type: string
+        amount_npr:
+          type: integer
+          minimum: 1
+        payer_name:
+          type: string
+          maxLength: 120
+        transaction_reference:
+          type:
+          - string
+          - 'null'
+          maxLength: 120
+        paid_at:
+          type: string
+          format: date-time
+        note:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+        proof_file:
+          type: string
+          format: binary
+    ApprovePaymentRequest:
+      type: object
+      properties:
+        note:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+        access_start_at:
+          type:
+          - string
+          - 'null'
+          format: date-time
+      additionalProperties: false
+    PaymentApprovalResult:
+      type: object
+      required:
+      - payment
+      - enrollment
+      - receipt
+      properties:
+        payment:
+          $ref: '#/components/schemas/Payment'
+        enrollment:
+          $ref: '#/components/schemas/EnrollmentSummary'
+        receipt:
+          $ref: '#/components/schemas/ReceiptSummary'
+    ReceiptSummary:
+      type: object
+      required:
+      - id
+      - receipt_number
+      - amount_npr
+      - issued_at
+      properties:
+        id:
+          type: string
+        receipt_number:
+          type: string
+        amount_npr:
+          type: integer
+        issued_at:
+          type: string
+          format: date-time
+    ReasonRequest:
+      type: object
+      required:
+      - reason
+      properties:
+        reason:
+          type: string
+          minLength: 3
+          maxLength: 500
+    AttendanceStatus:
+      type: string
+      enum:
+      - present
+      - late
+      - absent
+      - excused
+      - not_finalized
+    FinalizeAttendanceRequest:
+      type: object
+      required:
+      - records
+      properties:
+        records:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+            - student_id
+            - status
+            properties:
+              student_id:
+                type: string
+              status:
+                $ref: '#/components/schemas/AttendanceStatus'
+              note:
+                type:
+                - string
+                - 'null'
+                maxLength: 300
+    TestSummary:
+      type: object
+      required:
+      - id
+      - title
+      - status
+      - opens_at
+      - closes_at
+      - duration_minutes
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum:
+          - draft
+          - scheduled
+          - open
+          - closed
+          - result_hidden
+          - result_released
+        opens_at:
+          type: string
+          format: date-time
+        closes_at:
+          type: string
+          format: date-time
+        duration_minutes:
+          type: integer
+          minimum: 1
+    AnnouncementSummary:
+      type: object
+      required:
+      - id
+      - title
+      - published_at
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        summary:
+          type:
+          - string
+          - 'null'
+        published_at:
+          type: string
+          format: date-time
+    StaffCreateStudentRequest:
+      type: object
+      required:
+      - name
+      - mobile
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        mobile:
+          type: string
+          maxLength: 20
+        email:
+          type:
+          - string
+          - 'null'
+          format: email
+        note:
+          type:
+          - string
+          - 'null'
+          maxLength: 500
+    StudentSummary:
+      type: object
+      required:
+      - id
+      - name
+      - mobile
+      - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        mobile:
+          type: string
+        email:
+          type:
+          - string
+          - 'null'
+        student_code:
+          type:
+          - string
+          - 'null'
+        status:
+          type: string
+          enum:
+          - active
+          - suspended
+    PaginatedStudentsResponse:
+      type: object
+      required:
+      - data
+      - meta
+      - links
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/StudentSummary'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+    PaginatedPaymentsResponse:
+      type: object
+      required:
+      - data
+      - meta
+      - links
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Payment'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+    AuditEntry:
+      type: object
+      required:
+      - id
+      - action
+      - subject_type
+      - subject_id
+      - actor_name
+      - occurred_at
+      properties:
+        id:
+          type: string
+        action:
+          type: string
+        subject_type:
+          type: string
+        subject_id:
+          type: string
+        actor_name:
+          type: string
+        reason:
+          type:
+          - string
+          - 'null'
+        occurred_at:
+          type: string
+          format: date-time
+    PaginatedAuditResponse:
+      type: object
+      required:
+      - data
+      - meta
+      - links
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+        links:
+          $ref: '#/components/schemas/PaginationLinks'
+    GenericData:
+      type: object
+      additionalProperties: true
+    GenericApiResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          $ref: '#/components/schemas/GenericData'
+        meta:
+          type: object
+          additionalProperties: true
+    GenericCollectionResponse:
+      type: object
+      required:
+      - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GenericData'
+        links:
+          type: object
+          additionalProperties: true
+        meta:
+          type: object
+          additionalProperties: true
+    GenericMutationRequest:
+      type: object
+      additionalProperties: true

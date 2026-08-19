@@ -1,0 +1,16 @@
+/vendor
+/node_modules
+/public/storage
+/storage/*.key
+/storage/app/private/*
+/storage/app/public/*
+!/storage/app/private/.gitignore
+!/storage/app/public/.gitignore
+.env
+.env.backup
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log

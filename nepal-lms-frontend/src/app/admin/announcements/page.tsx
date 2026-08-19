@@ -1,0 +1,11 @@
+import { Megaphone, Send, Timer } from "lucide-react";
+import { AnnouncementComposer } from "@/components/admin-controls";
+import { DataTable } from "@/components/portal-components";
+import { ApiExportLink } from "@/components/api-actions";
+import { MetricCard, PageHeader, Panel, StatusBadge } from "@/components/ui";
+import { getAdminAnnouncements, getAdminBatches, getAdminRoles } from "@/lib/data/admin";
+
+export default async function AdminAnnouncementsPage() {
+  const [announcements, batches, roles] = await Promise.all([getAdminAnnouncements(), getAdminBatches(), getAdminRoles()]);
+  return <><PageHeader eyebrow="Communication" title="Announcements" description="Publish targeted academic and operational messages without exposing private links or sensitive records." actions={<ApiExportLink href="/api/v1/admin/announcements/export" label="Export history" />}/><div className="mb-6 grid gap-4 sm:grid-cols-3"><MetricCard label="Published this month" value={String(announcements.metrics.publishedMonth)} detail="Across approved audiences" icon={Megaphone} tone="blue"/><MetricCard label="Scheduled" value={String(announcements.metrics.scheduled)} detail={`Next: ${announcements.metrics.nextScheduled}`} icon={Timer} tone="amber"/><MetricCard label="Delivery rate" value={announcements.metrics.deliveryRate} detail="In-app and email" icon={Send} tone="green"/></div><AnnouncementComposer batches={batches} roles={roles}/><Panel className="mt-6"><div><h2 className="text-xl font-bold text-slate-950">Announcement history</h2><p className="mt-1 text-sm text-slate-500">Searchable history with audience, author, channel and release status.</p></div><div className="mt-5"><DataTable rowKey="id" rows={announcements.items as unknown as Record<string,unknown>[]} columns={[{key:"title",label:"Announcement",render:(row)=><div><p className="font-semibold text-slate-900">{String(row.title)}</p><p className="mt-1 text-xs text-slate-500">{String(row.id)}</p></div>},{key:"audience",label:"Audience"},{key:"author",label:"Author"},{key:"channel",label:"Channel"},{key:"scheduled",label:"Published / scheduled"},{key:"status",label:"Status",render:(row)=><StatusBadge status={String(row.status)}/>}]}/></div></Panel></>;
+}
