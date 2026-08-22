@@ -2,6 +2,7 @@ import { AccountingAdjustmentForm, type PaymentSummary } from "@/components/acco
 import { PageHeader } from "@/components/ui";
 import { getSessionUser, requirePermission } from "@/lib/auth/server";
 import { getAccountingPayment } from "@/lib/data/accounting";
+import { portalPath } from "@/lib/portal-path";
 import { firstParam, type PageSearchParams } from "@/lib/search-params";
 
 export default async function NewAccountingAdjustmentPage({ searchParams }: { searchParams: PageSearchParams }) {
@@ -19,5 +20,7 @@ export default async function NewAccountingAdjustmentPage({ searchParams }: { se
     }
   }
 
-  return <><PageHeader back={{ href: "/accounting/adjustments", label: "All adjustments" }} eyebrow="Financial corrections" title="New adjustment" description="Create a separate, auditable financial action against an authoritative payment record." /><AccountingAdjustmentForm initialPayment={initialPayment} /></>;
+  const base = await portalPath("/accounting/adjustments");
+
+  return <><PageHeader back={{ href: base, label: "All adjustments" }} eyebrow="Financial corrections" title="New adjustment" description="Create a separate, auditable financial action against an authoritative payment record." /><AccountingAdjustmentForm initialPayment={initialPayment} returnPath={base} /></>;
 }

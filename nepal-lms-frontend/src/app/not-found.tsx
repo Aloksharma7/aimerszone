@@ -8,7 +8,7 @@ export default async function NotFound() {
   return (
     <main id="main-content" className="flex min-h-screen items-center justify-center bg-canvas px-4 py-12">
       <div className="w-full max-w-lg text-center">
-        <div className="mb-8 flex justify-center"><Brand name={settings.name}/></div>
+        <div className="mb-8 flex justify-center"><Brand name={settings.name} tagline={settings.tagline} logoUrl={settings.logoUrl}/></div>
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 text-slate-500"><SearchX className="h-8 w-8"/></div>
         <p className="mt-6 text-sm font-bold uppercase tracking-[0.16em] text-brand-700">404 · Page not found</p>
         <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">This page is not available.</h1>

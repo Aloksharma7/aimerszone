@@ -212,8 +212,8 @@ export function EnrollStudentForm({ courses, redirectTo = "/staff/payment-submis
       setError("Find or create the student first.");
       return;
     }
-    if (!values.courseId || Number(values.amount) <= 0 || !file) {
-      setError("Select the course, enter the paid amount, and attach proof.");
+    if (!values.courseId || values.amount.trim() === "" || Number(values.amount) < 0 || !file) {
+      setError("Select the course, enter the amount paid (0 for a full scholarship or waiver), and attach proof.");
       return;
     }
     if (!["image/jpeg", "image/png", "application/pdf"].includes(file.type) || file.size > 8 * 1024 * 1024) {
@@ -253,7 +253,7 @@ export function EnrollStudentForm({ courses, redirectTo = "/staff/payment-submis
 
       toast(approvedNow
         ? { tone: "success", title: "Student enrolled", message: `${student.name}'s seat is active now.` }
-        : { tone: "success", title: "Sent for review", message: `${student.name}'s payment needs a second look (a duplicate, short or over payment was detected) — a different staff member or admin can review it from the payments list.` });
+        : { tone: "success", title: "Sent for review", message: `${student.name}'s payment needs a second look (a scholarship/waiver, a duplicate, or an amount that doesn't match was detected) — a different staff member or admin can review it from the payments list.` });
       router.push(redirectTo);
       router.refresh();
     } catch (caught) {
@@ -309,7 +309,7 @@ export function EnrollStudentForm({ courses, redirectTo = "/staff/payment-submis
             <label className="text-sm font-semibold text-slate-700 sm:col-span-2">Course<select className={inputClass} value={values.courseId} onChange={(event) => setValues((current) => ({ ...current, courseId: event.target.value }))}><option value="">Select course</option>{courses.map((course) => <option key={course.id || course.slug} value={course.id || course.slug}>{course.title} · {course.batch}</option>)}</select></label>
             <label className="text-sm font-semibold text-slate-700">Expected amount<input value={selectedCourse?.price || 0} readOnly className={`${inputClass} bg-slate-100 text-slate-600`} /></label>
             <label className="text-sm font-semibold text-slate-700">Payment method<select className={inputClass} value={values.method} onChange={(event) => setValues((current) => ({ ...current, method: event.target.value }))}><option value="esewa">eSewa</option><option value="khalti">Khalti</option><option value="bank">Bank transfer</option><option value="cash">Cash receipt</option></select></label>
-            <label className="text-sm font-semibold text-slate-700">Amount paid<input type="number" min="1" className={inputClass} value={values.amount} onChange={(event) => setValues((current) => ({ ...current, amount: event.target.value }))} /></label>
+            <label className="text-sm font-semibold text-slate-700">Amount paid<input type="number" min="0" className={inputClass} value={values.amount} onChange={(event) => setValues((current) => ({ ...current, amount: event.target.value }))} /><span className="mt-1 block text-xs font-normal text-slate-400">For a full scholarship or fee waiver, enter 0 and attach the institution&apos;s authorization slip as proof below.</span></label>
             <label className="text-sm font-semibold text-slate-700">Payer name<input className={inputClass} value={values.payer} onChange={(event) => setValues((current) => ({ ...current, payer: event.target.value }))} placeholder={student?.name || ""} /></label>
             <label className="text-sm font-semibold text-slate-700">Reference number<input className={inputClass} value={values.reference} onChange={(event) => setValues((current) => ({ ...current, reference: event.target.value }))} /></label>
             <label className="text-sm font-semibold text-slate-700">Payment date<input type="date" className={inputClass} value={values.date} onChange={(event) => setValues((current) => ({ ...current, date: event.target.value }))} /></label>
@@ -331,10 +331,10 @@ export function EnrollStudentForm({ courses, redirectTo = "/staff/payment-submis
       </Panel>
       <aside className="space-y-5">
         <AlertBox title="Access activates on submission" tone="info">
-          <p>You already verified this payment before entering it here, so the student&apos;s seat activates immediately — no separate approval step. Only a flagged submission (duplicate evidence, or an amount mismatch) falls back to a second reviewer.</p>
+          <p>You already verified this payment before entering it here, so the student&apos;s seat activates immediately — no separate approval step. Only a flagged submission (a scholarship/waiver, duplicate evidence, or an amount mismatch) falls back to a second reviewer.</p>
         </AlertBox>
-        <AlertBox title="If the student did not actually pay" tone="warning">
-          <p>Do not submit a payment. Use an enrollment request instead — that path is reserved for genuine scholarships and waivers, and needs Super Admin approval for a paid course.</p>
+        <AlertBox title="For a scholarship or fee waiver" tone="warning">
+          <p>Enter 0 as the amount paid and attach the institution&apos;s authorization slip as proof instead of a payment screenshot. It still needs a different staff member or admin to approve it before the seat activates.</p>
         </AlertBox>
       </aside>
     </div>

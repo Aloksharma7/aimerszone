@@ -14,12 +14,12 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       <SessionIntegrity />
       <aside className="relative hidden overflow-hidden bg-brand-950 p-10 text-white lg:flex lg:flex-col xl:p-14">
         <div className="dot-pattern absolute inset-0 opacity-25" />
-        <div className="relative"><Brand light name={settings.name} /></div>
+        <div className="relative"><Brand light name={settings.name} tagline={settings.tagline} logoUrl={settings.logoUrl} /></div>
         <div className="relative my-auto max-w-lg py-14"><p className="text-sm font-bold uppercase tracking-[0.16em] text-blue-200">One connected learning space</p><h2 className="mt-4 text-4xl font-bold leading-tight">The next class, recording or test is always clear.</h2><p className="mt-5 text-base leading-8 text-slate-300">A calm portal for batch schedules, learning progress, payment status and support.</p><div className="mt-8 grid gap-4">{[[BookOpenCheck,"Courses stay organized by batch"],[ShieldCheck,"Paid access follows verified approval"],[Headphones,"Support remains easy to reach"]].map(([Icon,label])=>{const C=Icon as typeof BookOpenCheck;return <div key={String(label)} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.06] p-4"><div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-blue-200"><C className="h-5 w-5" /></div><span className="font-semibold text-slate-100">{String(label)}</span><CheckCircle2 className="ml-auto h-5 w-5 text-green-400" /></div>})}</div></div>
         <p className="relative text-xs text-slate-500">Authentication and session security are handled through Laravel Sanctum.</p>
       </aside>
       <section className="flex min-h-screen flex-col">
-        <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-8 lg:hidden"><Brand name={settings.name} /><Link href="/" className="text-sm font-semibold text-slate-600">Back to website</Link></header>
+        <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-8 lg:hidden"><Brand name={settings.name} tagline={settings.tagline} logoUrl={settings.logoUrl} /><Link href="/" className="text-sm font-semibold text-slate-600">Back to website</Link></header>
         <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-8"><div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-card sm:p-8">{children}</div></div>
         <footer className="px-6 pb-8 text-center text-xs text-slate-400">Protected by server-side permissions when connected to the API.</footer>
       </section>

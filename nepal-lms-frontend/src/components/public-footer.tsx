@@ -27,7 +27,7 @@ export function PublicFooter({ settings }: { settings?: PublicSettings }) {
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-2">
-            <Brand light name={site.name} />
+            <Brand light name={site.name} tagline={site.tagline} logoUrl={settings?.logoUrl ?? null} />
             <p className="mt-5 max-w-md text-sm leading-7 text-slate-400">{site.tagline} Built for batch-based learning, mobile access and clear human support.</p>
             <div className="mt-6 space-y-3 text-sm">
               <p className="flex items-start gap-3"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-blue-300" />{site.address}</p>

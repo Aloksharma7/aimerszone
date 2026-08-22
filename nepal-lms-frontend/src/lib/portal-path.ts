@@ -8,9 +8,8 @@ import { headers } from "next/headers";
  * /admin so they never leave their own workspace. A hardcoded "/staff/..."
  * link inside a shared page throws them back out.
  *
- * portalPath("/staff/enrollment-requests/new") returns
- * "/admin/enrollment-requests/new" when the request is under /admin, and the
- * path unchanged everywhere else.
+ * portalPath("/staff/payments") returns "/admin/payments" when the request
+ * is under /admin, and the path unchanged everywhere else.
  */
 export async function portalPath(path: string): Promise<string> {
   const headerStore = await headers();

@@ -44,9 +44,14 @@ Route::prefix('v1')->group(function () {
         Route::post('forgot-password', [Auth\PasswordResetController::class, 'forgot'])->middleware('throttle:password-reset');
         Route::post('reset-password', [Auth\PasswordResetController::class, 'reset'])->middleware('throttle:password-reset');
 
+        // Mobile app only — issues a Sanctum personal-access token instead of
+        // a session cookie. See nepal-lms-mobile/docs/ARCHITECTURE.md.
+        Route::post('mobile-login', [Auth\MobileLoginController::class, 'store'])->middleware('throttle:auth');
+
         Route::middleware('auth')->group(function () {
             Route::get('me', Auth\MeController::class);
             Route::post('logout', [Auth\LoginController::class, 'destroy']);
+            Route::post('mobile-logout', [Auth\MobileLoginController::class, 'destroy']);
             Route::post('change-password', Auth\ChangePasswordController::class);
             Route::post('email/verification-notification', [Auth\EmailVerificationController::class, 'send'])
                 ->middleware('throttle:6,1');
@@ -76,6 +81,8 @@ Route::prefix('v1')->group(function () {
         Route::put('password', [Account\PasswordController::class, 'update']);
         Route::post('sessions/revoke-others', [Account\SessionController::class, 'revokeOthers']);
         Route::post('two-factor/setup', [Account\TwoFactorController::class, 'setup']);
+        Route::post('device-tokens', [Account\DeviceTokenController::class, 'store']);
+        Route::delete('device-tokens', [Account\DeviceTokenController::class, 'destroy']);
     });
 
     /* ------------------------------------------------------------------
@@ -248,8 +255,6 @@ Route::prefix('v1')->group(function () {
             ->middleware(['permission:students.manage', 'idempotent']);
 
         Route::get('enrollments', [Staff\EnrollmentController::class, 'index'])->middleware('permission:enrollments.view');
-        Route::post('enrollment-requests', [Staff\EnrollmentController::class, 'requestEnrollment'])
-            ->middleware(['permission:enrollments.manage', 'idempotent']);
 
         Route::get('courses', [Staff\CourseController::class, 'index'])->middleware('permission:courses.view');
         Route::get('courses/{course}', [Staff\CourseController::class, 'show'])->middleware('permission:courses.view');
@@ -259,6 +264,24 @@ Route::prefix('v1')->group(function () {
             ->middleware(['permission:courses.update', 'idempotent', 'throttle:uploads']);
         Route::delete('courses/{course}/thumbnail', [Staff\CourseController::class, 'deleteThumbnail'])
             ->middleware('permission:courses.update');
+
+        // Same controllers as the admin routes below — categories.manage and
+        // syllabus.manage have no admin-specific logic in either one, they are
+        // permission-gated the same way everything else here is. Staff already
+        // creates and publishes courses; without these, a course needing a new
+        // category or its syllabus content had to wait on an admin for either.
+        Route::get('categories', [Admin\CategoryController::class, 'index'])->middleware('permission:courses.view');
+        Route::post('categories', [Admin\CategoryController::class, 'store'])
+            ->middleware(['permission:categories.manage', 'idempotent']);
+        Route::patch('categories/{category}', [Admin\CategoryController::class, 'update'])
+            ->middleware(['permission:categories.manage', 'idempotent']);
+        Route::delete('categories/{category}', [Admin\CategoryController::class, 'destroy'])
+            ->middleware('permission:categories.manage');
+
+        Route::get('courses/{course}/syllabus', [Admin\SyllabusController::class, 'show'])
+            ->middleware('permission:courses.view');
+        Route::put('courses/{course}/syllabus', [Admin\SyllabusController::class, 'update'])
+            ->middleware(['permission:syllabus.manage', 'idempotent']);
 
         Route::get('payment-submissions', [Staff\PaymentSubmissionController::class, 'index'])->middleware('permission:payments.view');
         Route::get('payment-submissions/{payment}', [Staff\PaymentSubmissionController::class, 'show'])->middleware('permission:payments.view');
@@ -276,8 +299,13 @@ Route::prefix('v1')->group(function () {
     Route::prefix('accounting')->middleware(['auth', 'account.usable', 'role:staff'])->group(function () {
         Route::get('payments/export', [Accounting\PaymentController::class, 'export'])->middleware('permission:reports.export');
         Route::get('receipts/export', [Accounting\LedgerController::class, 'exportReceipts'])->middleware('permission:reports.export');
-        Route::get('reports/collections/export', [Accounting\ReportController::class, 'exportCollections'])->middleware('permission:reports.export');
-        Route::get('reports/outstanding/export', [Accounting\ReportController::class, 'exportOutstanding'])->middleware('permission:reports.export');
+
+        // Institution-wide collections and outstanding figures, not the
+        // day-to-day payment queue — kept behind their own admin-only
+        // permission rather than the general reports.export staff already
+        // has for their own operational exports (students, enrollments).
+        Route::get('reports/collections/export', [Accounting\ReportController::class, 'exportCollections'])->middleware('permission:reports.financial');
+        Route::get('reports/outstanding/export', [Accounting\ReportController::class, 'exportOutstanding'])->middleware('permission:reports.financial');
 
         Route::get('dashboard', Accounting\DashboardController::class)->middleware('permission:payments.view');
 
@@ -304,8 +332,8 @@ Route::prefix('v1')->group(function () {
         Route::post('refunds/{refund}/complete', [Accounting\LedgerController::class, 'completeRefund'])
             ->middleware(['permission:payments.refund', 'idempotent']);
 
-        Route::get('reports/collections', [Accounting\ReportController::class, 'collections'])->middleware('permission:reports.view');
-        Route::get('reports/outstanding', [Accounting\ReportController::class, 'outstanding'])->middleware('permission:reports.view');
+        Route::get('reports/collections', [Accounting\ReportController::class, 'collections'])->middleware('permission:reports.financial');
+        Route::get('reports/outstanding', [Accounting\ReportController::class, 'outstanding'])->middleware('permission:reports.financial');
     });
 
     /* ------------------------------------------------------------------
@@ -351,6 +379,15 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:settings.manage');
         Route::delete('payment-methods/{paymentMethod}/qr', [Admin\SettingsController::class, 'deletePaymentMethodQr'])
             ->middleware('permission:settings.manage');
+
+        Route::post('settings/institution/logo', [Admin\SettingsController::class, 'uploadInstitutionLogo'])
+            ->middleware(['permission:settings.manage', 'idempotent', 'throttle:uploads']);
+        Route::delete('settings/institution/logo', [Admin\SettingsController::class, 'deleteInstitutionLogo'])
+            ->middleware(['permission:settings.manage', 'idempotent']);
+        Route::post('settings/institution/favicon', [Admin\SettingsController::class, 'uploadInstitutionFavicon'])
+            ->middleware(['permission:settings.manage', 'idempotent', 'throttle:uploads']);
+        Route::delete('settings/institution/favicon', [Admin\SettingsController::class, 'deleteInstitutionFavicon'])
+            ->middleware(['permission:settings.manage', 'idempotent']);
 
         Route::get('roles', [Admin\RoleController::class, 'index'])->middleware('permission:roles.manage');
         Route::get('permissions', [Admin\RoleController::class, 'permissions'])->middleware('permission:roles.manage');
@@ -411,12 +448,6 @@ Route::prefix('v1')->group(function () {
 
         Route::get('audit-logs', [Admin\AuditLogController::class, 'index'])->middleware('permission:audit.view');
 
-        // Staff raise exception requests; only this endpoint can grant one.
-        Route::get('enrollment-requests', [Admin\EnrollmentRequestController::class, 'index'])
-            ->middleware('permission:enrollments.view');
-        Route::post('enrollment-requests/{enrollmentRequest}/decision', [Admin\EnrollmentRequestController::class, 'decide'])
-            ->middleware(['permission:enrollments.manage', 'idempotent']);
-
         // Landing page: aggregate counts, attention signals, service health.
         Route::get('dashboard', Admin\DashboardController::class)->middleware('permission:reports.view');
 
@@ -444,7 +475,6 @@ Route::prefix('v1')->group(function () {
         Route::patch('announcements/{announcement}', [Admin\AnnouncementController::class, 'update'])->middleware(['permission:announcements.manage', 'idempotent']);
 
         Route::get('finance-overview', Admin\FinanceOverviewController::class)->middleware('permission:payments.view');
-        Route::get('learning-operations', Admin\LearningOperationController::class)->middleware('permission:reports.view');
 
         Route::middleware('permission:reports.view')->group(function () {
             Route::get('reports/academic', [Admin\ReportController::class, 'academic']);

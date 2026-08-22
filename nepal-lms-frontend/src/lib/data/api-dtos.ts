@@ -182,6 +182,7 @@ export type ApiPayment = {
   proof_preview_available?: boolean;
   course_title?: string | null;
   batch_title?: string | null;
+  receipt_id?: string | null;
 };
 
 export type ApiStudentReceipt = {

@@ -60,14 +60,13 @@ export type AdminFinanceOverview = {
   metrics: { pending: number; approvedToday: number; approvedTodayNpr: number; monthNpr: number; refundsMonthNpr: number };
 };
 
-export type AdminLearningOperation = { id: string; type: string; title: string; detail: string; status: string; href: string };
 export type AcademicReportRow = { id: string; batch: string; students: number; attendance: string; testAverage: string; syllabus: string; recordings: string; followUp: number };
 export type EnrollmentReportRow = { id: string; period: string; new: number; approved: number; pending: number; rejected: number; free: number; transfers: number };
 export type FinanceReportRow = { id: string; date: string; transactions: number; gross: number; refunds: number; adjustments: number; net: number; pending: number };
 export type IntegrationRow = Record<string, string> & { id: string };
 
 export type AdminSettingsData = {
-  institution: { name: string; shortName: string; primaryPhone: string; supportEmail: string; whatsapp: string; website: string; address: string };
+  institution: { name: string; shortName: string; tagline: string; primaryPhone: string; supportEmail: string; whatsapp: string; website: string; address: string; logoUrl: string | null; faviconUrl: string | null };
   paymentMethods: Array<{ id: string; name: string; accountName: string; accountReference: string; bankName: string; branch: string; qrImageUrl: string | null; status: string; sort: number }>;
   security: { publicRegistration: boolean; emailVerification: boolean; privilegedMfa: boolean; forcePasswordChange: boolean; sessionTimeoutHours: number; failedLoginAttempts: number; lockoutMinutes: number };
   operations: { maintenanceNotice: boolean; automaticReceipts: boolean; dailyIntegrationHealthCheck: boolean };
@@ -143,7 +142,7 @@ type ApiAdminUserDetail = {
 };
 
 type ApiAdminSettings = {
-  institution: { name: string; short_name: string; primary_phone?: string | null; support_email?: string | null; whatsapp?: string | null; website?: string | null; address?: string | null };
+  institution: { name: string; short_name: string; tagline?: string | null; primary_phone?: string | null; support_email?: string | null; whatsapp?: string | null; website?: string | null; address?: string | null; logo_url?: string | null; favicon_url?: string | null };
   payment_methods: Array<{ id: string; name: string; account_name?: string | null; account_reference?: string | null; bank_name?: string | null; branch?: string | null; qr_image_url?: string | null; status: string; sort_order: number }>;
   security: { public_registration: boolean; email_verification: boolean; privileged_mfa: boolean; force_password_change: boolean; session_timeout_hours: number; failed_login_attempts: number; lockout_minutes: number };
   operations: { maintenance_notice: boolean; automatic_receipts: boolean; daily_integration_health_check: boolean };
@@ -300,7 +299,7 @@ type ApiAdminCategory = {
  * needs the full list so an administrator can see what exists before creating
  * another one.
  */
-export async function getAdminCategories(): Promise<AdminCategory[]> {
+export async function getAdminCategories(endpointBase = "/api/v1/admin/categories"): Promise<AdminCategory[]> {
   if (isMockDataEnabled()) {
     return [
       { id: "cat-management", name: "Management", slug: "management", description: null, sortOrder: 0, isActive: true, courseCount: 2 },
@@ -308,7 +307,7 @@ export async function getAdminCategories(): Promise<AdminCategory[]> {
     ];
   }
 
-  const response = await serverApiFetch<ApiResponse<ApiAdminCategory[]>>("/api/v1/admin/categories");
+  const response = await serverApiFetch<ApiResponse<ApiAdminCategory[]>>(endpointBase);
   return response.data.map((item) => ({
     id: item.id,
     name: item.name,
@@ -362,73 +361,6 @@ export async function getAdminFaqs(): Promise<AdminFaq[]> {
   }));
 }
 
-export type AdminEnrollmentRequest = {
-  id: string;
-  studentName: string;
-  studentCode: string | null;
-  courseTitle: string;
-  batchTitle: string;
-  basis: string;
-  note: string | null;
-  requestedBy: string | null;
-  status: string;
-  createdAt: string;
-};
-
-type ApiAdminEnrollmentRequest = {
-  id: string;
-  student_name: string;
-  student_code: string | null;
-  course_title: string;
-  batch_title: string;
-  basis: string;
-  note: string | null;
-  requested_by: string | null;
-  status: string;
-  created_at: string;
-};
-
-/**
- * Staff raise these (scholarship, transfer, institutional exception) but
- * cannot grant them — this list is the only place a decision can be made.
- * There was previously no page rendering it, so requests piled up with no
- * way to act on them.
- */
-export async function getAdminEnrollmentRequests(): Promise<AdminEnrollmentRequest[]> {
-  if (isMockDataEnabled()) {
-    return [
-      {
-        id: "req-2083-0001",
-        studentName: "Sita Rai",
-        studentCode: "STD-2083-1002",
-        courseTitle: "CMAT Preparation Foundation",
-        batchTitle: "Evening Batch",
-        basis: "scholarship",
-        note: "Merit scholarship approved by director.",
-        requestedBy: "Staff Member",
-        status: "Pending",
-        createdAt: formatDateTime(new Date().toISOString()),
-      },
-    ];
-  }
-
-  const response = await serverApiFetch<ApiResponse<ApiAdminEnrollmentRequest[]> | PaginatedResponse<ApiAdminEnrollmentRequest>>(
-    "/api/v1/admin/enrollment-requests?per_page=50",
-  );
-  return response.data.map((item) => ({
-    id: item.id,
-    studentName: item.student_name,
-    studentCode: item.student_code,
-    courseTitle: item.course_title,
-    batchTitle: item.batch_title,
-    basis: item.basis,
-    note: item.note,
-    requestedBy: item.requested_by,
-    status: titleCase(item.status),
-    createdAt: formatDateTime(item.created_at),
-  }));
-}
-
 export type SyllabusEditorData = {
   courseId: string;
   courseTitle: string;
@@ -441,7 +373,7 @@ type ApiSyllabus = {
   modules: Array<{ id: string; title: string; summary: string | null; order: number; lessons: Array<{ id: string; title: string; type: string; order: number }> }>;
 };
 
-export async function getCourseSyllabus(courseId: string): Promise<SyllabusEditorData> {
+export async function getCourseSyllabus(courseId: string, endpointBase = "/api/v1/admin/courses"): Promise<SyllabusEditorData> {
   if (isMockDataEnabled()) {
     return {
       courseId,
@@ -453,7 +385,7 @@ export async function getCourseSyllabus(courseId: string): Promise<SyllabusEdito
   }
 
   const response = await serverApiFetch<ApiResponse<ApiSyllabus>>(
-    `/api/v1/admin/courses/${encodeURIComponent(courseId)}/syllabus`,
+    `${endpointBase}/${encodeURIComponent(courseId)}/syllabus`,
   );
 
   return {
@@ -615,20 +547,10 @@ export async function getAdminIntegrationRows(provider: "zoom" | "youtube"): Pro
   return response.data;
 }
 
-export async function getAdminLearningOperations(): Promise<AdminLearningOperation[]> {
-  if (isMockDataEnabled()) return [
-    { id: "op-1", type: "Session", title: "Elasticity of Demand — Numerical Practice", detail: "Microeconomics Evening · Live now", status: "Live now", href: "/admin/classes/session-live-1" },
-    { id: "op-2", type: "Attendance", title: "Demand Forecasting Discussion", detail: "BBA Economics Morning · awaiting finalization", status: "Needs action", href: "/admin/attendance" },
-    { id: "op-3", type: "Recording", title: "Banking Awareness — Session 4", detail: "Provider processing incomplete", status: "Pending", href: "/admin/integrations/youtube" },
-    { id: "op-4", type: "Batch", title: "BBA Economics · September", detail: "Teacher and schedule required", status: "Draft", href: "/admin/batches/batch-bba-economics-draft" },
-  ];
-  const response = await serverApiFetch<ApiResponse<AdminLearningOperation[]> | PaginatedResponse<AdminLearningOperation>>("/api/v1/admin/learning-operations?per_page=100");
-  return response.data;
-}
 
 export async function getAdminSettings(): Promise<AdminSettingsData> {
   if (isMockDataEnabled()) return {
-    institution: { name: "Institution LMS", shortName: "LMS", primaryPhone: "+977 98XXXXXXXX", supportEmail: "support@example.com", whatsapp: "97798XXXXXXXX", website: "https://learn.example.com", address: "Kathmandu, Nepal" },
+    institution: { name: "Institution LMS", shortName: "LMS", tagline: "Live classes, recordings, tests and support in one clear place.", primaryPhone: "+977 98XXXXXXXX", supportEmail: "support@example.com", whatsapp: "97798XXXXXXXX", website: "https://learn.example.com", address: "Kathmandu, Nepal", logoUrl: null, faviconUrl: null },
     paymentMethods: [{ id: "pm-esewa", name: "eSewa", accountName: "Institution LMS", accountReference: "98XXXXXX01", bankName: "", branch: "", qrImageUrl: null, status: "Active", sort: 1 }, { id: "pm-khalti", name: "Khalti", accountName: "Institution LMS", accountReference: "98XXXXXX02", bankName: "", branch: "", qrImageUrl: null, status: "Active", sort: 2 }, { id: "pm-bank", name: "Bank transfer", accountName: "Institution LMS Pvt. Ltd.", accountReference: "Account ending 2083", bankName: "Nepal Investment Bank", branch: "New Road", qrImageUrl: null, status: "Active", sort: 3 }, { id: "pm-cash", name: "Cash at office", accountName: "Main office", accountReference: "Receipt required", bankName: "", branch: "", qrImageUrl: null, status: "Paused", sort: 4 }],
     security: { publicRegistration: true, emailVerification: true, privilegedMfa: true, forcePasswordChange: true, sessionTimeoutHours: 8, failedLoginAttempts: 5, lockoutMinutes: 15 },
     operations: { maintenanceNotice: false, automaticReceipts: true, dailyIntegrationHealthCheck: true },
@@ -646,7 +568,7 @@ export async function getAdminSettings(): Promise<AdminSettingsData> {
   };
   const response = await serverApiFetch<ApiResponse<ApiAdminSettings>>("/api/v1/admin/settings");
   return {
-    institution: { name: response.data.institution.name, shortName: response.data.institution.short_name, primaryPhone: response.data.institution.primary_phone || "", supportEmail: response.data.institution.support_email || "", whatsapp: response.data.institution.whatsapp || "", website: response.data.institution.website || "", address: response.data.institution.address || "" },
+    institution: { name: response.data.institution.name, shortName: response.data.institution.short_name, tagline: response.data.institution.tagline || "", primaryPhone: response.data.institution.primary_phone || "", supportEmail: response.data.institution.support_email || "", whatsapp: response.data.institution.whatsapp || "", website: response.data.institution.website || "", address: response.data.institution.address || "", logoUrl: response.data.institution.logo_url || null, faviconUrl: response.data.institution.favicon_url || null },
     paymentMethods: response.data.payment_methods.map((item) => ({ id: item.id, name: item.name, accountName: item.account_name || "", accountReference: item.account_reference || "", bankName: item.bank_name || "", branch: item.branch || "", qrImageUrl: item.qr_image_url || null, status: titleCase(item.status), sort: item.sort_order })),
     security: { publicRegistration: response.data.security.public_registration, emailVerification: response.data.security.email_verification, privilegedMfa: response.data.security.privileged_mfa, forcePasswordChange: response.data.security.force_password_change, sessionTimeoutHours: response.data.security.session_timeout_hours, failedLoginAttempts: response.data.security.failed_login_attempts, lockoutMinutes: response.data.security.lockout_minutes },
     operations: { maintenanceNotice: response.data.operations.maintenance_notice, automaticReceipts: response.data.operations.automatic_receipts, dailyIntegrationHealthCheck: response.data.operations.daily_integration_health_check },

@@ -10,6 +10,9 @@ enum IntegrationProvider: string
     // Notification delivery, configured from the admin panel.
     case Sms = 'sms';
 
+    // Push notifications via Expo — no admin configuration needed, unlike Sms.
+    case Push = 'push';
+
     // Payment gateway, configured from the admin panel.
     case Esewa = 'esewa';
 
@@ -19,6 +22,7 @@ enum IntegrationProvider: string
             self::Zoom => 'Zoom',
             self::Youtube => 'Youtube',
             self::Sms => 'Sms',
+            self::Push => 'Push',
             self::Esewa => 'Esewa',
         };
     }

@@ -3,6 +3,7 @@ import { ListFilters } from "@/components/list-filters";
 import { DataTable } from "@/components/portal-components";
 import { AlertBox, ButtonLink, MetricCard, PageHeader, Panel, StatusBadge } from "@/components/ui";
 import { getAccountingAdjustments } from "@/lib/data/accounting";
+import { portalPath } from "@/lib/portal-path";
 import { firstParam, matchesQuery, type PageSearchParams } from "@/lib/search-params";
 import { formatNpr } from "@/lib/utils";
 
@@ -14,10 +15,11 @@ export default async function AccountingAdjustmentsPage({ searchParams }: { sear
   const data = await getAccountingAdjustments();
   const types = [...new Set(data.items.map((item) => item.type))].sort();
   const filtered = data.items.filter((item) => matchesQuery(q, item.id, item.payment, item.student, item.reason) && (!status || item.status === status) && (!type || item.type === type));
+  const [base, newPath] = await Promise.all([portalPath("/accounting/adjustments"), portalPath("/accounting/adjustments/new")]);
 
   return (
     <>
-      <PageHeader eyebrow="Financial corrections" title="Adjustments & Refunds" description="Every refund, reversal and credit requires explicit authorization and a permanent reason." actions={<ButtonLink href="/accounting/adjustments/new"><Plus className="h-4 w-4" />New adjustment</ButtonLink>} />
+      <PageHeader eyebrow="Financial corrections" title="Adjustments & Refunds" description="Every refund, reversal and credit requires explicit authorization and a permanent reason." actions={<ButtonLink href={newPath}><Plus className="h-4 w-4" />New adjustment</ButtonLink>} />
       <div className="grid gap-4 sm:grid-cols-3">
         <MetricCard label="Pending review" value={String(data.metrics.pending)} icon={AlertTriangle} tone="amber" />
         <MetricCard label="Completed this month" value={String(data.metrics.completedMonth)} icon={ArrowDownUp} tone="blue" />
@@ -28,7 +30,7 @@ export default async function AccountingAdjustmentsPage({ searchParams }: { sear
         <ListFilters
           searchValue={q}
           searchPlaceholder="Search adjustment, payment or student"
-          resetHref="/accounting/adjustments"
+          resetHref={base}
           fields={[
             { name: "type", label: "Adjustment type", value: type, options: [{ value: "", label: "All types" }, ...types.map((item) => ({ value: item, label: item }))] },
             { name: "status", label: "Adjustment status", value: status, options: [{ value: "", label: "All statuses" }, { value: "Pending", label: "Pending" }, { value: "Completed", label: "Completed" }, { value: "Rejected", label: "Rejected" }] },

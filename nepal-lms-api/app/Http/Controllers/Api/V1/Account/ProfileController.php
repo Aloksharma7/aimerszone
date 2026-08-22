@@ -93,7 +93,11 @@ class ProfileController extends Controller
                 'platform' => $this->platformFrom($session->user_agent),
                 'location' => $session->ip_address,
                 'last_active_at' => now()->parse('@'.$session->last_activity)->toIso8601String(),
-                'current' => $session->id === $request->session()->getId(),
+                // A token-authenticated (mobile) request has no session store
+                // at all, so it can never be "the current session" in this
+                // list — asking for its session ID unconditionally crashed
+                // the whole profile endpoint for every mobile user.
+                'current' => $request->hasSession() && $session->id === $request->session()->getId(),
             ])
             ->all();
     }

@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { NotificationBell } from "@/components/notification-bell";
 import {
-  AlertTriangle,
   Bell,
   BookOpen,
   CalendarDays,
@@ -32,7 +31,6 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   UserRound,
-  UserPlus,
   Users,
   Video,
   WalletCards,
@@ -65,6 +63,7 @@ const navByRole: Record<PortalRole, NavItem[]> = {
     { label: "PDFs & Resources", href: "/student/resources", icon: FileText, permission: "resources.view" },
     { label: "Tests", href: "/student/tests", icon: ClipboardCheck, permission: "tests.view" },
     { label: "Payments", href: "/student/payments", icon: CreditCard, permission: "payments.view" },
+    { label: "Receipts", href: "/student/receipts", icon: ReceiptText, permission: "payments.view" },
     { label: "Notifications", href: "/student/notifications", icon: Bell },
     { label: "Profile & Security", href: "/student/profile", icon: UserRound },
     { label: "Support", href: "/student/support", icon: Headphones },
@@ -83,22 +82,29 @@ const navByRole: Record<PortalRole, NavItem[]> = {
    * one, so the sidebar shows every capability regardless of which URL
    * prefix (/staff or /accounting) is currently open — see `accounting`
    * below, which reuses this exact array rather than a shorter one.
+   *
+   * Every href stays under /staff — the underlying pages are shared with
+   * /accounting (portalPath() keeps internal links in whichever portal the
+   * request came from), but a staff member's own sidebar should never show
+   * them a URL for a portal nobody told them they were in.
+   *
+   * Financial Reports and Outstanding are deliberately not here: those are
+   * institution-wide figures, kept to admin only (reports.financial), not
+   * part of the day-to-day enrollment-and-payments work this role does.
    */
   staff: [
     { label: "Dashboard", href: "/staff/dashboard", icon: LayoutDashboard },
     { label: "Courses", href: "/staff/courses", icon: BookOpen, permission: "courses.view" },
-    { label: "Enroll a Student", href: "/staff/enroll", icon: UserPlus, permission: "students.manage" },
+    { label: "Categories", href: "/staff/categories", icon: FolderTree, permission: "categories.manage" },
     { label: "Students", href: "/staff/students", icon: Users, permission: "students.view" },
     { label: "Payment Submissions", href: "/staff/payment-submissions", icon: WalletCards, permission: "payments.view" },
     { label: "Enrollments", href: "/staff/enrollments", icon: GraduationCap, permission: "enrollments.view" },
     { label: "Account Assistance", href: "/staff/support-actions", icon: Headphones, permission: "students.manage" },
     { label: "Support Inbox", href: "/staff/support", icon: MessageSquare, permission: "support.view" },
-    { label: "Payment Review", href: "/accounting/payments", icon: CreditCard, permission: "payments.review" },
-    { label: "Receipts", href: "/accounting/receipts", icon: ReceiptText, permission: "payments.view" },
-    { label: "Adjustments", href: "/accounting/adjustments", icon: CreditCard, permission: "payments.adjust" },
-    { label: "Refunds", href: "/accounting/refunds", icon: RotateCcw, permission: "payments.refund" },
-    { label: "Financial Reports", href: "/accounting/reports/collections", icon: FileBarChart, permission: "reports.view" },
-    { label: "Outstanding", href: "/accounting/reports/outstanding", icon: AlertTriangle, permission: "reports.view" },
+    { label: "Review Payments", href: "/staff/payments", icon: CreditCard, permission: "payments.review" },
+    { label: "Receipts", href: "/staff/receipts", icon: ReceiptText, permission: "payments.view" },
+    { label: "Adjustments", href: "/staff/adjustments", icon: CreditCard, permission: "payments.adjust" },
+    { label: "Refunds", href: "/staff/refunds", icon: RotateCcw, permission: "payments.refund" },
   ],
   get accounting() {
     return navByRole.staff;
@@ -110,7 +116,6 @@ const navByRole: Record<PortalRole, NavItem[]> = {
     { label: "FAQs", href: "/admin/faqs", icon: CircleHelp, permission: "faqs.manage" },
     { label: "Batches", href: "/admin/batches", icon: CalendarDays, permission: "batches.view" },
     { label: "Users & Roles", href: "/admin/users", icon: Users, permission: "users.view" },
-    { label: "Learning Operations", href: "/admin/learning-operations", icon: MonitorPlay },
     { label: "Finance Oversight", href: "/admin/finance", icon: WalletCards, permission: "payments.view" },
 
     /*
@@ -251,12 +256,14 @@ export function PortalShell({
   user,
   mockMode,
   institutionName,
+  institutionLogoUrl,
   children,
 }: {
   role: PortalRole;
   user: SessionUser;
   mockMode: boolean;
   institutionName?: string;
+  institutionLogoUrl?: string | null;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -340,7 +347,7 @@ export function PortalShell({
     <div className="min-h-screen bg-canvas">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[268px] border-r border-slate-800 bg-brand-950 lg:flex lg:flex-col">
         <div className="border-b border-white/10 px-5 py-5">
-          <Brand href={`/${role}/dashboard`} light name={institutionName} />
+          <Brand href={`/${role}/dashboard`} light name={institutionName} logoUrl={institutionLogoUrl} />
         </div>
         <div className="px-5 pt-5">
           <div className="rounded-xl border border-white/10 bg-white/[0.06] p-3">
@@ -374,7 +381,7 @@ export function PortalShell({
           <button type="button" className="absolute inset-0 bg-slate-950/55" onClick={() => setDrawerOpen(false)} aria-label="Close navigation" />
           <aside className="relative flex h-full w-[300px] max-w-[86vw] flex-col bg-brand-950 shadow-float">
             <div className="flex items-center justify-between border-b border-white/10 p-4">
-              <Brand href={`/${role}/dashboard`} light name={institutionName} />
+              <Brand href={`/${role}/dashboard`} light name={institutionName} logoUrl={institutionLogoUrl} />
               <button type="button" onClick={() => setDrawerOpen(false)} className="flex h-10 w-10 items-center justify-center rounded-lg text-white hover:bg-white/10" aria-label="Close menu"><X className="h-5 w-5" /></button>
             </div>
             <div className="border-b border-white/10 p-4">

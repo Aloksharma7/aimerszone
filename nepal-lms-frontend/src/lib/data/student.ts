@@ -188,12 +188,10 @@ export async function getStudentPayment(paymentId: string): Promise<Payment | nu
 
 export async function getStudentReceipt(receiptId: string, studentName = "Student", studentCode = ""): Promise<StudentReceipt | null> {
   if (isMockDataEnabled()) {
-    const approved = (payments as unknown as Payment[]).find((payment) => payment.status === "Approved");
-    if (!approved) return null;
-    const expectedId = `REC-${approved.id}`;
-    if (receiptId !== expectedId && receiptId !== approved.id) return null;
+    const approved = (payments as unknown as Payment[]).find((payment) => payment.status === "Approved" && payment.receiptId);
+    if (!approved || receiptId !== approved.receiptId) return null;
     return {
-      id: expectedId,
+      id: approved.receiptId as string,
       paymentId: approved.id,
       issuedAt: approved.submitted,
       studentName,
@@ -250,8 +248,10 @@ type ApiStudentReceiptRow = {
 /** Receipts for every approved payment on this account. */
 export async function getStudentReceipts(): Promise<StudentReceiptRow[]> {
   if (isMockDataEnabled()) {
+    const approved = (payments as unknown as Payment[]).find((payment) => payment.status === "Approved" && payment.receiptId);
+    if (!approved) return [];
     return [
-      { id: "rcp-1", paymentId: "pay-1", issuedAt: new Date().toISOString(), courseTitle: "Preview course", batchTitle: "Evening batch", amountNpr: 5500, paymentMethod: "eSewa" },
+      { id: approved.receiptId as string, paymentId: approved.id, issuedAt: approved.submitted, courseTitle: approved.course, batchTitle: approved.batch, amountNpr: approved.amount, paymentMethod: approved.method },
     ];
   }
 

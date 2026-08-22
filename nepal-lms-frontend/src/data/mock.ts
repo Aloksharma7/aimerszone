@@ -417,6 +417,7 @@ export const payments = [
     method: "eSewa",
     reference: "98XXXX2142",
     status: "Approved",
+    receiptId: "rcp-2083-0142",
   },
   {
     id: "PAY-2083-0158",

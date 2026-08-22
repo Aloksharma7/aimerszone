@@ -19,6 +19,7 @@ return [
         'resource_max_kb' => (int) env('LMS_RESOURCE_MAX_KB', 51200),
         'resource_mimes' => ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'xls', 'xlsx', 'zip', 'png', 'jpg', 'jpeg'],
         'image_max_kb' => (int) env('LMS_IMAGE_MAX_KB', 2048),
+        'favicon_max_kb' => (int) env('LMS_FAVICON_MAX_KB', 512),
     ],
 
     'pagination' => [
@@ -50,7 +51,8 @@ return [
             'whatsapp' => '9779800000000',
             'website' => 'https://lms.example.com',
             'address' => 'Kathmandu, Nepal',
-            'logo_url' => null,
+            'logo_path' => null,
+            'favicon_path' => null,
             'tagline' => 'Live classes, recordings, tests and support in one clear place.',
             'map_url' => 'https://www.google.com/maps/search/?api=1&query=Kathmandu%2C%20Nepal',
             'support_hours' => 'Sunday to Friday, 9:00 AM-6:00 PM (Nepal time).',
@@ -201,6 +203,7 @@ return [
             'support.manage' => 'Respond to and resolve support tickets',
             'reports.view' => 'View operational reports',
             'reports.export' => 'Export reports',
+            'reports.financial' => 'View institution-wide collections and outstanding reports',
             'users.view' => 'View user accounts',
             'users.manage' => 'Create and edit user accounts',
             'users.delete' => 'Archive user accounts',
@@ -247,7 +250,7 @@ return [
             // and one more portal to explain during onboarding.
             'staff' => [
                 'courses.view', 'courses.create', 'courses.update', 'courses.publish',
-                'categories.manage', 'faqs.manage',
+                'categories.manage', 'faqs.manage', 'syllabus.manage',
                 'batches.view', 'students.view', 'students.manage', 'enrollments.view', 'enrollments.manage',
                 'payments.view', 'payments.submit', 'payments.review', 'payments.adjust', 'payments.refund',
                 'receipts.view', 'support.view', 'support.manage',
@@ -273,7 +276,7 @@ return [
                 'tests.view', 'tests.manage',
                 'announcements.view', 'announcements.manage',
                 'support.view', 'support.manage',
-                'reports.view', 'reports.export',
+                'reports.view', 'reports.export', 'reports.financial',
                 'users.view', 'users.manage', 'users.delete', 'users.security',
                 'syllabus.manage', 'audit.view',
             ],

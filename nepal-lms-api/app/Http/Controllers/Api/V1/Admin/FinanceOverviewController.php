@@ -54,6 +54,7 @@ class FinanceOverviewController extends Controller
         return match ($payment->risk_label) {
             'duplicate_evidence' => 'Duplicate evidence',
             'short_payment' => 'Short payment',
+            'full_waiver' => 'Full waiver',
             'overpayment' => 'Overpayment',
             default => 'Standard',
         };

@@ -64,6 +64,48 @@ class StaffCapturedPaymentAutoApprovalTest extends TestCase
     }
 
     /**
+     * A genuine scholarship or fee waiver is recorded as a real zero-amount
+     * payment (proof is the institution's authorization slip) rather than a
+     * fake amount that would misstate collections — see
+     * PaymentSubmissionService::riskLabel(). It must still be flagged and
+     * wait on a second reviewer, the same protection a separate "enrollment
+     * request" system used to provide before it was removed.
+     */
+    public function test_a_full_waiver_is_recorded_as_a_genuine_zero_and_still_needs_a_second_reviewer(): void
+    {
+        $batch = $this->makeBatch($this->makeCourse(['price_npr' => 5000]), ['price_npr' => 5000]);
+        $student = $this->makeUser(RoleKey::Student);
+        $staff = $this->makeUser(RoleKey::Staff);
+        $anotherStaff = $this->makeUser(RoleKey::Staff);
+
+        $response = $this->actingAs($staff)
+            ->postJson('/api/v1/staff/payment-submissions', [
+                'student_id' => $student->getKey(),
+                'course_id' => $batch->course_id,
+                'batch_id' => $batch->getKey(),
+                'payment_method' => PaymentMethod::first()->key,
+                'amount_npr' => 0,
+                'payer_name' => $student->name,
+                'payment_date' => now()->toDateString(),
+                'status' => 'submitted',
+                'proof' => UploadedFile::fake()->image('scholarship-slip.jpg'),
+            ])
+            ->assertCreated();
+
+        // Not auto-approved: a waiver still needs a different person to sign off.
+        $response->assertJsonPath('data.status', 'submitted');
+
+        $payment = Payment::findOrFail($response->json('data.id'));
+        $this->assertSame(0, $payment->submitted_amount_npr, 'The receipt must reflect what was actually paid, not the catalogue price.');
+        $this->assertSame('full_waiver', $payment->risk_label);
+
+        $this->actingAs($anotherStaff)
+            ->postJson('/api/v1/accounting/payments/'.$payment->getKey().'/decision', ['decision' => 'approve'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'approved');
+    }
+
+    /**
      * The same forgiving treatment must not extend to evidence the submission
      * itself already flagged as suspicious — a duplicate screenshot still
      * needs a second, different person to look at it.

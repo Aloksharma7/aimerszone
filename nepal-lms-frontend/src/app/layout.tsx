@@ -13,6 +13,11 @@ export async function generateMetadata(): Promise<Metadata> {
       template: `%s | ${settings.name}`,
     },
     description: settings.tagline,
+
+    // Falls back to the bundled icon.svg (app/icon.svg) when no administrator
+    // favicon is set — omitting `icons` entirely here lets that static file
+    // convention apply instead of overriding it with nothing.
+    icons: settings.faviconUrl ? { icon: settings.faviconUrl } : undefined,
   };
 }
 

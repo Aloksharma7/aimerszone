@@ -176,11 +176,14 @@ export function DataTable({
   rows,
   rowKey,
   actions = false,
+  needsAttention,
 }: {
   columns: { key: string; label: string; render?: (row: Record<string, unknown>) => React.ReactNode }[];
   rows: Record<string, unknown>[];
   rowKey: string;
   actions?: boolean;
+  /** Marks a row as needing a decision — a highlighted background instead of a status value buried in a column. */
+  needsAttention?: (row: Record<string, unknown>) => boolean;
 }) {
   const showActions = actions && rows.some((row) => typeof row.href === "string" && String(row.href).startsWith("/"));
   return (
@@ -194,12 +197,20 @@ export function DataTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.map((row) => (
-              <tr key={String(row[rowKey])} className="hover:bg-slate-50/70">
-                {columns.map((column) => <td key={column.key} className="px-4 py-3.5 align-middle text-slate-700">{column.render ? column.render(row) : String(row[column.key] ?? "—")}</td>)}
-                {showActions ? <td className="px-4 py-3.5 text-right">{typeof row.href === "string" && row.href.startsWith("/") ? <ButtonLink href={row.href} variant="outline" size="sm">Open</ButtonLink> : null}</td> : null}
-              </tr>
-            ))}
+            {rows.map((row) => {
+              const attention = needsAttention?.(row) ?? false;
+              return (
+                <tr key={String(row[rowKey])} className={attention ? "bg-amber-50/70 hover:bg-amber-50" : "hover:bg-slate-50/70"}>
+                  {columns.map((column, index) => (
+                    <td key={column.key} className="px-4 py-3.5 align-middle text-slate-700">
+                      {index === 0 && attention ? <span className="mr-2 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden="true" title="Needs a decision" /> : null}
+                      {column.render ? column.render(row) : String(row[column.key] ?? "—")}
+                    </td>
+                  ))}
+                  {showActions ? <td className="px-4 py-3.5 text-right">{typeof row.href === "string" && row.href.startsWith("/") ? <ButtonLink href={row.href} variant="outline" size="sm">Open</ButtonLink> : null}</td> : null}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

@@ -22,6 +22,10 @@ class PaymentResource extends JsonResource
             'proof_preview_available' => $this->hasProof(),
             'course_title' => $this->course?->title,
             'batch_title' => $this->batch?->title,
+
+            // Null whenever automatic receipts are switched off, even for an
+            // approved payment — the frontend must not guess a receipt link.
+            'receipt_id' => $this->receipt?->id,
         ];
     }
 }

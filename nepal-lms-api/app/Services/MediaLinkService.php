@@ -66,12 +66,29 @@ class MediaLinkService
         return $this->sign('media.recording', ['recording' => $recording->getKey()]);
     }
 
+    /**
+     * Returned as a path relative to this API, not an absolute URL.
+     *
+     * temporarySignedRoute() builds an absolute URL from APP_URL, which is
+     * this backend's own address — a different origin from the frontend the
+     * browser is actually on. The frontend's trustedDestination() check
+     * (deliberately) only opens same-origin or explicitly allow-listed HTTPS
+     * links, so it silently refused every signed link: proof, downloads,
+     * receipts, recordings all failed to open with no visible error.
+     *
+     * A relative /media/... path resolves against whatever origin the
+     * frontend is actually running on, which next.config.ts already proxies
+     * through to this API — so the signature (computed from the path and
+     * query only) still verifies once the request arrives here.
+     */
     protected function sign(string $route, array $parameters): array
     {
         $expiresAt = $this->expiresAt();
+        $absolute = URL::temporarySignedRoute($route, $expiresAt, $parameters);
+        $parts = parse_url($absolute);
 
         return [
-            'url' => URL::temporarySignedRoute($route, $expiresAt, $parameters),
+            'url' => ($parts['path'] ?? '/').(isset($parts['query']) ? '?'.$parts['query'] : ''),
             'expires_at' => $expiresAt,
         ];
     }

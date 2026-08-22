@@ -57,7 +57,7 @@ class DeviceGuard
                     'revoked_at' => null,
                     'revoked_reason' => null,
                     'ip_address' => $request->ip(),
-                    'session_id' => $request->session()->getId(),
+                    'session_id' => $this->sessionId($request),
                     'last_active_at' => now(),
                 ])->save();
 
@@ -91,7 +91,7 @@ class DeviceGuard
                 'platform' => $this->platform($request),
                 'browser' => $this->browser($request),
                 'ip_address' => $request->ip(),
-                'session_id' => $request->session()->getId(),
+                'session_id' => $this->sessionId($request),
                 'last_active_at' => now(),
             ]);
         });
@@ -171,6 +171,18 @@ class DeviceGuard
             : $this->platform($request).'|'.$this->browser($request).'|'.$request->userAgent();
 
         return hash('sha256', $material);
+    }
+
+    /**
+     * A token-authenticated mobile request never starts a Laravel session
+     * (EnsureFrontendRequestsAreStateful only does that for stateful-domain
+     * requests) — session_id is purely informational either way, so a mobile
+     * device row is stored with null here rather than the whole method
+     * assuming a session that was never started.
+     */
+    protected function sessionId(Request $request): ?string
+    {
+        return $request->hasSession() ? $request->session()->getId() : null;
     }
 
     protected function label(Request $request): string

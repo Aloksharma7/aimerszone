@@ -32,7 +32,7 @@ export async function ProtectedPortalLayout({
     <SessionProvider user={user}>
       {/* Back-button after sign-out must not reveal the previous session. */}
       <SessionIntegrity />
-      <PortalShell role={chrome} user={user} mockMode={isMockDataEnabled()} institutionName={settings.name}>
+      <PortalShell role={chrome} user={user} mockMode={isMockDataEnabled()} institutionName={settings.name} institutionLogoUrl={settings.logoUrl}>
         {children}
       </PortalShell>
     </SessionProvider>

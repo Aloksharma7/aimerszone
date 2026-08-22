@@ -11,6 +11,7 @@ export type PublicSettings = {
   shortName: string;
   tagline: string;
   logoUrl: string | null;
+  faviconUrl: string | null;
   address: string;
   mapUrl: string;
   website: string | null;
@@ -29,6 +30,7 @@ type ApiPublicSettings = {
   short_name: string | null;
   tagline: string | null;
   logo_url: string | null;
+  favicon_url: string | null;
   timezone: string;
   currency: string;
   address: string | null;
@@ -45,6 +47,7 @@ const fallback: PublicSettings = {
   shortName: siteConfig.shortName,
   tagline: siteConfig.tagline,
   logoUrl: null,
+  faviconUrl: null,
   address: siteConfig.address,
   mapUrl: siteConfig.mapUrl,
   website: null,
@@ -84,6 +87,7 @@ export const getPublicSettings = cache(async (): Promise<PublicSettings> => {
       shortName: data.short_name || fallback.shortName,
       tagline: data.tagline || fallback.tagline,
       logoUrl: data.logo_url,
+      faviconUrl: data.favicon_url,
       address: data.address || fallback.address,
       mapUrl: data.map_url || fallback.mapUrl,
       website: data.website,

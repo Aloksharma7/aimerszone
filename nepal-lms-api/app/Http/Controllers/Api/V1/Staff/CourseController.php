@@ -61,11 +61,18 @@ class CourseController extends Controller
 
         $data = $this->validated($request);
 
+        // Publishing on create is a separate permission from creating, same as
+        // it is on update() below — an officer without it can still draft one.
+        // No Course instance exists yet to run the publish policy against, so
+        // this checks the same underlying permission directly.
+        $publish = ($data['published'] ?? false) && $request->user()->hasPermission('courses.publish');
+
         $course = Course::create(array_merge($data, [
             'slug' => $data['slug'] ?? Str::slug($data['title']),
             'code' => $data['code'] ?? Str::upper(Str::slug(Str::limit($data['title'], 20, ''), '_')),
-            'status' => CourseStatus::Draft->value,
-            'published' => false,
+            'status' => $publish ? CourseStatus::Published->value : CourseStatus::Draft->value,
+            'published' => $publish,
+            'published_at' => $publish ? now() : null,
             'owner_id' => $request->user()->getKey(),
             'created_by' => $request->user()->getKey(),
             'updated_by' => $request->user()->getKey(),

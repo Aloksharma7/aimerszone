@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\FeatureGate;
 use App\Services\SettingsRepository;
 use App\Support\ApiResponse;
+use App\Support\PublicAssetUrl;
 use Illuminate\Http\JsonResponse;
 
 /**
@@ -29,7 +30,8 @@ class SettingsController extends Controller
             'institution_name' => $institution['name'] ?? config('app.name'),
             'short_name' => $institution['short_name'] ?? null,
             'tagline' => $institution['tagline'] ?? null,
-            'logo_url' => $institution['logo_url'] ?? null,
+            'logo_url' => $this->assetUrl($institution['logo_path'] ?? null),
+            'favicon_url' => $this->assetUrl($institution['favicon_path'] ?? null),
             'timezone' => 'Asia/Kathmandu',
             'currency' => 'NPR',
             'address' => $institution['address'] ?? null,
@@ -58,5 +60,10 @@ class SettingsController extends Controller
                 ? $this->settings->string('operations.maintenance_message')
                 : null,
         ]);
+    }
+
+    protected function assetUrl(?string $path): ?string
+    {
+        return PublicAssetUrl::for($path);
     }
 }

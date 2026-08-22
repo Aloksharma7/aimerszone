@@ -18,7 +18,7 @@ const emptyDraft: Draft = { id: null, name: "", description: "", isActive: true 
  * creation entirely on a fresh install: the course form requires a category and
  * the dropdown could never be filled.
  */
-export function CategoryManager({ categories }: { categories: AdminCategory[] }) {
+export function CategoryManager({ categories, endpointBase = "/api/v1/admin/categories" }: { categories: AdminCategory[]; endpointBase?: string }) {
   const router = useRouter();
   const mockMode = isMockDataEnabled();
 
@@ -51,7 +51,7 @@ export function CategoryManager({ categories }: { categories: AdminCategory[] })
       }
 
       await browserRequest({
-        url: editing ? `/api/v1/admin/categories/${encodeURIComponent(draft.id as string)}` : "/api/v1/admin/categories",
+        url: editing ? `${endpointBase}/${encodeURIComponent(draft.id as string)}` : endpointBase,
         method: editing ? "PATCH" : "POST",
         data: {
           name: draft.name.trim(),
@@ -80,7 +80,7 @@ export function CategoryManager({ categories }: { categories: AdminCategory[] })
     }
 
     try {
-      await browserRequest({ url: `/api/v1/admin/categories/${encodeURIComponent(category.id)}`, method: "DELETE" });
+      await browserRequest({ url: `${endpointBase}/${encodeURIComponent(category.id)}`, method: "DELETE" });
       setNotice("Category deleted.");
       await refreshPublicCatalogue({ tags: ["public-categories", "public-courses"] });
       router.refresh();

@@ -15,7 +15,7 @@ export default async function PublicLayout({ children }: { children: React.React
     <div className="min-h-screen bg-white">
       <PublicHeader
         session={user ? { name: user.name, portalHome: preferredPortalHome(user) } : null}
-        branding={{ name: settings.name }}
+        branding={{ name: settings.name, logoUrl: settings.logoUrl }}
       />
       <main id="main-content">{children}</main>
       <PublicFooter settings={settings} />

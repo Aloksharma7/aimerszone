@@ -25,10 +25,12 @@ export function SyllabusBuilder({
   courseId,
   courseTitle,
   initialModules,
+  endpointBase = "/api/v1/admin/courses",
 }: {
   courseId: string;
   courseTitle: string;
   initialModules: SyllabusModule[];
+  endpointBase?: string;
 }) {
   const router = useRouter();
   const mockMode = isMockDataEnabled();
@@ -87,7 +89,7 @@ export function SyllabusBuilder({
       }
 
       await browserRequest({
-        url: `/api/v1/admin/courses/${encodeURIComponent(courseId)}/syllabus`,
+        url: `${endpointBase}/${encodeURIComponent(courseId)}/syllabus`,
         method: "PUT",
         data: {
           modules: modules.map((module) => ({

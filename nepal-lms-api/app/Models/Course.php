@@ -5,14 +5,13 @@ namespace App\Models;
 use App\Enums\AccessType;
 use App\Enums\BatchStatus;
 use App\Enums\CourseStatus;
+use App\Support\PublicAssetUrl;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class Course extends Model
 {
@@ -109,15 +108,7 @@ class Course extends Model
      */
     public function thumbnailUrl(): ?string
     {
-        if (! $this->thumbnail_path) {
-            return null;
-        }
-
-        if (Str::startsWith($this->thumbnail_path, ['http://', 'https://'])) {
-            return $this->thumbnail_path;
-        }
-
-        return Storage::disk('public')->url($this->thumbnail_path);
+        return PublicAssetUrl::for($this->thumbnail_path);
     }
 
     public function isFree(): bool

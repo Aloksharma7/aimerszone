@@ -1,0 +1,7 @@
+# EAS Build archives the whole git repo by default, but this repo also holds
+# the Laravel API and Next.js frontend, which the mobile build never needs —
+# and nepal-lms-api/storage/app/public is a symlink (from `artisan storage:link`)
+# that Windows can't recreate without elevated privileges, crashing the upload
+# with EPERM. Exclude both unrelated projects entirely.
+nepal-lms-api/
+nepal-lms-frontend/

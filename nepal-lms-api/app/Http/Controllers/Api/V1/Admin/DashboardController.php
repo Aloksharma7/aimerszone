@@ -170,7 +170,7 @@ class DashboardController extends Controller
 
         $brand = $this->score([
             filled($institution['name'] ?? null) && $institution['name'] !== 'Institution LMS',
-            filled($institution['logo_url'] ?? null),
+            filled($institution['logo_path'] ?? null),
             filled($institution['support_email'] ?? null),
             filled($institution['primary_phone'] ?? null),
             filled($institution['address'] ?? null),

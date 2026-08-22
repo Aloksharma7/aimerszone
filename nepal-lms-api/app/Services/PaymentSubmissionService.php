@@ -149,6 +149,13 @@ class PaymentSubmissionService
             return 'duplicate_evidence';
         }
 
+        // A genuine scholarship or fee waiver, not a mistake — flagged
+        // distinctly from an ordinary short payment so a reviewer does not
+        // read it as an error to chase up with the student.
+        if ($submitted === 0) {
+            return 'full_waiver';
+        }
+
         if ($submitted < $expected) {
             return 'short_payment';
         }

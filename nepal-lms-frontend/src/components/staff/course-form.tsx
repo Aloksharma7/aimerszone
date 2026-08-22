@@ -247,7 +247,9 @@ export function CourseForm({
                     <p className="w-full text-xs text-slate-500">JPG, PNG or WebP · maximum 2 MB</p>
                   </div>
                 ) : (
-                  <p className="text-xs text-slate-500">Save the course first, then come back here to upload an image directly.</p>
+                  <AlertBox title="Save the course first to upload an image" tone="info">
+                    <p>Image upload needs a saved course to attach the file to. Save a draft below, then reopen it here — or paste a URL now instead.</p>
+                  </AlertBox>
                 )}
                 <Field label="Or paste an image URL" error={errors.thumbnailUrl}><input value={values.thumbnailUrl && !values.thumbnailUrl.startsWith("blob:") ? values.thumbnailUrl : ""} onChange={(event) => update("thumbnailUrl", event.target.value || null)} type="url" className={fieldClass} disabled={readOnly || thumbnailBusy} placeholder="https://cdn.example.com/course.jpg" /></Field>
               </div>

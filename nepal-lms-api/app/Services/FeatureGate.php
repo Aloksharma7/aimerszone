@@ -49,6 +49,12 @@ class FeatureGate
         return $this->settings->bool('features.student_support_tickets', true);
     }
 
+    /** Unlike SMS, Expo's push service needs no credentials — on by default. */
+    public function push(): bool
+    {
+        return $this->settings->bool('features.push_notifications', true);
+    }
+
     public function freeCourses(): bool
     {
         return $this->settings->bool('features.public_free_courses', true);

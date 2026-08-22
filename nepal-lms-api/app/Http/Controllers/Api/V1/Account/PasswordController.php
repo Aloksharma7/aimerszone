@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Api\V1\Account;
 
 use App\Http\Controllers\Controller;
 use App\Services\AuditLogger;
+use App\Services\AuthenticationRevoker;
 use App\Services\SettingsRepository;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Validation\ValidationException;
@@ -18,6 +18,7 @@ class PasswordController extends Controller
     public function __construct(
         protected SettingsRepository $settings,
         protected AuditLogger $audit,
+        protected AuthenticationRevoker $revoker,
     ) {}
 
     public function update(Request $request): JsonResponse
@@ -41,24 +42,18 @@ class PasswordController extends Controller
             'password_changed_at' => now(),
         ])->save();
 
-        // Other devices lose access; this browser stays signed in.
-        $this->revokeOtherSessions($request);
-        $request->session()->regenerate();
+        // Other devices lose access; this one — whichever mechanism it used
+        // to authenticate — stays signed in.
+        $this->revoker->revokeOthers($request, $user);
+
+        // Only a real cookie session needs a fresh ID; a token request has
+        // none to regenerate.
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
 
         $this->audit->log('account.password_changed', $user, $user);
 
         return ApiResponse::message('Your password has been updated on this device and others were signed out.');
-    }
-
-    protected function revokeOtherSessions(Request $request): void
-    {
-        if (config('session.driver') !== 'database') {
-            return;
-        }
-
-        DB::table(config('session.table', 'sessions'))
-            ->where('user_id', $request->user()->getKey())
-            ->where('id', '!=', $request->session()->getId())
-            ->delete();
     }
 }

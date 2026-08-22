@@ -2,13 +2,12 @@ import { GraduationCap, Plus, Search } from "lucide-react";
 import { ApiExportLink } from "@/components/api-actions";
 import { ListFilters } from "@/components/list-filters";
 import { DataTable } from "@/components/portal-components";
-import { ButtonLink, MetricCard, PageHeader, Panel, StatusBadge } from "@/components/ui";
+import { MetricCard, PageHeader, Panel, StatusBadge } from "@/components/ui";
 import { getStaffEnrollments } from "@/lib/data/staff";
 import { buildQueryString, firstParam, matchesQuery, type PageSearchParams } from "@/lib/search-params";
 import { portalPath } from "@/lib/portal-path";
 
 export default async function StaffEnrollmentsPage({ searchParams }: { searchParams: PageSearchParams }) {
-  const enrollmentRequestPath = await portalPath("/staff/enrollment-requests/new");
   const enrollmentsBase = await portalPath("/staff/enrollments");
   const raw = await searchParams;
   const q = firstParam(raw.q);
@@ -21,7 +20,7 @@ export default async function StaffEnrollmentsPage({ searchParams }: { searchPar
 
   return (
     <>
-      <PageHeader eyebrow="Access overview" title="Enrollments" description="View enrollment status and create requests. Financial approval and access override remain outside this role." actions={<><ApiExportLink href={`/api/v1/staff/enrollments/export${exportQuery}`} label="Export" /><ButtonLink href={enrollmentRequestPath}><Plus className="h-4 w-4" />Enrollment request</ButtonLink></>} />
+      <PageHeader eyebrow="Access overview" title="Enrollments" description="View enrollment status across courses and batches." actions={<ApiExportLink href={`/api/v1/staff/enrollments/export${exportQuery}`} label="Export" />} />
       <div className="grid gap-4 sm:grid-cols-3">
         <MetricCard label="Active" value={String(active)} icon={GraduationCap} tone="green" />
         <MetricCard label="All enrollments" value={String(enrollments.length)} icon={Plus} tone="blue" />

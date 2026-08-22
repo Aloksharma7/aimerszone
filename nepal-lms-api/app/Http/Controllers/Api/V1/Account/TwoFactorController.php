@@ -3,16 +3,23 @@
 namespace App\Http\Controllers\Api\V1\Account;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\TwoFactorService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 /**
  * Two-step enrollment: the first call returns a secret and QR payload, the
  * second confirms a generated code before the factor becomes active.
+ *
+ * The pending secret is held in the cache, keyed by user id, rather than the
+ * session — the web app has a session either way, but a mobile request
+ * authenticated by a bearer token has none, and this flow must work
+ * identically for both.
  */
 class TwoFactorController extends Controller
 {
@@ -27,7 +34,7 @@ class TwoFactorController extends Controller
 
         // Confirmation step: a code is present, so verify against the pending secret.
         if ($request->filled('code')) {
-            $pending = $request->session()->get('two_factor.pending_secret');
+            $pending = Cache::get($this->pendingSecretKey($user));
 
             if ($pending === null) {
                 return ApiResponse::error('Start the setup again to receive a new secret.', 'no_pending_setup', 409);
@@ -45,7 +52,7 @@ class TwoFactorController extends Controller
                 'two_factor_confirmed_at' => now(),
             ])->save();
 
-            $request->session()->forget('two_factor.pending_secret');
+            Cache::forget($this->pendingSecretKey($user));
             $this->audit->log('account.two_factor_enabled', $user, $user);
 
             // Recovery codes are shown exactly once.
@@ -53,12 +60,17 @@ class TwoFactorController extends Controller
         }
 
         $secret = $this->twoFactor->generateSecret();
-        $request->session()->put('two_factor.pending_secret', $secret);
+        Cache::put($this->pendingSecretKey($user), $secret, now()->addMinutes(10));
 
         return ApiResponse::item([
             'enabled' => false,
             'secret' => $secret,
             'otpauth_url' => $this->twoFactor->provisioningUri($user, $secret),
         ])->header('Cache-Control', 'no-store, private');
+    }
+
+    protected function pendingSecretKey(User $user): string
+    {
+        return "two_factor_pending_secret:{$user->getKey()}";
     }
 }

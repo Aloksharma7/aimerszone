@@ -22,7 +22,7 @@ class PaymentController extends Controller
     {
         $payments = Payment::query()
             ->where('user_id', $request->user()->getKey())
-            ->with(['course:id,title', 'batch:id,title', 'method:id,name'])
+            ->with(['course:id,title', 'batch:id,title', 'method:id,name', 'receipt:id,payment_id'])
             ->orderByDesc('submitted_at')
             ->paginate($this->perPage(20));
 

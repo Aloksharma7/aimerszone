@@ -6,11 +6,13 @@ import {
   AlertTriangle,
   CheckCircle2,
   CloudCog,
+  ImageUp,
   LoaderCircle,
   Megaphone,
   Save,
   Send,
   ShieldCheck,
+  Trash2,
   Unplug,
 } from "lucide-react";
 import { AlertBox, Badge, Button, Panel, StatusBadge, fieldClass } from "@/components/ui";
@@ -237,10 +239,56 @@ export function AnnouncementComposer({ batches, roles }: { batches: AdminBatch[]
 }
 
 export function SettingsManager({ initialData }: { initialData: AdminSettingsData }) {
+  const { toast } = useToast();
   const [values, setValues] = useState(initialData);
   const [notice, setNotice] = useState<{ tone: "success" | "danger"; title: string; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [qrBusyId, setQrBusyId] = useState<string | null>(null);
+  const [brandAssetBusy, setBrandAssetBusy] = useState<"logo" | "favicon" | null>(null);
+
+  async function uploadBrandAsset(asset: "logo" | "favicon", file: File) {
+    setBrandAssetBusy(asset);
+    try {
+      if (mockMode) {
+        await new Promise((resolve) => window.setTimeout(resolve, 300));
+        const previewUrl = URL.createObjectURL(file);
+        setValues((current) => ({ ...current, institution: { ...current.institution, [asset === "logo" ? "logoUrl" : "faviconUrl"]: previewUrl } }));
+        toast({ tone: "success", title: "Preview validated", message: "Preview mode does not persist the upload." });
+        return;
+      }
+      const data = new FormData();
+      data.append(asset, file);
+      const response = await browserRequest<ApiResponse<{ logo_url?: string; favicon_url?: string }>>({
+        url: `/api/v1/admin/settings/institution/${asset}`,
+        method: "POST",
+        data,
+        headers: { "Idempotency-Key": createIdempotencyKey(`institution-${asset}-upload`) },
+      });
+      const url = asset === "logo" ? response.data.logo_url : response.data.favicon_url;
+      setValues((current) => ({ ...current, institution: { ...current.institution, [asset === "logo" ? "logoUrl" : "faviconUrl"]: url ?? null } }));
+      toast({ tone: "success", title: asset === "logo" ? "Logo updated" : "Favicon updated" });
+    } catch (caught) {
+      const error = caught as Partial<NormalizedApiError>;
+      toast({ tone: "danger", title: asset === "logo" ? "Logo not uploaded" : "Favicon not uploaded", message: error.message || "The request could not be completed." });
+    } finally {
+      setBrandAssetBusy(null);
+    }
+  }
+
+  async function removeBrandAsset(asset: "logo" | "favicon") {
+    setBrandAssetBusy(asset);
+    try {
+      if (!mockMode) await browserRequest({ url: `/api/v1/admin/settings/institution/${asset}`, method: "DELETE" });
+      else await new Promise((resolve) => window.setTimeout(resolve, 250));
+      setValues((current) => ({ ...current, institution: { ...current.institution, [asset === "logo" ? "logoUrl" : "faviconUrl"]: null } }));
+      toast({ tone: "success", title: asset === "logo" ? "Logo removed" : "Favicon removed" });
+    } catch (caught) {
+      const error = caught as Partial<NormalizedApiError>;
+      toast({ tone: "danger", title: asset === "logo" ? "Logo not removed" : "Favicon not removed", message: error.message || "The request could not be completed." });
+    } finally {
+      setBrandAssetBusy(null);
+    }
+  }
 
   // Secrets are write-only: the API never returns the stored value, only
   // whether one is configured. A blank field on save means "leave it alone".
@@ -282,7 +330,7 @@ export function SettingsManager({ initialData }: { initialData: AdminSettingsDat
   async function save() {
     setBusy(true); setNotice(null);
     try {
-      if (!mockMode) await browserRequest<ApiResponse<AdminSettingsData>>({ url: "/api/v1/admin/settings", method: "PATCH", data: { institution: { name: values.institution.name, short_name: values.institution.shortName, primary_phone: values.institution.primaryPhone, support_email: values.institution.supportEmail, whatsapp: values.institution.whatsapp, website: values.institution.website, address: values.institution.address }, payment_methods: values.paymentMethods.map((item) => ({ id: item.id, name: item.name, account_name: item.accountName, account_reference: item.accountReference, bank_name: item.bankName, branch: item.branch, status: item.status.toLowerCase(), sort_order: item.sort })), security: { public_registration: values.security.publicRegistration, email_verification: values.security.emailVerification, privileged_mfa: values.security.privilegedMfa, force_password_change: values.security.forcePasswordChange, session_timeout_hours: values.security.sessionTimeoutHours, failed_login_attempts: values.security.failedLoginAttempts, lockout_minutes: values.security.lockoutMinutes }, operations: { maintenance_notice: values.operations.maintenanceNotice, automatic_receipts: values.operations.automaticReceipts, daily_integration_health_check: values.operations.dailyIntegrationHealthCheck }, sms: { provider: values.sms.provider, endpoint: values.sms.endpoint, sender_id: values.sms.senderId, token: smsToken || undefined, notify_class_starting: values.sms.notifyClassStarting, notify_payment_decision: values.sms.notifyPaymentDecision, notify_enrollment_activated: values.sms.notifyEnrollmentActivated }, esewa: { environment: values.esewa.environment, merchant_code: values.esewa.merchantCode, secret_key: esewaSecretKey || undefined } }, headers: { "Idempotency-Key": createIdempotencyKey("admin-settings") } });
+      if (!mockMode) await browserRequest<ApiResponse<AdminSettingsData>>({ url: "/api/v1/admin/settings", method: "PATCH", data: { institution: { name: values.institution.name, short_name: values.institution.shortName, tagline: values.institution.tagline, primary_phone: values.institution.primaryPhone, support_email: values.institution.supportEmail, whatsapp: values.institution.whatsapp, website: values.institution.website, address: values.institution.address }, payment_methods: values.paymentMethods.map((item) => ({ id: item.id, name: item.name, account_name: item.accountName, account_reference: item.accountReference, bank_name: item.bankName, branch: item.branch, status: item.status.toLowerCase(), sort_order: item.sort })), security: { public_registration: values.security.publicRegistration, email_verification: values.security.emailVerification, privileged_mfa: values.security.privilegedMfa, force_password_change: values.security.forcePasswordChange, session_timeout_hours: values.security.sessionTimeoutHours, failed_login_attempts: values.security.failedLoginAttempts, lockout_minutes: values.security.lockoutMinutes }, operations: { maintenance_notice: values.operations.maintenanceNotice, automatic_receipts: values.operations.automaticReceipts, daily_integration_health_check: values.operations.dailyIntegrationHealthCheck }, sms: { provider: values.sms.provider, endpoint: values.sms.endpoint, sender_id: values.sms.senderId, token: smsToken || undefined, notify_class_starting: values.sms.notifyClassStarting, notify_payment_decision: values.sms.notifyPaymentDecision, notify_enrollment_activated: values.sms.notifyEnrollmentActivated }, esewa: { environment: values.esewa.environment, merchant_code: values.esewa.merchantCode, secret_key: esewaSecretKey || undefined } }, headers: { "Idempotency-Key": createIdempotencyKey("admin-settings") } });
       else await new Promise((resolve) => window.setTimeout(resolve, 350));
       if (smsToken) setValues((current) => ({ ...current, sms: { ...current.sms, tokenConfigured: true } }));
       if (esewaSecretKey) setValues((current) => ({ ...current, esewa: { ...current.esewa, secretKeyConfigured: true } }));
@@ -292,7 +340,64 @@ export function SettingsManager({ initialData }: { initialData: AdminSettingsDat
     finally { setBusy(false); }
   }
   return (
-    <div className="space-y-6"><RequestNotice notice={notice} /><Panel><h2 className="text-xl font-bold text-slate-950">Institution identity</h2><div className="mt-5 grid gap-5 sm:grid-cols-2"><Field label="Institution name"><input className={inputClass} value={values.institution.name} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, name: event.target.value } }))} /></Field><Field label="Short name"><input className={inputClass} value={values.institution.shortName} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, shortName: event.target.value } }))} /></Field><Field label="Support email"><input className={inputClass} type="email" value={values.institution.supportEmail} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, supportEmail: event.target.value } }))} /></Field><Field label="Primary phone"><input className={inputClass} value={values.institution.primaryPhone} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, primaryPhone: event.target.value } }))} /></Field><Field label="WhatsApp"><input className={inputClass} value={values.institution.whatsapp} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, whatsapp: event.target.value } }))} /></Field><Field label="Public website"><input className={inputClass} type="url" value={values.institution.website} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, website: event.target.value } }))} /></Field><div className="sm:col-span-2"><Field label="Address"><textarea className={textareaClass} value={values.institution.address} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, address: event.target.value } }))} /></Field></div></div></Panel>
+    <div className="space-y-6"><RequestNotice notice={notice} /><Panel><h2 className="text-xl font-bold text-slate-950">Institution identity</h2><div className="mt-5 grid gap-5 sm:grid-cols-2"><Field label="Institution name"><input className={inputClass} value={values.institution.name} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, name: event.target.value } }))} /></Field><Field label="Short name"><input className={inputClass} value={values.institution.shortName} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, shortName: event.target.value } }))} /></Field><div className="sm:col-span-2"><Field label="Tagline" hint="Shown under the logo on the login screen and used as the site description."><input className={inputClass} maxLength={160} value={values.institution.tagline} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, tagline: event.target.value } }))} /></Field></div><Field label="Support email"><input className={inputClass} type="email" value={values.institution.supportEmail} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, supportEmail: event.target.value } }))} /></Field><Field label="Primary phone"><input className={inputClass} value={values.institution.primaryPhone} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, primaryPhone: event.target.value } }))} /></Field><Field label="WhatsApp"><input className={inputClass} value={values.institution.whatsapp} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, whatsapp: event.target.value } }))} /></Field><Field label="Public website"><input className={inputClass} type="url" value={values.institution.website} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, website: event.target.value } }))} /></Field><div className="sm:col-span-2"><Field label="Address"><textarea className={textareaClass} value={values.institution.address} onChange={(event) => setValues((current) => ({ ...current, institution: { ...current.institution, address: event.target.value } }))} /></Field></div></div>
+      <div className="mt-6 grid gap-6 border-t border-slate-100 pt-6 sm:grid-cols-2">
+        <div>
+          <p className="text-sm font-semibold text-slate-800">Logo</p>
+          <p className="mt-1 text-xs text-slate-500">Shown in the header, footer and portal sidebar in place of the default mark.</p>
+          <div className="mt-3 flex items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+              {values.institution.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded asset, not a Next-optimized asset
+                <img src={values.institution.logoUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="px-2 text-center text-[10px] text-slate-400">No logo</span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <label className={cn("inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50", brandAssetBusy === "logo" && "pointer-events-none opacity-50")}>
+                {brandAssetBusy === "logo" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <ImageUp className="h-3.5 w-3.5" />}
+                {values.institution.logoUrl ? "Replace" : "Upload"}
+                <input type="file" accept="image/jpeg,image/png,image/webp,image/svg+xml" className="sr-only" disabled={brandAssetBusy === "logo"} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadBrandAsset("logo", file); event.target.value = ""; }} />
+              </label>
+              {values.institution.logoUrl ? (
+                <button type="button" onClick={() => void removeBrandAsset("logo")} disabled={brandAssetBusy === "logo"} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 px-3 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
+                  <Trash2 className="h-3.5 w-3.5" />Remove
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-slate-400">JPG, PNG, WebP or SVG · maximum 2 MB</p>
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-slate-800">Favicon</p>
+          <p className="mt-1 text-xs text-slate-500">The browser tab icon. Falls back to the default mark until one is set.</p>
+          <div className="mt-3 flex items-center gap-4">
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+              {values.institution.faviconUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded asset, not a Next-optimized asset
+                <img src={values.institution.faviconUrl} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <span className="px-2 text-center text-[10px] text-slate-400">Default</span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <label className={cn("inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50", brandAssetBusy === "favicon" && "pointer-events-none opacity-50")}>
+                {brandAssetBusy === "favicon" ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <ImageUp className="h-3.5 w-3.5" />}
+                {values.institution.faviconUrl ? "Replace" : "Upload"}
+                <input type="file" accept="image/png,image/svg+xml,image/webp,image/x-icon,.ico" className="sr-only" disabled={brandAssetBusy === "favicon"} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadBrandAsset("favicon", file); event.target.value = ""; }} />
+              </label>
+              {values.institution.faviconUrl ? (
+                <button type="button" onClick={() => void removeBrandAsset("favicon")} disabled={brandAssetBusy === "favicon"} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 px-3 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
+                  <Trash2 className="h-3.5 w-3.5" />Remove
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-slate-400">PNG, SVG, WebP or ICO · maximum 512 KB</p>
+        </div>
+      </div>
+    </Panel>
 
     <Panel>
       <h2 className="text-xl font-bold text-slate-950">Payment methods</h2>

@@ -29,7 +29,7 @@ const links = [
  * Login button to someone who is already signed in.
  */
 export type HeaderSession = { name: string; portalHome: string } | null;
-export type HeaderBranding = { name: string } | undefined;
+export type HeaderBranding = { name: string; logoUrl?: string | null } | undefined;
 
 export function PublicHeader({ session = null, branding }: { session?: HeaderSession; branding?: HeaderBranding }) {
   const pathname = usePathname();
@@ -38,7 +38,7 @@ export function PublicHeader({ session = null, branding }: { session?: HeaderSes
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200/80 bg-white/95 backdrop-blur">
       <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        <Brand name={branding?.name} />
+        <Brand name={branding?.name} logoUrl={branding?.logoUrl} />
         <nav className="hidden items-center gap-1 lg:flex" aria-label="Primary navigation">
           {links.map((link) => {
             const active = pathname === link.href || pathname.startsWith(`${link.href}/`);

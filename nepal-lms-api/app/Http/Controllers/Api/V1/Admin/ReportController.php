@@ -105,8 +105,10 @@ class ReportController extends Controller
                 'approved' => (clone $payments)->where('status', PaymentStatus::Approved->value)->count(),
                 'pending' => (clone $payments)->pendingReview()->count(),
                 'rejected' => (clone $payments)->where('status', PaymentStatus::Rejected->value)->count(),
-                // Written by the enrollment-request approval path: a scholarship
-                // or institutional exception is 'free', a transfer is 'staff'.
+                // 'free' and 'staff' sources were written by the old, now-removed
+                // enrollment-request approval path. A scholarship or waiver is
+                // recorded as a zero-amount payment instead (source 'payment'),
+                // so these two counts only reflect historical rows going forward.
                 'free' => (clone $created)->where('source', 'free')->count(),
                 'transfers' => (clone $created)->where('source', 'staff')->count(),
             ]);

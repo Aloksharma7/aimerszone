@@ -25,6 +25,15 @@ const nextConfig: NextConfig = {
        * signature stays valid through this rewrite. See TrustProxies.
        */
       { source: "/media/:path*", destination: `${apiTarget}/media/:path*` },
+
+      /*
+       * Public-disk assets (course thumbnails, payment QR codes, avatars,
+       * institution branding) — same-origin for the same reason as /media:
+       * the API returns a relative /storage/... path (see PublicAssetUrl on
+       * the backend) rather than an absolute URL pointing at its own
+       * address, since that address is not the origin the browser is on.
+       */
+      { source: "/storage/:path*", destination: `${apiTarget}/storage/:path*` },
     ];
   },
 };

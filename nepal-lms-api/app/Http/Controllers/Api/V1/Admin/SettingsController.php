@@ -8,6 +8,7 @@ use App\Services\AuditLogger;
 use App\Services\FeatureGate;
 use App\Services\SettingsRepository;
 use App\Support\ApiResponse;
+use App\Support\PublicAssetUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -35,11 +36,14 @@ class SettingsController extends Controller
             'institution' => [
                 'name' => $this->settings->string('institution.name'),
                 'short_name' => $this->settings->string('institution.short_name'),
+                'tagline' => $this->settings->string('institution.tagline'),
                 'primary_phone' => $this->settings->string('institution.primary_phone'),
                 'support_email' => $this->settings->string('institution.support_email'),
                 'whatsapp' => $this->settings->string('institution.whatsapp'),
                 'website' => $this->settings->string('institution.website'),
                 'address' => $this->settings->string('institution.address'),
+                'logo_url' => $this->assetUrl($this->settings->get('institution.logo_path')),
+                'favicon_url' => $this->assetUrl($this->settings->get('institution.favicon_path')),
             ],
             'payment_methods' => PaymentMethod::orderBy('sort_order')->get()->map(fn (PaymentMethod $method) => [
                 'id' => $method->id,
@@ -150,6 +154,7 @@ class SettingsController extends Controller
             'institution' => ['sometimes', 'array'],
             'institution.name' => ['required_with:institution', 'string', 'min:2', 'max:120'],
             'institution.short_name' => ['nullable', 'string', 'max:12'],
+            'institution.tagline' => ['nullable', 'string', 'max:160'],
             'institution.primary_phone' => ['nullable', 'string', 'max:32'],
             'institution.support_email' => ['nullable', 'email:filter', 'max:190'],
             'institution.whatsapp' => ['nullable', 'string', 'max:20'],
@@ -305,5 +310,99 @@ class SettingsController extends Controller
         }
 
         return ApiResponse::message('QR image removed.');
+    }
+
+    public function uploadInstitutionLogo(Request $request): JsonResponse
+    {
+        $maxKb = (int) config('lms.uploads.image_max_kb', 2048);
+
+        $request->validate([
+            'logo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp,svg', 'max:'.$maxKb],
+        ]);
+
+        $url = $this->replaceBrandAsset($request, 'logo', 'branding/logo');
+
+        return ApiResponse::item(['logo_url' => $url]);
+    }
+
+    public function deleteInstitutionLogo(Request $request): JsonResponse
+    {
+        $this->removeBrandAsset($request, 'logo');
+
+        return ApiResponse::message('Logo removed.');
+    }
+
+    /**
+     * Favicons skip the `image` rule (it rejects .ico) and use a much smaller
+     * cap — nothing legitimate needs more than a few hundred KB for one.
+     */
+    public function uploadInstitutionFavicon(Request $request): JsonResponse
+    {
+        $maxKb = (int) config('lms.uploads.favicon_max_kb', 512);
+
+        $request->validate([
+            'favicon' => ['required', 'file', 'mimes:png,svg,ico,webp', 'max:'.$maxKb],
+        ]);
+
+        $url = $this->replaceBrandAsset($request, 'favicon', 'branding/favicon');
+
+        return ApiResponse::item(['favicon_url' => $url]);
+    }
+
+    public function deleteInstitutionFavicon(Request $request): JsonResponse
+    {
+        $this->removeBrandAsset($request, 'favicon');
+
+        return ApiResponse::message('Favicon removed.');
+    }
+
+    /** @param  'logo'|'favicon'  $asset */
+    protected function replaceBrandAsset(Request $request, string $asset, string $directory): ?string
+    {
+        $settingKey = "{$asset}_path";
+        $previous = $this->settings->get("institution.{$settingKey}");
+
+        $path = $request->file($asset)->store($directory, 'public');
+
+        $this->settings->set('institution', $settingKey, $path, isPublic: true, updatedBy: $request->user()->getKey());
+
+        // Deleted only after the new file is safely stored and the setting
+        // saved, so a failure midway never leaves the institution with none.
+        if ($previous) {
+            Storage::disk('public')->delete($previous);
+        }
+
+        $this->audit->log(
+            "settings.institution_{$asset}_updated",
+            actor: $request->user(),
+            targetLabel: 'Institution settings',
+        );
+
+        return $this->assetUrl($path);
+    }
+
+    /** @param  'logo'|'favicon'  $asset */
+    protected function removeBrandAsset(Request $request, string $asset): void
+    {
+        $settingKey = "{$asset}_path";
+        $previous = $this->settings->get("institution.{$settingKey}");
+
+        if (! $previous) {
+            return;
+        }
+
+        Storage::disk('public')->delete($previous);
+        $this->settings->set('institution', $settingKey, null, isPublic: true, updatedBy: $request->user()->getKey());
+
+        $this->audit->log(
+            "settings.institution_{$asset}_removed",
+            actor: $request->user(),
+            targetLabel: 'Institution settings',
+        );
+    }
+
+    protected function assetUrl(?string $path): ?string
+    {
+        return PublicAssetUrl::for($path);
     }
 }

@@ -106,7 +106,7 @@ export function PaymentPicker({ onSelect }: { onSelect: (payment: PaymentSummary
   );
 }
 
-export function AccountingAdjustmentForm({ initialPayment = null }: { initialPayment?: PaymentSummary | null }) {
+export function AccountingAdjustmentForm({ initialPayment = null, returnPath = "/accounting/adjustments" }: { initialPayment?: PaymentSummary | null; returnPath?: string }) {
   const router = useRouter();
   const [selected, setSelected] = useState<PaymentSummary | null>(initialPayment);
   const [busy, setBusy] = useState(false);
@@ -139,7 +139,7 @@ export function AccountingAdjustmentForm({ initialPayment = null }: { initialPay
         data,
         headers: { "Idempotency-Key": createIdempotencyKey("accounting-adjustment") },
       });
-      router.replace(`/accounting/adjustments?created=${encodeURIComponent(response.data.id)}`);
+      router.replace(`${returnPath}?created=${encodeURIComponent(response.data.id)}`);
       router.refresh();
     } catch (caught) {
       setNotice({ tone: "danger", title: "Adjustment not submitted", message: normalizeApiError(caught).message });

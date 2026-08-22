@@ -247,6 +247,8 @@ export type Payment = {
   reference: string;
   status: "Approved" | "Under review" | "Rejected" | "Submitted" | "Refunded" | "Draft";
   reason?: string;
+  /** Null even for an approved payment when automatic receipts are switched off. */
+  receiptId: string | null;
 };
 
 export type StudentReceipt = {

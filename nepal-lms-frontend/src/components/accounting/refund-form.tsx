@@ -12,7 +12,7 @@ import { formatNpr } from "@/lib/utils";
 const mockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
 const inputClass = labelledFieldClass;
 
-export function AccountingRefundForm() {
+export function AccountingRefundForm({ returnPath = "/accounting/refunds" }: { returnPath?: string } = {}) {
   const router = useRouter();
   const [selected, setSelected] = useState<PaymentSummary | null>(null);
   const [busy, setBusy] = useState(false);
@@ -51,7 +51,7 @@ export function AccountingRefundForm() {
         },
         headers: { "Idempotency-Key": createIdempotencyKey("accounting-refund") },
       });
-      router.replace(`/accounting/refunds?created=${encodeURIComponent(response.data.id)}`);
+      router.replace(`${returnPath}?created=${encodeURIComponent(response.data.id)}`);
       router.refresh();
     } catch (caught) {
       setNotice({ tone: "danger", title: "Refund not submitted", message: normalizeApiError(caught).message });

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api\V1\Staff;
 
 use App\Http\Controllers\Controller;
-use App\Models\EnrollmentRequest;
 use App\Models\Payment;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -30,20 +29,7 @@ class NotificationController extends Controller
                 'summary' => $oldest ? 'Oldest submission '.now()->parse($oldest)->diffForHumans() : null,
                 'published_at' => null,
                 'read' => false,
-                'href' => '/accounting/payments',
-            ];
-        }
-
-        $pendingRequests = EnrollmentRequest::query()->where('status', 'pending')->count();
-
-        if ($pendingRequests > 0) {
-            $items[] = [
-                'id' => 'enrollment-requests-pending',
-                'title' => $pendingRequests.' enrollment request'.($pendingRequests === 1 ? '' : 's').' waiting on a decision',
-                'summary' => 'Scholarship, transfer and exception requests only an admin can decide.',
-                'published_at' => null,
-                'read' => false,
-                'href' => '/staff/enrollments',
+                'href' => '/staff/payments?status=pending',
             ];
         }
 

@@ -84,11 +84,14 @@ class Payment extends Model
 
     public function scopePendingReview($query)
     {
-        return $query->whereIn('status', [PaymentStatus::Submitted->value, PaymentStatus::UnderReview->value]);
+        // Qualified: unqualified "status" is ambiguous the moment a caller
+        // joins another table that also has a status column (courses, for
+        // one), and this scope is meant to compose with joins like that.
+        return $query->whereIn('payments.status', [PaymentStatus::Submitted->value, PaymentStatus::UnderReview->value]);
     }
 
     public function scopeApproved($query)
     {
-        return $query->where('status', PaymentStatus::Approved->value);
+        return $query->where('payments.status', PaymentStatus::Approved->value);
     }
 }

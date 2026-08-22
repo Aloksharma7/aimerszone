@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Enums\RoleKey;
-use App\Models\EnrollmentRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\BuildsLmsFixtures;
 use Tests\TestCase;
@@ -51,28 +50,17 @@ class RoleNotificationFeedsTest extends TestCase
         $this->actingAs($teacher)->getJson('/api/v1/teacher/notifications')->assertOk()->assertJsonCount(0, 'data');
     }
 
-    public function test_staff_sees_pending_payments_and_enrollment_requests(): void
+    public function test_staff_sees_pending_payments(): void
     {
         $staff = $this->makeUser(RoleKey::Staff);
         $student = $this->makeUser(RoleKey::Student);
         $batch = $this->makeBatch($this->makeCourse());
         $this->makePayment($student, $batch);
 
-        EnrollmentRequest::create([
-            'user_id' => $student->getKey(),
-            'course_id' => $batch->course_id,
-            'batch_id' => $batch->getKey(),
-            'basis' => 'scholarship',
-            'note' => 'Awaiting decision.',
-            'requested_by' => $staff->getKey(),
-            'status' => 'pending',
-        ]);
-
         $response = $this->actingAs($staff)->getJson('/api/v1/staff/notifications')->assertOk();
         $titles = collect($response->json('data'))->pluck('title')->implode(' | ');
 
         $this->assertStringContainsString('payment', strtolower($titles));
-        $this->assertStringContainsString('enrollment request', strtolower($titles));
     }
 
     public function test_an_admin_sees_the_same_signals_as_the_dashboard_attention_panel(): void

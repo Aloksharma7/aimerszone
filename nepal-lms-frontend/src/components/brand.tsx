@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { BookOpenCheck } from "lucide-react";
 import { siteConfig } from "@/lib/site";
@@ -10,6 +11,7 @@ export function Brand({
   className,
   name,
   tagline,
+  logoUrl,
 }: {
   href?: string;
   compact?: boolean;
@@ -18,17 +20,23 @@ export function Brand({
   /** Administrator-managed name; falls back to the compiled-in default. */
   name?: string;
   tagline?: string;
+  /** Administrator-uploaded logo; falls back to the built-in mark when unset. */
+  logoUrl?: string | null;
 }) {
   const displayName = name || siteConfig.name;
   return (
     <Link href={href} className={cn("inline-flex items-center gap-3", className)} aria-label={`${displayName} home`}>
       <span
         className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+          "flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border shadow-sm",
           light ? "border-white/15 bg-white/10 text-white" : "border-brand-800 bg-brand-900 text-white",
         )}
       >
-        <BookOpenCheck className="h-5 w-5" aria-hidden="true" />
+        {logoUrl ? (
+          <Image src={logoUrl} alt="" width={40} height={40} className="h-full w-full object-cover" unoptimized />
+        ) : (
+          <BookOpenCheck className="h-5 w-5" aria-hidden="true" />
+        )}
       </span>
       {!compact ? (
         <span className="min-w-0">

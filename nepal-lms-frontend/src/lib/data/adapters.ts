@@ -315,6 +315,7 @@ export function mapPayment(value: ApiPayment): Payment {
     reference: value.transaction_reference || "Not provided",
     status: paymentStatus(value.status),
     reason: value.rejection_reason || undefined,
+    receiptId: value.receipt_id || null,
   };
 }
 

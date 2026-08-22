@@ -32,7 +32,7 @@ class AdminAttentionService
                 'detail' => $oldest
                     ? 'Oldest submission '.now()->parse($oldest)->diffForHumans()
                     : 'Awaiting accounting review',
-                'href' => '/admin/payments',
+                'href' => '/admin/payments?status=pending',
                 'tone' => 'amber',
             ];
         }

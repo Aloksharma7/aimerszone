@@ -6,8 +6,8 @@ export default async function StaffNotificationsPage() {
   const items = await getStaffNotifications();
   return (
     <>
-      <PageHeader eyebrow="Updates" title="Notifications" description="Payments awaiting review and enrollment requests waiting on an admin decision." />
-      <NotificationFeed items={items} emptyDescription="No payments or enrollment requests are waiting right now." />
+      <PageHeader eyebrow="Updates" title="Notifications" description="Payments awaiting a second review." />
+      <NotificationFeed items={items} emptyDescription="No payments are waiting right now." />
     </>
   );
 }

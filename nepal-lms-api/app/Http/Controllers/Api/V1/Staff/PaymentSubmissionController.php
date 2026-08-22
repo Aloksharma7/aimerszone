@@ -62,7 +62,13 @@ class PaymentSubmissionController extends Controller
             'course_id' => ['required', 'string'],
             'batch_id' => ['nullable', 'string'],
             'payment_method' => ['required', 'string', 'max:40'],
-            'amount_npr' => ['required', 'numeric', 'min:1', 'max:10000000'],
+
+            // 0 is a real value here, not a missing one: a full scholarship or
+            // fee waiver is recorded as a genuine zero-amount submission (proof
+            // is the institution's authorization slip), not a fake amount that
+            // would misstate collections. It still gets flagged and routed to a
+            // second reviewer — see PaymentSubmissionService::riskLabel().
+            'amount_npr' => ['required', 'numeric', 'min:0', 'max:10000000'],
             'payer_name' => ['required', 'string', 'min:2', 'max:120'],
             'transaction_reference' => ['nullable', 'string', 'max:120'],
             'payment_date' => ['required', 'date', 'before_or_equal:now'],
@@ -168,6 +174,7 @@ class PaymentSubmissionController extends Controller
         return match ($payment->risk_label) {
             'duplicate_evidence' => 'Duplicate evidence',
             'short_payment' => 'Short payment',
+            'full_waiver' => 'Full waiver',
             'overpayment' => 'Overpayment',
             'flagged_duplicate' => 'Flagged',
             default => 'Normal',
