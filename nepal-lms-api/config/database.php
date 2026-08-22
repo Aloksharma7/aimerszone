@@ -23,6 +23,13 @@ return [
             'engine' => 'InnoDB',
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+
+                // Some hosts still default this to OFF, which makes MySQL invent a
+                // 0000-00-00 default for any NOT NULL timestamp column beyond the
+                // first in a table — rejected under strict mode. Forcing it ON here
+                // makes every connection behave like modern MySQL regardless of the
+                // server's own my.cnf, without needing access to change that file.
+                PDO::MYSQL_ATTR_INIT_COMMAND => 'SET SESSION explicit_defaults_for_timestamp=1',
             ]) : [],
         ],
 
