@@ -22,7 +22,7 @@ class RegisterRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'mobile' => ['required', 'string', 'min:7', 'max:20', 'regex:/^[0-9+\-\s]+$/', Rule::unique('users', 'mobile')->whereNull('deleted_at')],
-            'email' => ['nullable', 'email:filter', 'max:190', Rule::unique('users', 'email')->whereNull('deleted_at')],
+            'email' => ['required', 'email:filter', 'max:190', Rule::unique('users', 'email')->whereNull('deleted_at')],
             'password' => ['required', 'confirmed', Password::min($minimum)->letters()->numbers()],
             'preferred_language' => ['nullable', Rule::in(['en', 'ne'])],
             'terms_accepted' => ['required', 'accepted'],
@@ -35,6 +35,8 @@ class RegisterRequest extends FormRequest
         return [
             'terms_accepted.accepted' => 'The terms of service must be accepted to create an account.',
             'mobile.unique' => 'An account already exists for this mobile number.',
+            'email.required' => 'Enter an email address — you will need it to sign in and recover your account.',
+            'email.unique' => 'An account already exists for this email address.',
         ];
     }
 

@@ -62,6 +62,43 @@ class TeacherRecordingTest extends TestCase
             ->assertJsonMissing(['id' => $recording->getKey()]);
     }
 
+    /**
+     * Regression: a recording saved while YouTube was still processing the
+     * video (or before YouTube integration was connected) landed in
+     * `processing` and stayed there forever — nothing ever re-checked it, so
+     * students could never see it. resync() gives it a second chance.
+     */
+    public function test_a_teacher_can_resync_a_recording_stuck_in_processing(): void
+    {
+        $batch = $this->makeBatch($this->makeCourse());
+        $teacher = $this->makeUser(RoleKey::Teacher);
+        $batch->teachers()->attach($teacher->getKey(), ['is_lead' => true]);
+
+        $recording = Recording::create([
+            'batch_id' => $batch->getKey(),
+            'title' => 'Elasticity of Demand',
+            'source' => 'youtube',
+            'youtube_video_id' => 'dQw4w9WgXcQ',
+            'state' => 'processing',
+            'sync_message' => 'YouTube is not connected, so this video id could not be verified.',
+            'synced_at' => now()->subDay(),
+        ]);
+
+        $this->actingAs($teacher)
+            ->postJson('/api/v1/teacher/batches/'.$batch->getKey().'/recordings/'.$recording->getKey().'/resync')
+            ->assertOk()
+            ->assertJsonPath('data.id', $recording->getKey());
+
+        $recording->refresh();
+
+        // Still processing here (no YouTube credentials in the test
+        // environment), but the point is proven: synced_at actually moved,
+        // meaning the endpoint really re-ran verify() rather than being a
+        // no-op — the exact capability that did not exist before this fix.
+        $this->assertTrue($recording->synced_at->gt(now()->subMinute()));
+        $this->assertDatabaseHas('audit_logs', ['action' => 'recording.resynced', 'target_id' => $recording->getKey()]);
+    }
+
     public function test_a_teacher_cannot_delete_a_recording_from_a_batch_they_do_not_teach(): void
     {
         $batch = $this->makeBatch($this->makeCourse());

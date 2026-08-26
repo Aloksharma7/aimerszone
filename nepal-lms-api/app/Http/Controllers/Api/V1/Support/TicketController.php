@@ -36,7 +36,7 @@ class TicketController extends Controller
         $status = trim((string) $request->string('status')->value());
 
         $tickets = SupportTicket::query()
-            ->with(['user:id,name', 'assignee:id,name'])
+            ->with(['user:id,name', 'assignee:id,name', 'enrollment.course:id,title'])
             ->withCount('messages')
             ->when($status !== '', fn ($query) => $query->where('status', $status))
             ->when($request->filled('assigned_to'), fn ($query) => $query->where('assigned_to', $request->string('assigned_to')->value()))
@@ -193,6 +193,7 @@ class TicketController extends Controller
             'status' => $ticket->status->value,
             'priority' => $ticket->priority ?? 'normal',
             'student_name' => $ticket->user?->name ?? $ticket->name,
+            'course_title' => $ticket->enrollment?->course?->title,
             'assignee_name' => $ticket->assignee?->name,
             'message_count' => (int) ($ticket->messages_count ?? 0),
             'created_at' => $ticket->created_at->toIso8601String(),
@@ -203,7 +204,7 @@ class TicketController extends Controller
 
     protected function detail(Request $request, SupportTicket $ticket): array
     {
-        $ticket->loadMissing(['user:id,name', 'assignee:id,name', 'messages.author:id,name']);
+        $ticket->loadMissing(['user:id,name', 'assignee:id,name', 'enrollment.course:id,title', 'messages.author:id,name']);
 
         // A student must never receive an internal note, so it is filtered out
         // of the payload rather than hidden in the interface.

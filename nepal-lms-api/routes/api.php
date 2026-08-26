@@ -140,6 +140,8 @@ Route::prefix('v1')->group(function () {
         Route::get('payment-options', [Student\PaymentController::class, 'options']);
         Route::post('payments', [Student\PaymentController::class, 'store'])
             ->middleware(['idempotent', 'throttle:uploads']);
+        Route::post('payments/{payment}/proof', [Student\PaymentController::class, 'proof'])
+            ->middleware('idempotent');
 
         // eSewa checkout: redirect out, verified signature back.
         Route::post('payments/esewa/checkout', [Student\EsewaController::class, 'checkout'])
@@ -178,6 +180,8 @@ Route::prefix('v1')->group(function () {
             ->middleware(['permission:recordings.manage', 'idempotent']);
         Route::delete('batches/{batchId}/recordings/{recording}', [Teacher\RecordingController::class, 'destroy'])
             ->middleware('permission:recordings.manage');
+        Route::post('batches/{batchId}/recordings/{recording}/resync', [Teacher\RecordingController::class, 'resync'])
+            ->middleware(['permission:recordings.manage', 'idempotent']);
         Route::get('batches/{batchId}/tests', [Teacher\TestController::class, 'forBatch']);
 
         // Notes and PDFs. Students could always download; nothing could upload.

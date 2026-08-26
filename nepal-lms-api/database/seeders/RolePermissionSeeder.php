@@ -36,7 +36,7 @@ class RolePermissionSeeder extends Seeder
             'student' => 'Access to enrolled courses, live classes, recordings, resources, tests and payments.',
             'teacher' => 'Manages assigned batches, classes, attendance, recordings, content and assessments.',
             'staff' => 'Onboards students, manages the course catalogue, submits payment evidence and reviews payments, receipts, adjustments and refunds.',
-            'admin' => 'Day-to-day administrative control: courses, batches, users, content and reports. Settings, integrations, role management and other admin accounts stay with Super Admin.',
+            'admin' => 'Full administrative control: courses, batches, users, content, reports, settings, integrations and role management. Managing another Admin or Super Admin account stays exclusive to Super Admin.',
             'super_admin' => 'Full administrative control including settings, roles, integrations and audit history.',
         ];
 

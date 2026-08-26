@@ -16,7 +16,7 @@ function ErrorNotice({ error }: { error: NormalizedApiError | null }) {
   return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p className="font-bold">{error.message}</p>{error.requestId ? <p className="mt-1 font-mono text-xs">Reference: {error.requestId}</p> : null}</div>;
 }
 
-export function PaymentProofButton({ paymentId, available }: { paymentId: string; available: boolean }) {
+export function PaymentProofButton({ paymentId, available, endpoint = "/api/v1/accounting/payments" }: { paymentId: string; available: boolean; endpoint?: string }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<NormalizedApiError | null>(null);
 
@@ -29,8 +29,8 @@ export function PaymentProofButton({ paymentId, available }: { paymentId: string
         setError({ status: 0, code: "preview_only", message: "Preview mode does not expose a real payment proof. Laravel will issue a short-lived authorized viewer URL.", retryable: false });
         return;
       }
-      const response = await browserRequest<{ data: { view_url: string } }>({ url: `/api/v1/accounting/payments/${encodeURIComponent(paymentId)}/proof`, method: "POST", headers: { "Idempotency-Key": createIdempotencyKey("proof-view") } });
-      const destination = trustedDestination(response.data.view_url, { currentOrigin: window.location.origin });
+      const response = await browserRequest<{ data: { url: string } }>({ url: `${endpoint}/${encodeURIComponent(paymentId)}/proof`, method: "POST", headers: { "Idempotency-Key": createIdempotencyKey("proof-view") } });
+      const destination = trustedDestination(response.data.url, { currentOrigin: window.location.origin });
       if (!destination) throw { status: 502, code: "untrusted_file_url", message: "The proof viewer returned an untrusted destination.", retryable: false } satisfies NormalizedApiError;
       window.open(destination, "_blank", "noopener,noreferrer");
     } catch (caught) {
@@ -48,7 +48,7 @@ export function PaymentProofButton({ paymentId, available }: { paymentId: string
  * switch tabs to look at the evidence before deciding on it. Falls back to
  * the new-tab button (full-size, or when the file type cannot be embedded).
  */
-export function PaymentProofPreview({ paymentId, mimeType, available }: { paymentId: string; mimeType: string; available: boolean }) {
+export function PaymentProofPreview({ paymentId, mimeType, available, endpoint = "/api/v1/accounting/payments" }: { paymentId: string; mimeType: string; available: boolean; endpoint?: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -64,12 +64,12 @@ export function PaymentProofPreview({ paymentId, mimeType, available }: { paymen
 
     async function load() {
       try {
-        const response = await browserRequest<{ data: { view_url: string } }>({
-          url: `/api/v1/accounting/payments/${encodeURIComponent(paymentId)}/proof`,
+        const response = await browserRequest<{ data: { url: string } }>({
+          url: `${endpoint}/${encodeURIComponent(paymentId)}/proof`,
           method: "POST",
           headers: { "Idempotency-Key": createIdempotencyKey("proof-preview") },
         });
-        const destination = trustedDestination(response.data.view_url, { currentOrigin: window.location.origin });
+        const destination = trustedDestination(response.data.url, { currentOrigin: window.location.origin });
         if (!destination) throw new Error("untrusted_destination");
         if (!cancelled) setPreviewUrl(destination);
       } catch {
@@ -107,7 +107,7 @@ export function PaymentProofPreview({ paymentId, mimeType, available }: { paymen
           This file type cannot be previewed inline — open it to review.
         </div>
       )}
-      <PaymentProofButton paymentId={paymentId} available={available} />
+      <PaymentProofButton paymentId={paymentId} available={available} endpoint={endpoint} />
     </div>
   );
 }

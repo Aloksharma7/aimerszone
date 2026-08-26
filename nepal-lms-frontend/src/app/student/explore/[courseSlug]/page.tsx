@@ -2,6 +2,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { BookOpen, CalendarDays, CheckCircle2, Clock3, GraduationCap, Layers3 } from "lucide-react";
 import { Badge, ButtonLink, PageHeader, Panel } from "@/components/ui";
+import { FreeEnrollButton } from "@/components/student/enrollment-actions";
 import { getPublicCourse } from "@/lib/data/public";
 import { formatNpr } from "@/lib/utils";
 
@@ -59,7 +60,13 @@ export default async function StudentExploreCoursePage({ params }: { params: Pro
             </dl>
             <div className="my-6 border-t border-slate-200" />
             <div className="flex items-baseline gap-2"><p className="text-3xl font-bold text-slate-950">{course.isFree ? "Free" : formatNpr(course.price)}</p>{course.originalPrice ? <p className="text-sm text-slate-400 line-through">{formatNpr(course.originalPrice)}</p> : null}</div>
-            <ButtonLink href={course.isFree ? `/student/courses?enroll=${course.slug}` : `/student/payments/new?course=${course.slug}&batch=${course.batchId}`} className="mt-5 w-full">{course.isFree ? "Activate free course" : "Continue to payment"}</ButtonLink>
+            {course.isFree ? (
+              <div className="mt-5">
+                <FreeEnrollButton batchId={course.batchId} courseTitle={course.title} />
+              </div>
+            ) : (
+              <ButtonLink href={`/student/payments/new?course=${course.slug}&batch=${course.batchId}`} className="mt-5 w-full">Continue to payment</ButtonLink>
+            )}
             <p className="mt-3 text-center text-xs leading-5 text-slate-500">Enrollment access is created only after Laravel validates the request or approves payment.</p>
           </Panel>
         </aside>

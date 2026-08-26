@@ -40,7 +40,7 @@ class RegisterController extends Controller
 
         // Sign the new student in immediately: the frontend expects /auth/me to
         // resolve straight after registration.
-        auth()->login($user, remember: false);
+        auth()->guard('web')->login($user, remember: false);
         $request->session()->regenerate();
 
         return ApiResponse::item(new AuthMeResource($user->fresh()), status: 201);

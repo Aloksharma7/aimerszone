@@ -77,12 +77,22 @@ function mockOptions(course: Course): PaymentOptions {
   };
 }
 
-export function PaymentWizard({ courses, initialCourseSlug }: { courses: Course[]; initialCourseSlug?: string }) {
+export function PaymentWizard({ courses, initialCourseSlug, initialBatchId }: { courses: Course[]; initialCourseSlug?: string; initialBatchId?: string }) {
   const router = useRouter();
   const payableCourses = useMemo(() => courses.filter((course) => !course.isFree && course.batchId), [courses]);
   const initial = payableCourses.find((course) => course.slug === initialCourseSlug) || payableCourses[0] || null;
   const [step, setStep] = useState(0);
   const [courseSlug, setCourseSlug] = useState(initial?.slug || "");
+  /*
+   * getPublicCourses() flattens each course to a single default batch, so
+   * selectedCourse.batchId alone cannot represent "the specific batch this
+   * buyer already chose" when a course has more than one open batch — a
+   * guest who picked the evening batch, registered, and returned here was
+   * silently checked out against whichever batch the catalogue lists first.
+   * This override carries the real batch through from the query string
+   * until the buyer actively changes the course selection themselves.
+   */
+  const [batchIdOverride, setBatchIdOverride] = useState(initialBatchId || "");
   const [options, setOptions] = useState<PaymentOptions | null>(null);
   const [optionsBusy, setOptionsBusy] = useState(false);
   const [methodId, setMethodId] = useState("");
@@ -98,13 +108,14 @@ export function PaymentWizard({ courses, initialCourseSlug }: { courses: Course[
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const mockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
   const selectedCourse = payableCourses.find((course) => course.slug === courseSlug) || null;
+  const effectiveBatchId = batchIdOverride || selectedCourse?.batchId || "";
   const selectedMethod = options?.methods.find((method) => method.id === methodId) || null;
 
   useEffect(() => {
     // Clears options/method left over from a previously selected course so a
     // stale payment method can never carry into a submission for this one.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!selectedCourse) { setOptions(null); return; }
+    if (!selectedCourse || !effectiveBatchId) { setOptions(null); return; }
     let active = true;
     setOptionsBusy(true); setServerError(null); setOptions(null); setMethodId("");
     if (mockMode) {
@@ -112,7 +123,7 @@ export function PaymentWizard({ courses, initialCourseSlug }: { courses: Course[
       setOptions(next); setMethodId(next.methods[0]?.id || ""); setAmountPaid(String(next.expectedAmountNpr)); setOptionsBusy(false);
       return () => { active = false; };
     }
-    browserRequest<ApiResponse<ApiPaymentOptions>>({ url: `/api/v1/student/payment-options?batch_id=${encodeURIComponent(selectedCourse.batchId)}`, method: "GET" })
+    browserRequest<ApiResponse<ApiPaymentOptions>>({ url: `/api/v1/student/payment-options?batch_id=${encodeURIComponent(effectiveBatchId)}`, method: "GET" })
       .then((response) => {
         if (!active) return;
         const mapped = mapPaymentOptions(response.data);
@@ -123,7 +134,7 @@ export function PaymentWizard({ courses, initialCourseSlug }: { courses: Course[
       .catch((caught) => { if (!active) return; const error = caught as Partial<NormalizedApiError>; setServerError(error.message || "Payment options could not be loaded."); })
       .finally(() => { if (active) setOptionsBusy(false); });
     return () => { active = false; };
-  }, [mockMode, selectedCourse]);
+  }, [mockMode, selectedCourse, effectiveBatchId]);
 
   function validateCurrent(): boolean {
     const next: Record<string, string> = {};
@@ -209,7 +220,7 @@ export function PaymentWizard({ courses, initialCourseSlug }: { courses: Course[
       <ol className="mb-6 grid grid-cols-4 gap-2">{steps.map((label, index) => <li key={label} className="min-w-0"><div className={cn("h-1.5 rounded-full", index <= step ? "bg-brand-700" : "bg-slate-200")} /><p className={cn("mt-2 truncate text-xs font-semibold", index === step ? "text-brand-700" : "text-slate-400")}>{index + 1}. {label}</p></li>)}</ol>
       {serverError ? <div className="mb-5"><AlertBox title="Payment action could not continue" tone="danger">{serverError}</AlertBox></div> : null}
       <Panel>
-        {step === 0 ? <div><p className="text-sm font-bold uppercase tracking-wider text-brand-700">Select batch</p><h1 className="mt-2 text-2xl font-bold text-slate-950">Choose what you paid for</h1><label className="mt-6 block text-sm font-semibold text-slate-700">Course and batch<select value={courseSlug} onChange={(event) => setCourseSlug(event.target.value)} className="mt-2 h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100">{payableCourses.map((course) => <option key={course.slug} value={course.slug}>{course.title} — {course.batch}</option>)}</select></label>{optionsBusy ? <div className="mt-6 flex items-center gap-2 rounded-xl bg-slate-50 p-5 text-sm text-slate-600"><LoaderCircle className="h-5 w-5 animate-spin" />Loading server-resolved price and methods…</div> : options ? <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-bold text-slate-900">{options.batchTitle}</p><p className="mt-2 text-sm text-slate-600">{selectedCourse?.schedule}</p><p className="mt-1 text-sm text-slate-600">Starts {selectedCourse?.startDate} · {selectedCourse?.access}</p></div><p className="text-2xl font-bold text-slate-950">{formatNpr(options.expectedAmountNpr)}</p></div></div> : null}{errors.course ? <p className="mt-2 text-sm text-red-700">{errors.course}</p> : null}<p className="mt-4 text-sm leading-6 text-slate-500">The expected amount and available payment methods are resolved by Laravel for the selected batch. The browser cannot set the authoritative fee.</p></div> : null}
+        {step === 0 ? <div><p className="text-sm font-bold uppercase tracking-wider text-brand-700">Select batch</p><h1 className="mt-2 text-2xl font-bold text-slate-950">Choose what you paid for</h1><label className="mt-6 block text-sm font-semibold text-slate-700">Course and batch<select value={courseSlug} onChange={(event) => { setCourseSlug(event.target.value); setBatchIdOverride(""); }} className="mt-2 h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100">{payableCourses.map((course) => <option key={course.slug} value={course.slug}>{course.title} — {course.batch}</option>)}</select></label>{optionsBusy ? <div className="mt-6 flex items-center gap-2 rounded-xl bg-slate-50 p-5 text-sm text-slate-600"><LoaderCircle className="h-5 w-5 animate-spin" />Loading server-resolved price and methods…</div> : options ? <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-bold text-slate-900">{options.batchTitle}</p><p className="mt-2 text-sm text-slate-600">{selectedCourse?.schedule}</p><p className="mt-1 text-sm text-slate-600">Starts {selectedCourse?.startDate} · {selectedCourse?.access}</p></div><p className="text-2xl font-bold text-slate-950">{formatNpr(options.expectedAmountNpr)}</p></div></div> : null}{errors.course ? <p className="mt-2 text-sm text-red-700">{errors.course}</p> : null}<p className="mt-4 text-sm leading-6 text-slate-500">The expected amount and available payment methods are resolved by Laravel for the selected batch. The browser cannot set the authoritative fee.</p></div> : null}
 
         {step === 1 ? <div><p className="text-sm font-bold uppercase tracking-wider text-brand-700">Choose payment method</p><h1 className="mt-2 text-2xl font-bold text-slate-950">Use an approved account</h1>{options?.methods.length ? <div className="mt-6 grid gap-4 sm:grid-cols-3">{options.methods.map((method) => { const selected = method.id === methodId; return <button key={method.id} type="button" onClick={() => setMethodId(method.id)} className={cn("rounded-xl border p-4 text-left", selected ? "border-brand-600 bg-brand-50 ring-2 ring-brand-100" : "border-slate-200 hover:bg-slate-50")}><span className="flex items-center justify-between"><QrCode className="h-7 w-7 text-brand-700" /><span className={cn("h-4 w-4 rounded-full border", selected ? "border-4 border-brand-700" : "border-slate-300")} /></span><span className="mt-4 block font-bold text-slate-900">{method.name}</span><span className="mt-1 block text-xs leading-5 text-slate-500">{method.accountName || "Institution payment account"}</span></button>; })}</div> : <EmptyState title="No active payment method" description="Contact enrollment support because this batch currently has no approved payment account." />}{selectedMethod ? <div className="mt-6 grid gap-5 rounded-xl border border-slate-200 bg-slate-50 p-5 sm:grid-cols-[1fr_auto]"><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Account information</p><p className="mt-2 font-bold text-slate-900">{selectedMethod.accountName || selectedMethod.name}</p><p className="mt-1 text-sm text-slate-600">{selectedMethod.accountIdentifier || "Follow the institution’s displayed instructions."}</p><p className="mt-3 text-sm leading-6 text-slate-600">{selectedMethod.instructions}</p></div>{selectedMethod.qrImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded image from Laravel storage, not a Next-optimized asset

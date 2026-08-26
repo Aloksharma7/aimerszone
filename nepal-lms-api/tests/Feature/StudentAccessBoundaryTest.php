@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Enums\EnrollmentStatus;
 use App\Enums\RoleKey;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\BuildsLmsFixtures;
 use Tests\TestCase;
 
@@ -69,6 +71,29 @@ class StudentAccessBoundaryTest extends TestCase
             ->assertForbidden();
     }
 
+    /**
+     * Regression: show() (the single-recording fetch, used when opening a
+     * recording directly rather than from a list) never included
+     * enrollment_id in its response, unlike index(). The frontend uses this
+     * field both to redirect to the course-scoped viewer and to confirm the
+     * viewer belongs to the right course — with it missing, the redirect
+     * silently never fired and the match guard failed open instead of
+     * closed. Reported by the user as "clicking play redirects to the
+     * course page instead of playing."
+     */
+    public function test_opening_a_recording_directly_includes_its_enrollment_id(): void
+    {
+        $batch = $this->makeBatch($this->makeCourse());
+        $student = $this->makeUser(RoleKey::Student);
+        $enrollment = $this->enroll($student, $batch);
+        $recording = $this->makeRecording($batch);
+
+        $this->actingAs($student)
+            ->getJson('/api/v1/student/recordings/'.$recording->getKey())
+            ->assertOk()
+            ->assertJsonPath('data.enrollment_id', $enrollment->getKey());
+    }
+
     public function test_an_unreleased_recording_is_invisible_to_an_enrolled_student(): void
     {
         $batch = $this->makeBatch($this->makeCourse());
@@ -101,6 +126,48 @@ class StudentAccessBoundaryTest extends TestCase
         $this->actingAs($intruder)
             ->getJson('/api/v1/student/receipts/'.$receipt->getKey())
             ->assertNotFound();
+    }
+
+    /**
+     * Regression: PaymentPolicy::viewProof() already allowed a student to
+     * view their own evidence (payment.user_id === user.id), but no route
+     * ever existed to reach it — only the accounting side had one. A student
+     * could never see what they themselves had uploaded.
+     */
+    public function test_a_student_can_view_their_own_payment_proof(): void
+    {
+        Storage::fake('local');
+
+        $batch = $this->makeBatch($this->makeCourse());
+        $student = $this->makeUser(RoleKey::Student);
+        $payment = $this->makePayment($student, $batch, [
+            'proof_path' => UploadedFile::fake()->image('proof.jpg')->store('payment-proof/test', 'local'),
+            'proof_disk' => 'local',
+            'proof_mime' => 'image/jpeg',
+        ]);
+
+        $this->actingAs($student)
+            ->postJson('/api/v1/student/payments/'.$payment->getKey().'/proof')
+            ->assertOk()
+            ->assertJsonStructure(['data' => ['url', 'expires_at']]);
+    }
+
+    public function test_a_student_cannot_view_another_students_payment_proof(): void
+    {
+        Storage::fake('local');
+
+        $batch = $this->makeBatch($this->makeCourse());
+        $owner = $this->makeUser(RoleKey::Student);
+        $intruder = $this->makeUser(RoleKey::Student);
+        $payment = $this->makePayment($owner, $batch, [
+            'proof_path' => UploadedFile::fake()->image('proof.jpg')->store('payment-proof/test', 'local'),
+            'proof_disk' => 'local',
+            'proof_mime' => 'image/jpeg',
+        ]);
+
+        $this->actingAs($intruder)
+            ->postJson('/api/v1/student/payments/'.$payment->getKey().'/proof')
+            ->assertForbidden();
     }
 
     public function test_a_suspended_account_cannot_use_the_portal(): void

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { FileVideo, Trash2 } from "lucide-react";
+import { FileVideo, RefreshCw, Trash2 } from "lucide-react";
 import { browserRequest, type NormalizedApiError } from "@/lib/api/browser-client";
 import { isMockDataEnabled } from "@/lib/data/config";
 import { ConfirmAction } from "@/components/shared/confirm-action";
@@ -19,6 +19,27 @@ export function RecordingList({ batchId, items }: { batchId: string; items: Reco
   const router = useRouter();
   const mockMode = isMockDataEnabled();
   const [error, setError] = useState<string | null>(null);
+  const [checkingId, setCheckingId] = useState<string | null>(null);
+
+  async function recheck(recording: Recording) {
+    setError(null);
+    if (mockMode) return;
+    setCheckingId(recording.id);
+
+    try {
+      await browserRequest({
+        url: `/api/v1/teacher/batches/${encodeURIComponent(batchId)}/recordings/${encodeURIComponent(recording.id)}/resync`,
+        method: "POST",
+      });
+
+      router.refresh();
+    } catch (caught) {
+      const apiError = caught as Partial<NormalizedApiError>;
+      setError(apiError.message || "The recording could not be re-checked.");
+    } finally {
+      setCheckingId(null);
+    }
+  }
 
   async function remove(recording: Recording) {
     setError(null);
@@ -49,17 +70,36 @@ export function RecordingList({ batchId, items }: { batchId: string; items: Reco
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-2"><h3 className="font-semibold text-slate-900">{item.title}</h3><StatusBadge status={item.state === "Processing" ? "Processing" : "Published"} /></div>
               <p className="mt-1 text-sm text-slate-500">{item.module} · {item.date} · {item.duration}</p>
-              <p className="mt-1 text-xs text-slate-400">Changes use a versioned recording update endpoint; published items remain auditable.</p>
+              {item.state === "Processing" ? (
+                <p className="mt-1 text-xs text-amber-600">
+                  {item.syncMessage || "Not verified yet."} Invisible to students until it checks in as ready — press &ldquo;Re-check&rdquo; once the video has finished processing on YouTube.
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-slate-400">Changes use a versioned recording update endpoint; published items remain auditable.</p>
+              )}
             </div>
-            <ConfirmAction
-              label="Remove"
-              icon={<Trash2 className="h-3.5 w-3.5" />}
-              title={`Remove "${item.title}"?`}
-              description="Students will lose access immediately. The video itself stays on YouTube."
-              confirmLabel="Remove recording"
-              triggerClassName="inline-flex h-9 items-center gap-1.5 self-start rounded-lg border border-red-200 px-3 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50 sm:self-center"
-              onConfirm={() => remove(item)}
-            />
+            <div className="flex shrink-0 gap-2 self-start sm:self-center">
+              {item.state === "Processing" ? (
+                <button
+                  type="button"
+                  onClick={() => recheck(item)}
+                  disabled={checkingId === item.id}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-amber-200 px-3 text-xs font-semibold text-amber-700 hover:bg-amber-50 disabled:opacity-50"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${checkingId === item.id ? "animate-spin" : ""}`} />
+                  {checkingId === item.id ? "Checking…" : "Re-check"}
+                </button>
+              ) : null}
+              <ConfirmAction
+                label="Remove"
+                icon={<Trash2 className="h-3.5 w-3.5" />}
+                title={`Remove "${item.title}"?`}
+                description="Students will lose access immediately. The video itself stays on YouTube."
+                confirmLabel="Remove recording"
+                triggerClassName="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 px-3 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                onConfirm={() => remove(item)}
+              />
+            </div>
           </div>
         )) : <p className="p-5 text-sm text-slate-500">No recordings match this search.</p>}
       </div>

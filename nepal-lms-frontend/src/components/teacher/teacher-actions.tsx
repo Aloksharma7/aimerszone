@@ -181,6 +181,37 @@ export function TeacherAttendanceEditor({ detail }: { detail: TeacherAttendanceD
   );
 }
 
+/**
+ * A teacher's clipboard almost always has the full YouTube URL, not the bare
+ * 11-character id — requiring the id alone meant retyping or hand-trimming
+ * it every time. Accepts a pasted watch/share/shorts/embed URL, a youtu.be
+ * link, or the id itself, and returns null only when nothing recognizable
+ * was found — server-side validation (RecordingController::store) still has
+ * the final say and is unchanged.
+ */
+function extractYoutubeVideoId(input: string): string | null {
+  const trimmed = input.trim();
+  if (/^[A-Za-z0-9_-]{11}$/.test(trimmed)) return trimmed;
+
+  try {
+    const url = new URL(trimmed);
+    const fromQuery = url.searchParams.get("v");
+    if (fromQuery && /^[A-Za-z0-9_-]{11}$/.test(fromQuery)) return fromQuery;
+
+    const pathMatch = url.pathname.match(/\/(?:shorts|embed|live)\/([A-Za-z0-9_-]{11})/);
+    if (pathMatch) return pathMatch[1];
+
+    if (url.hostname === "youtu.be") {
+      const short = url.pathname.replace(/^\//, "");
+      if (/^[A-Za-z0-9_-]{11}$/.test(short)) return short;
+    }
+  } catch {
+    // Not a URL at all — fall through to "invalid".
+  }
+
+  return null;
+}
+
 export function TeacherRecordingForm({ batchId, sessionOptions = [] }: { batchId: string; sessionOptions?: TeacherSessionOption[] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<NormalizedApiError | null>(null);
@@ -190,9 +221,9 @@ export function TeacherRecordingForm({ batchId, sessionOptions = [] }: { batchId
     event.preventDefault();
     if (loading) return;
     const form = new FormData(event.currentTarget);
-    const videoId = String(form.get("youtube_video_id") || "").trim();
-    if (!/^[A-Za-z0-9_-]{6,32}$/.test(videoId)) {
-      setError({ status: 422, code: "validation_failed", message: "Enter only a valid YouTube video ID, not a full URL.", retryable: false });
+    const videoId = extractYoutubeVideoId(String(form.get("youtube_video_id") || ""));
+    if (!videoId) {
+      setError({ status: 422, code: "validation_failed", message: "Paste the video's YouTube link, or just its video id.", retryable: false });
       return;
     }
     setLoading(true);
@@ -227,7 +258,7 @@ export function TeacherRecordingForm({ batchId, sessionOptions = [] }: { batchId
     <form onSubmit={submit} className="mt-5 space-y-4" noValidate>
       <label className="block text-sm font-semibold text-slate-700">Related session <span className="font-normal text-slate-400">(optional)</span><select name="session_id" className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100"><option value="">Not tied to a specific class</option>{sessionOptions.map((session) => <option key={session.id} value={session.id}>{session.label}</option>)}</select></label>
       <label className="block text-sm font-semibold text-slate-700">Title<input name="title" required maxLength={150} className="mt-2 h-10 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" /></label>
-      <label className="block text-sm font-semibold text-slate-700">YouTube video ID<input name="youtube_video_id" required className="mt-2 h-10 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" placeholder="Video ID only" autoComplete="off" /></label>
+      <label className="block text-sm font-semibold text-slate-700">YouTube link or video ID<input name="youtube_video_id" required className="mt-2 h-10 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" placeholder="Paste the video's YouTube link" autoComplete="off" /></label>
       <label className="block text-sm font-semibold text-slate-700">Release date<input name="release_at" type="datetime-local" className="mt-2 h-10 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" /></label>
       <ErrorNotice error={error} /><SuccessNotice message={success} />
       <Button type="submit" className="w-full" disabled={loading}><UploadCloud className="h-4 w-4" />{loading ? "Saving…" : "Save recording"}</Button>

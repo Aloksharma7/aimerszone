@@ -63,7 +63,6 @@ const navByRole: Record<PortalRole, NavItem[]> = {
     { label: "PDFs & Resources", href: "/student/resources", icon: FileText, permission: "resources.view" },
     { label: "Tests", href: "/student/tests", icon: ClipboardCheck, permission: "tests.view" },
     { label: "Payments", href: "/student/payments", icon: CreditCard, permission: "payments.view" },
-    { label: "Receipts", href: "/student/receipts", icon: ReceiptText, permission: "payments.view" },
     { label: "Notifications", href: "/student/notifications", icon: Bell },
     { label: "Profile & Security", href: "/student/profile", icon: UserRound },
     { label: "Support", href: "/student/support", icon: Headphones },

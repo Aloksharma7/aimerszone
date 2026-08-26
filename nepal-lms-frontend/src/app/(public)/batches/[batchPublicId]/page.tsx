@@ -48,7 +48,7 @@ export default async function BatchPage({ params }: { params: Promise<{ batchPub
     ? course.isFree
       ? `/student/explore/${encodeURIComponent(course.slug)}`
       : `/student/payments/new?course=${encodeURIComponent(course.slug)}&batch=${encodeURIComponent(course.batchId)}`
-    : `/register?next=${encodeURIComponent(`/batches/${batchPublicId}`)}`;
+    : `/register?returnTo=${encodeURIComponent(`/batches/${batchPublicId}`)}`;
 
   const enrollLabel = isStudent
     ? course.isFree

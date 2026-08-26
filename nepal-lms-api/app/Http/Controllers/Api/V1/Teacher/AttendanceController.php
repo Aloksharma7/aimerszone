@@ -18,6 +18,7 @@ use App\Services\SettingsRepository;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -255,13 +256,32 @@ class AttendanceController extends Controller
 
             $minutes = (int) round($match['duration'] / 60);
 
+            /*
+             * Late means "joined late", not "stayed briefly" — those are
+             * different facts. This used to classify Late whenever minutes
+             * attended fell under the late-minutes setting, which reused a
+             * "how many minutes past start counts as late" number to mean
+             * "how many minutes attended counts as present" instead — so
+             * someone who joined on time but left after a few minutes was
+             * marked Late rather than Present (their real attendance mark),
+             * and duration told us nothing about when they actually joined.
+             * Zoom's report includes each participant's real join_time, so
+             * this now computes lateness exactly like the student's own
+             * join-link path does. The duration heuristic only remains as a
+             * fallback for the rare case Zoom omits join_time.
+             */
+            $joinedAt = filled($match['join_time'] ?? null) ? Carbon::parse($match['join_time']) : null;
+
+            $late = $joinedAt !== null
+                ? $joinedAt->gt($session->starts_at->copy()->addMinutes($lateAfter))
+                : $minutes < $lateAfter;
+
             Attendance::updateOrCreate(
                 ['class_session_id' => $session->getKey(), 'user_id' => $enrollment->user_id],
                 [
                     'enrollment_id' => $enrollment->getKey(),
-                    'status' => $minutes >= $lateAfter
-                        ? AttendanceStatus::Present->value
-                        : AttendanceStatus::Late->value,
+                    'status' => $late ? AttendanceStatus::Late->value : AttendanceStatus::Present->value,
+                    'joined_at' => $joinedAt,
                     'minutes_attended' => $minutes,
                     'note' => $match['name'],
                     'source' => 'zoom_import',

@@ -167,6 +167,7 @@ export type Recording = {
   duration: string;
   progress: number;
   state: "In progress" | "Not started" | "Completed" | "Available" | "Processing";
+  syncMessage?: string | null;
   thumbnailUrl?: string | null;
   videoId?: string | null;
 };
@@ -249,6 +250,8 @@ export type Payment = {
   reason?: string;
   /** Null even for an approved payment when automatic receipts are switched off. */
   receiptId: string | null;
+  proofAvailable: boolean;
+  proofMimeType: string | null;
 };
 
 export type StudentReceipt = {

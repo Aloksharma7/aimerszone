@@ -148,21 +148,30 @@ export function LoginForm() {
   );
 }
 
+/** Inline, per-field error text — the backend already computes exactly this; showing only a generic top banner and discarding it left the visitor knowing something failed but not which field or why. */
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="mt-1.5 text-sm text-red-700">{message}</p>;
+}
+
 export function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<NormalizedApiError | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (loading) return;
     setLoading(true);
     setError(null);
+    setFieldErrors({});
     const form = new FormData(event.currentTarget);
     const password = String(form.get("password") || "");
     const passwordConfirmation = String(form.get("password_confirmation") || "");
     if (password !== passwordConfirmation) {
-      setError({ status: 422, code: "validation_failed", message: "The password confirmation does not match.", retryable: false });
+      setFieldErrors({ password_confirmation: "This does not match the password above." });
       setLoading(false);
       return;
     }
@@ -187,20 +196,26 @@ export function RegisterForm() {
         },
       });
       const response = await browserRequest<ApiResponse<AuthenticatedUser>>({ url: "/api/v1/auth/me", method: "GET" });
-      window.location.assign(authDestination(response.data));
+      window.location.assign(authDestination(response.data, searchParams.get("returnTo")));
     } catch (caught) {
-      setError(normalizeApiError(caught));
+      const normalized = normalizeApiError(caught);
+      setError(normalized);
+      if (normalized.validation) {
+        const next: Record<string, string> = {};
+        Object.entries(normalized.validation).forEach(([key, messages]) => { next[key] = messages[0] || "Invalid value."; });
+        setFieldErrors(next);
+      }
       setLoading(false);
     }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-7 grid gap-5 sm:grid-cols-2" noValidate>
-      <label className="text-sm font-semibold text-slate-700 sm:col-span-2">Full name<span className="text-red-600"> *</span><span className="relative mt-2 flex"><UserRound className="pointer-events-none absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input name="name" className="h-12 w-full rounded-lg border border-slate-300 pl-11 pr-3 font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100" placeholder="Your full name" minLength={2} maxLength={120} autoComplete="name" required /></span></label>
-      <label className="text-sm font-semibold text-slate-700">Mobile number<span className="text-red-600"> *</span><span className="relative mt-2 flex"><Phone className="pointer-events-none absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input name="mobile" className="h-12 w-full rounded-lg border border-slate-300 pl-11 pr-3 font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100" placeholder="98XXXXXXXX" minLength={7} maxLength={20} autoComplete="tel" required /></span></label>
-      <label className="text-sm font-semibold text-slate-700">Email <span className="font-normal text-slate-400">(optional)</span><span className="relative mt-2 flex"><Mail className="pointer-events-none absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input name="email" type="email" className="h-12 w-full rounded-lg border border-slate-300 pl-11 pr-3 font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100" placeholder="name@example.com" autoComplete="email" /></span></label>
-      <label className="text-sm font-semibold text-slate-700">Password<span className="text-red-600"> *</span><input name="password" type="password" className="mt-2 h-12 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100" placeholder="At least 8 characters" minLength={8} autoComplete="new-password" required /></label>
-      <label className="text-sm font-semibold text-slate-700">Confirm password<span className="text-red-600"> *</span><input name="password_confirmation" type="password" className="mt-2 h-12 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100" placeholder="Repeat password" minLength={8} autoComplete="new-password" required /></label>
+    <form onSubmit={handleSubmit} className="mt-7 grid gap-5 sm:grid-cols-2">
+      <label className="text-sm font-semibold text-slate-700 sm:col-span-2">Full name<span className="text-red-600"> *</span><span className="relative mt-2 flex"><UserRound className="pointer-events-none absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input name="name" className={cn("h-12 w-full rounded-lg border pl-11 pr-3 font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100", fieldErrors.name ? "border-red-400" : "border-slate-300")} placeholder="Your full name" minLength={2} maxLength={120} autoComplete="name" required /></span><FieldError message={fieldErrors.name} /></label>
+      <label className="text-sm font-semibold text-slate-700">Mobile number<span className="text-red-600"> *</span><span className="relative mt-2 flex"><Phone className="pointer-events-none absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input name="mobile" className={cn("h-12 w-full rounded-lg border pl-11 pr-3 font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100", fieldErrors.mobile ? "border-red-400" : "border-slate-300")} placeholder="98XXXXXXXX" pattern="[0-9+\-\s]+" title="Digits only — + and - are allowed." minLength={7} maxLength={20} autoComplete="tel" required /></span>{fieldErrors.mobile ? <FieldError message={fieldErrors.mobile} /> : <p className="mt-1.5 text-xs text-slate-400">Digits only, e.g. 98XXXXXXXX.</p>}</label>
+      <label className="text-sm font-semibold text-slate-700">Email<span className="text-red-600"> *</span><span className="relative mt-2 flex"><Mail className="pointer-events-none absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input name="email" type="email" className={cn("h-12 w-full rounded-lg border pl-11 pr-3 font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100", fieldErrors.email ? "border-red-400" : "border-slate-300")} placeholder="name@example.com" autoComplete="email" required /></span>{fieldErrors.email ? <FieldError message={fieldErrors.email} /> : <p className="mt-1.5 text-xs text-slate-400">Used to sign in and to recover your account.</p>}</label>
+      <label className="text-sm font-semibold text-slate-700">Password<span className="text-red-600"> *</span><input name="password" type="password" className={cn("mt-2 h-12 w-full rounded-lg border px-3 font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100", fieldErrors.password ? "border-red-400" : "border-slate-300")} placeholder="At least 8 characters" minLength={8} autoComplete="new-password" required />{fieldErrors.password ? <FieldError message={fieldErrors.password} /> : <p className="mt-1.5 text-xs text-slate-400">At least 8 characters, with letters and numbers.</p>}</label>
+      <label className="text-sm font-semibold text-slate-700">Confirm password<span className="text-red-600"> *</span><input name="password_confirmation" type="password" className={cn("mt-2 h-12 w-full rounded-lg border px-3 font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100", fieldErrors.password_confirmation ? "border-red-400" : "border-slate-300")} placeholder="Repeat password" minLength={8} autoComplete="new-password" required /><FieldError message={fieldErrors.password_confirmation} /></label>
       <label className="text-sm font-semibold text-slate-700 sm:col-span-2">Preferred interface language<select name="language" className="mt-2 h-12 w-full rounded-lg border border-slate-300 bg-white px-3 font-normal outline-none focus:border-brand-600"><option value="en">English</option><option value="ne">Nepali</option></select></label>
       <label className="flex items-start gap-3 text-sm leading-6 text-slate-600 sm:col-span-2"><input name="terms" type="checkbox" className="mt-1 h-4 w-4 shrink-0 rounded accent-brand-700" required /><span>I agree to the <Link href="/terms" className="font-semibold text-brand-700">Terms</Link> and <Link href="/privacy" className="font-semibold text-brand-700">Privacy Notice</Link>.</span></label>
       <label className="flex items-start gap-3 text-sm leading-6 text-slate-600 sm:col-span-2"><input name="recording_policy" type="checkbox" className="mt-1 h-4 w-4 shrink-0 rounded accent-brand-700" /><span>I have read the <Link href="/recording-policy" className="font-semibold text-brand-700">Recording Policy</Link>.</span></label>

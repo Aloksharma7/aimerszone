@@ -26,6 +26,7 @@ class RecordingResource extends JsonResource
             'duration_seconds' => $this->duration_seconds,
             'progress_percent' => (int) ($this->additional['progress_percent'] ?? 0),
             'state' => $this->state->value,
+            'sync_message' => $this->state === \App\Enums\RecordingState::Processing ? $this->sync_message : null,
             'thumbnail_url' => $this->thumbnail_url,
             'youtube_video_id' => $this->source === 'youtube' ? $this->youtube_video_id : null,
         ];

@@ -17,12 +17,18 @@ class PaymentPolicy
         return $payment->user_id === $user->getKey() || $user->hasPermission('payments.view');
     }
 
-    /** Evidence is more sensitive than the payment row itself. */
+    /**
+     * Evidence is more sensitive than the payment row itself — deliberately
+     * NOT the same check as view(). Every student holds payments.view so
+     * their own payments list works (query-scoped, per config/lms.php's own
+     * comment on the student role), but that same broad grant must not let
+     * one student open another student's uploaded evidence. Only the owner,
+     * or staff actually reviewing payments (payments.review), may see it.
+     */
     public function viewProof(User $user, Payment $payment): bool
     {
         return $payment->user_id === $user->getKey()
-            || $user->hasPermission('payments.review')
-            || $user->hasPermission('payments.view');
+            || $user->hasPermission('payments.review');
     }
 
     public function submit(User $user): bool

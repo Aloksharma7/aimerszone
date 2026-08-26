@@ -225,51 +225,6 @@ export async function getStudentReceipt(receiptId: string, studentName = "Studen
   }
 }
 
-export type StudentReceiptRow = {
-  id: string;
-  paymentId: string;
-  issuedAt: string;
-  courseTitle: string;
-  batchTitle: string;
-  amountNpr: number;
-  paymentMethod: string;
-};
-
-type ApiStudentReceiptRow = {
-  id: string;
-  payment_id: string;
-  issued_at: string;
-  course_title: string;
-  batch_title: string;
-  amount_npr: number;
-  payment_method: string;
-};
-
-/** Receipts for every approved payment on this account. */
-export async function getStudentReceipts(): Promise<StudentReceiptRow[]> {
-  if (isMockDataEnabled()) {
-    const approved = (payments as unknown as Payment[]).find((payment) => payment.status === "Approved" && payment.receiptId);
-    if (!approved) return [];
-    return [
-      { id: approved.receiptId as string, paymentId: approved.id, issuedAt: approved.submitted, courseTitle: approved.course, batchTitle: approved.batch, amountNpr: approved.amount, paymentMethod: approved.method },
-    ];
-  }
-
-  const response = await serverApiFetch<ApiResponse<ApiStudentReceiptRow[]> | PaginatedResponse<ApiStudentReceiptRow>>(
-    "/api/v1/student/receipts?per_page=100",
-  );
-
-  return response.data.map((item) => ({
-    id: item.id,
-    paymentId: item.payment_id,
-    issuedAt: item.issued_at,
-    courseTitle: item.course_title,
-    batchTitle: item.batch_title,
-    amountNpr: item.amount_npr,
-    paymentMethod: item.payment_method,
-  }));
-}
-
 export type StudentAttendanceRow = {
   sessionId: string;
   topic: string;

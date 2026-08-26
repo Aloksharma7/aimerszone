@@ -73,7 +73,14 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ c
                         <p className="mt-2 text-slate-600">{option.schedule}</p>
                         <p className="mt-1 text-slate-600">Starts {option.startDate}</p>
                         {option.teacherNames.length ? <p className="mt-1 text-slate-500">Taught by {option.teacherNames.join(", ")}</p> : null}
-                        <ButtonLink href={course.isFree && !isStudent ? "/register" : `/batches/${option.id}`} className="mt-4 w-full">
+                        <ButtonLink
+                          href={
+                            course.isFree && !isStudent
+                              ? `/register?returnTo=${encodeURIComponent(`/batches/${option.id}`)}`
+                              : `/batches/${option.id}`
+                          }
+                          className="mt-4 w-full"
+                        >
                           {course.isFree ? "Enroll free" : "Choose this batch"}
                         </ButtonLink>
                       </div>

@@ -50,12 +50,16 @@ class IntegrationStatusTest extends TestCase
             ->assertJsonPath('data.status', 'connected');
     }
 
-    public function test_a_plain_admin_cannot_read_integration_status(): void
+    /**
+     * integrations.manage moved from Super-Admin-exclusive to also granted
+     * to plain Admin (config/lms.php) — this used to assert the old boundary.
+     */
+    public function test_a_plain_admin_can_read_integration_status(): void
     {
         $admin = $this->makeUser(RoleKey::Admin);
 
         $this->actingAs($admin)
             ->getJson('/api/v1/admin/integrations/zoom/status')
-            ->assertForbidden();
+            ->assertOk();
     }
 }

@@ -16,6 +16,7 @@ class SupportTicket extends Model
     protected $fillable = [
         'reference',
         'user_id',
+        'enrollment_id',
         'name',
         'email',
         'mobile',
@@ -42,6 +43,11 @@ class SupportTicket extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function enrollment(): BelongsTo
+    {
+        return $this->belongsTo(Enrollment::class);
     }
 
     public function assignee(): BelongsTo

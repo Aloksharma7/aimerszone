@@ -110,6 +110,7 @@ export type ApiRecording = {
   duration_seconds?: number | null;
   progress_percent?: number;
   state?: "available" | "processing" | "unavailable";
+  sync_message?: string | null;
   thumbnail_url?: string | null;
   youtube_video_id?: string | null;
 };
@@ -180,6 +181,7 @@ export type ApiPayment = {
   submitted_at: string;
   rejection_reason?: string | null;
   proof_preview_available?: boolean;
+  proof_mime?: string | null;
   course_title?: string | null;
   batch_title?: string | null;
   receipt_id?: string | null;

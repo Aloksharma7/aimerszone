@@ -76,6 +76,17 @@ export function CourseForm({
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [thumbnailBusy, setThumbnailBusy] = useState(false);
+  /*
+   * What to show in the preview box — separate from values.thumbnailUrl,
+   * which is only ever the pasted-URL field's own value. An uploaded file
+   * resolves to a relative /storage/... path, not a full URL; feeding that
+   * into thumbnailUrl (as the upload handler used to) failed both this
+   * form's own "valid URL" check and the backend's `url` validation rule,
+   * blocking every save right after a successful upload.
+   */
+  const [previewUrl, setPreviewUrl] = useState<string | null>(
+    course?.image && course.image !== "/images/course-study-skills.svg" ? course.image : null,
+  );
   const mockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
   const dirty = JSON.stringify(values) !== JSON.stringify(original);
   const editing = Boolean(course?.id);
@@ -90,7 +101,8 @@ export function CourseForm({
     setServerError(null);
     try {
       if (mockMode) {
-        update("thumbnailUrl", URL.createObjectURL(file));
+        setPreviewUrl(URL.createObjectURL(file));
+        update("thumbnailUrl", null);
         toast({ tone: "success", title: "Preview validated", message: "Preview mode does not persist the upload." });
         return;
       }
@@ -102,7 +114,8 @@ export function CourseForm({
         data,
         headers: { "Idempotency-Key": createIdempotencyKey("course-thumbnail-upload") },
       });
-      update("thumbnailUrl", response.data.thumbnail_url);
+      setPreviewUrl(response.data.thumbnail_url);
+      update("thumbnailUrl", null);
       await refreshPublicCatalogue({ slug: values.slug });
       toast({ tone: "success", title: "Thumbnail updated" });
     } catch (caught) {
@@ -123,6 +136,7 @@ export function CourseForm({
         await browserRequest({ url: `${endpointBase}/${encodeURIComponent(course.id)}/thumbnail`, method: "DELETE" });
         await refreshPublicCatalogue({ slug: values.slug });
       }
+      setPreviewUrl(null);
       update("thumbnailUrl", null);
       toast({ tone: "success", title: "Thumbnail removed" });
     } catch (caught) {
@@ -162,7 +176,7 @@ export function CourseForm({
         setValues(payload); setSaved(true);
         return;
       }
-      const body = {
+      const body: Record<string, unknown> = {
         title: payload.title.trim(),
         slug: payload.slug,
         code: payload.code.trim().toUpperCase(),
@@ -172,10 +186,15 @@ export function CourseForm({
         access_type: payload.accessType,
         price_npr: payload.accessType === "free" ? 0 : payload.priceNpr,
         original_price_npr: payload.accessType === "free" ? null : payload.originalPriceNpr,
-        thumbnail_url: payload.thumbnailUrl || null,
         features: payload.features,
         published: payload.published,
       };
+      // Only send thumbnail_url when a URL was actually pasted. An uploaded
+      // file already persisted its own path via the dedicated upload
+      // endpoint; sending an explicit null here on every routine save would
+      // tell the backend to clear that thumbnail. The "Remove" button is the
+      // one real way to clear a thumbnail of either kind.
+      if (payload.thumbnailUrl) body.thumbnail_url = payload.thumbnailUrl;
       const response = await browserRequest<ApiResponse<{ id: string; slug: string }>>({
         url: editing ? `${endpointBase}/${encodeURIComponent(course!.id!)}` : endpointBase,
         method: editing ? "PATCH" : "POST",
@@ -224,9 +243,9 @@ export function CourseForm({
             <span className="text-sm font-semibold text-slate-700">Course thumbnail</span>
             <div className="mt-2 flex flex-col gap-4 sm:flex-row sm:items-start">
               <div className="flex h-28 w-44 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
-                {values.thumbnailUrl ? (
+                {previewUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded or externally-hosted image, not a Next-optimized asset
-                  <img src={values.thumbnailUrl} alt="Course thumbnail" className="h-full w-full object-cover" />
+                  <img src={previewUrl} alt="Course thumbnail" className="h-full w-full object-cover" />
                 ) : (
                   <span className="px-3 text-center text-xs text-slate-400">No thumbnail yet</span>
                 )}
@@ -236,10 +255,10 @@ export function CourseForm({
                   <div className="flex flex-wrap gap-2">
                     <label className={cn("inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 hover:bg-slate-50", (readOnly || thumbnailBusy) && "pointer-events-none opacity-50")}>
                       {thumbnailBusy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <ImageUp className="h-4 w-4" />}
-                      {thumbnailBusy ? "Uploading…" : values.thumbnailUrl ? "Replace image" : "Upload image"}
+                      {thumbnailBusy ? "Uploading…" : previewUrl ? "Replace image" : "Upload image"}
                       <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={readOnly || thumbnailBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadThumbnail(file); event.target.value = ""; }} />
                     </label>
-                    {values.thumbnailUrl ? (
+                    {previewUrl ? (
                       <button type="button" onClick={() => void removeThumbnail()} disabled={readOnly || thumbnailBusy} className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-red-200 px-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
                         <Trash2 className="h-4 w-4" />Remove
                       </button>
@@ -251,7 +270,7 @@ export function CourseForm({
                     <p>Image upload needs a saved course to attach the file to. Save a draft below, then reopen it here — or paste a URL now instead.</p>
                   </AlertBox>
                 )}
-                <Field label="Or paste an image URL" error={errors.thumbnailUrl}><input value={values.thumbnailUrl && !values.thumbnailUrl.startsWith("blob:") ? values.thumbnailUrl : ""} onChange={(event) => update("thumbnailUrl", event.target.value || null)} type="url" className={fieldClass} disabled={readOnly || thumbnailBusy} placeholder="https://cdn.example.com/course.jpg" /></Field>
+                <Field label="Or paste an image URL" error={errors.thumbnailUrl}><input value={values.thumbnailUrl || ""} onChange={(event) => { const next = event.target.value || null; update("thumbnailUrl", next); setPreviewUrl(next); }} type="url" className={fieldClass} disabled={readOnly || thumbnailBusy} placeholder="https://cdn.example.com/course.jpg" /></Field>
               </div>
             </div>
           </div>

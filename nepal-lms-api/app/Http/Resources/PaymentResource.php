@@ -20,6 +20,7 @@ class PaymentResource extends JsonResource
             'submitted_at' => $this->submitted_at?->toIso8601String(),
             'rejection_reason' => $this->rejection_reason,
             'proof_preview_available' => $this->hasProof(),
+            'proof_mime' => $this->proof_mime,
             'course_title' => $this->course?->title,
             'batch_title' => $this->batch?->title,
 

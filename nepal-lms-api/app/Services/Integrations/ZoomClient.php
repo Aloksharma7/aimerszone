@@ -104,6 +104,11 @@ class ZoomClient
                 'name' => (string) ($participant['name'] ?? 'Unknown participant'),
                 'email' => $participant['user_email'] ?? null,
                 'duration' => (int) ($participant['duration'] ?? 0),
+
+                // When present, lets the import compute "joined late" the same
+                // way the student's own join link does, instead of guessing
+                // lateness from how long they stayed.
+                'join_time' => $participant['join_time'] ?? null,
             ])
             ->all();
     }

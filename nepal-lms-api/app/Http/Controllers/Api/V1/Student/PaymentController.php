@@ -9,6 +9,8 @@ use App\Http\Resources\PublicPaymentMethodResource;
 use App\Models\Batch;
 use App\Models\Payment;
 use App\Models\PaymentMethod;
+use App\Services\AuditLogger;
+use App\Services\MediaLinkService;
 use App\Services\PaymentSubmissionService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +18,11 @@ use Illuminate\Http\Request;
 
 class PaymentController extends Controller
 {
-    public function __construct(protected PaymentSubmissionService $submissions) {}
+    public function __construct(
+        protected PaymentSubmissionService $submissions,
+        protected MediaLinkService $links,
+        protected AuditLogger $audit,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -65,5 +71,24 @@ class PaymentController extends Controller
         $payment->load(['course:id,title', 'batch:id,title', 'method:id,name']);
 
         return ApiResponse::item(new PaymentResource($payment), status: 201);
+    }
+
+    /**
+     * Short-lived, authorized link to the student's own evidence file —
+     * PaymentPolicy already allowed this (payment.user_id === user.id), but
+     * no route existed to reach it, so a student could never actually view
+     * what they themselves uploaded. Mirrors Accounting\PaymentController::proof().
+     */
+    public function proof(Request $request, Payment $payment): JsonResponse
+    {
+        $this->authorize('viewProof', $payment);
+
+        abort_unless($payment->hasProof(), 404);
+
+        $this->audit->log('payment.proof_viewed', $payment, $request->user());
+
+        $destination = $this->links->forPaymentProof($payment);
+
+        return ApiResponse::destination($destination['url'], $destination['expires_at']);
     }
 }

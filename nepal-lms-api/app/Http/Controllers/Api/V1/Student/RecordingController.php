@@ -69,7 +69,14 @@ class RecordingController extends Controller
             ->where('recording_id', $recording->getKey())
             ->first();
 
+        // index() already includes this; show() omitting it left every
+        // single-recording fetch with enrollment_id undefined, which broke
+        // both the course-scoped canonicalization redirect and the page's
+        // own enrollment-match guard (it fails open when this is missing).
+        $enrollment = $this->guard->enrollmentFor($request->user(), $recording->batch_id);
+
         return ApiResponse::item((new RecordingResource($recording))->additional([
+            'enrollment_id' => $enrollment?->id,
             'progress_percent' => (int) ($progress->progress_percent ?? 0),
         ]));
     }

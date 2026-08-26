@@ -19,6 +19,50 @@ class AuthenticationTest extends TestCase
         $this->actingAsFrontend();
     }
 
+    /**
+     * Regression: config/auth.php deliberately sets the default guard to
+     * "sanctum" (a RequestGuard, so both the web cookie and mobile Bearer
+     * token resolve through one `auth` middleware). RegisterController used
+     * to call the unqualified auth()->login(), which resolves to that same
+     * default guard — but RequestGuard has no login() method at all, so
+     * every registration crashed with "Method
+     * Illuminate\Auth\RequestGuard::login does not exist." before this test
+     * existed to catch it. LoginController already guarded against this
+     * with an explicit auth()->guard('web')->login(...); registration must
+     * do the same.
+     */
+    public function test_a_new_student_is_signed_in_immediately_after_registering(): void
+    {
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Priya Sharma',
+            'mobile' => '9812345678',
+            'email' => 'priya@example.test',
+            'password' => 'Passw0rd!',
+            'password_confirmation' => 'Passw0rd!',
+            'terms_accepted' => true,
+        ])->assertCreated()->assertJsonPath('data.portal_home', '/student/dashboard');
+
+        $this->getJson('/api/v1/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.user.email', 'priya@example.test');
+    }
+
+    /**
+     * Email used to be optional at registration, which left accounts with no
+     * way to recover a lost password or sign in without the exact phone
+     * number on file. Now required, matching mobile.
+     */
+    public function test_registering_without_an_email_is_rejected(): void
+    {
+        $this->postJson('/api/v1/auth/register', [
+            'name' => 'Priya Sharma',
+            'mobile' => '9812345679',
+            'password' => 'Passw0rd!',
+            'password_confirmation' => 'Passw0rd!',
+            'terms_accepted' => true,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['email']);
+    }
+
     public function test_a_student_can_sign_in_with_mobile_or_email(): void
     {
         $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);

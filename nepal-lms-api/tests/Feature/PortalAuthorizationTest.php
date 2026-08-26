@@ -39,12 +39,6 @@ class PortalAuthorizationTest extends TestCase
             // from the former enrollment_officer and accountant roles), so
             // it legitimately reaches both /staff and /accounting — the
             // boundary that matters is still "not another portal entirely."
-
-            // Admin runs day-to-day operations but not settings, integrations
-            // or role management — that stays exclusive to Super Admin.
-            'admin cannot open settings' => [RoleKey::Admin, '/api/v1/admin/settings'],
-            'admin cannot open roles management' => [RoleKey::Admin, '/api/v1/admin/roles'],
-            'admin cannot open integrations' => [RoleKey::Admin, '/api/v1/admin/integrations/youtube/records'],
         ];
     }
 
@@ -54,6 +48,22 @@ class PortalAuthorizationTest extends TestCase
         $user = $this->makeUser($role);
 
         $this->actingAs($user)->getJson($endpoint)->assertForbidden();
+    }
+
+    /**
+     * Admin has full day-to-day authority, including settings, integrations
+     * and role management — only managing another Admin/Super Admin account
+     * stays exclusive to Super Admin (covered separately below). This used
+     * to be a "cannot" case; config/lms.php's admin grant deliberately
+     * changed to include these.
+     */
+    public function test_admin_can_reach_settings_roles_and_integrations(): void
+    {
+        $admin = $this->makeUser(RoleKey::Admin);
+
+        $this->actingAs($admin)->getJson('/api/v1/admin/settings')->assertOk();
+        $this->actingAs($admin)->getJson('/api/v1/admin/roles')->assertOk();
+        $this->actingAs($admin)->getJson('/api/v1/admin/integrations/youtube/records')->assertOk();
     }
 
     public function test_an_unauthenticated_request_is_rejected_with_a_machine_code(): void

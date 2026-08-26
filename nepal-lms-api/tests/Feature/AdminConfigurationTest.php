@@ -129,7 +129,11 @@ class AdminConfigurationTest extends TestCase
         $this->assertNull($method->fresh()->qr_image_path);
     }
 
-    public function test_a_plain_admin_cannot_upload_a_payment_method_qr_image(): void
+    /**
+     * settings.manage moved from Super-Admin-exclusive to also granted to
+     * plain Admin (config/lms.php) — this used to assert the old boundary.
+     */
+    public function test_a_plain_admin_can_upload_a_payment_method_qr_image(): void
     {
         Storage::fake('public');
         $admin = $this->makeUser(RoleKey::Admin);
@@ -139,7 +143,7 @@ class AdminConfigurationTest extends TestCase
             ->postJson("/api/v1/admin/payment-methods/{$method->getKey()}/qr", [
                 'qr_image' => UploadedFile::fake()->image('esewa-qr.png'),
             ])
-            ->assertForbidden();
+            ->assertOk();
     }
 
     public function test_an_idempotency_key_replays_instead_of_repeating_the_action(): void

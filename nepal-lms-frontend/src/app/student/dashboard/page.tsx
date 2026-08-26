@@ -32,6 +32,8 @@ export default async function StudentDashboardPage() {
           time={`${data.nextClass.date} · ${data.nextClass.time}`}
           status={data.nextClass.status}
           href={nextClassHref}
+          sessionId={data.nextClass.id}
+          joinAvailable={data.nextClass.joinAvailable}
         />
       ) : <EmptyState title="No class scheduled" description="Your upcoming live classes will appear here after a batch schedule is published." action={<ButtonLink href="/student/courses" variant="outline">Open my courses</ButtonLink>} />}
 

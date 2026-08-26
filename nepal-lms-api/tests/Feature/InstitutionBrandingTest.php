@@ -87,12 +87,16 @@ class InstitutionBrandingTest extends TestCase
             ->assertJsonPath('data.tagline', 'Evening batches every weekday.');
     }
 
-    public function test_a_plain_admin_cannot_change_institution_branding(): void
+    /**
+     * settings.manage moved from Super-Admin-exclusive to also granted to
+     * plain Admin (config/lms.php) — this used to assert the old boundary.
+     */
+    public function test_a_plain_admin_can_change_institution_branding(): void
     {
         $admin = $this->makeUser(RoleKey::Admin);
 
         $this->actingAs($admin)
             ->postJson('/api/v1/admin/settings/institution/logo', ['logo' => UploadedFile::fake()->image('logo.png')])
-            ->assertForbidden();
+            ->assertOk();
     }
 }

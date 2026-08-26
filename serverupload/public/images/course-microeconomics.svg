@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-labelledby="title desc">
+<title id="title">MICRO course illustration</title><desc id="desc">Original academic illustration for MICRO</desc>
+<rect width="640" height="360" rx="28" fill="#172554"/>
+<circle cx="580" cy="-20" r="180" fill="#2563eb" opacity=".58"/>
+<circle cx="520" cy="330" r="155" fill="#2563eb" opacity=".22"/>
+<g opacity=".12" fill="#fff"><circle cx="38" cy="38" r="4"/><circle cx="66" cy="38" r="4"/><circle cx="94" cy="38" r="4"/><circle cx="38" cy="66" r="4"/><circle cx="66" cy="66" r="4"/><circle cx="94" cy="66" r="4"/></g>
+<g transform="translate(282,34)"><polyline points="78,142 110,110 140,124 180,72 218,92 256,48" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/><line x1="76" y1="158" x2="268" y2="158" stroke="#fff" stroke-opacity=".45" stroke-width="6" stroke-linecap="round"/></g>
+<text x="48" y="250" fill="#fff" font-family="Arial, sans-serif" font-weight="700" font-size="36" letter-spacing="1">MICRO</text>
+<text x="48" y="292" fill="#fff" fill-opacity=".78" font-family="Arial, sans-serif" font-size="20">Demand • Supply • Elasticity</text>
+<rect x="48" y="314" width="110" height="4" rx="2" fill="#fff" fill-opacity=".55"/>
+</svg>

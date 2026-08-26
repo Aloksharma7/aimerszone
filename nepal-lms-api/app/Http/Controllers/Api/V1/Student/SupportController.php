@@ -13,6 +13,7 @@ use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class SupportController extends Controller
 {
@@ -91,17 +92,23 @@ class SupportController extends Controller
             );
         }
 
+        $user = $request->user();
+
         $data = $request->validate([
             'subject' => ['required', 'string', 'max:180'],
             'category' => ['nullable', 'string', 'max:40'],
             'message' => ['required', 'string', 'min:10', 'max:4000'],
-        ]);
 
-        $user = $request->user();
+            // Must be one of the student's own enrollments — otherwise a
+            // ticket could claim to be about a course this account never
+            // touched.
+            'enrollment_id' => ['nullable', 'string', Rule::exists('enrollments', 'id')->where('user_id', $user->getKey())],
+        ]);
 
         $ticket = SupportTicket::create([
             'reference' => 'SUP-'.now()->format('Ymd').'-'.Str::upper(Str::random(5)),
             'user_id' => $user->getKey(),
+            'enrollment_id' => $data['enrollment_id'] ?? null,
             'name' => $user->name,
             'email' => $user->email,
             'mobile' => $user->mobile,

@@ -13,7 +13,7 @@ import type { StaffCourse } from "@/types/lms";
 const inputClass = labelledFieldClass;
 const textareaClass = "mt-2 min-h-24 w-full rounded-lg border border-slate-300 p-3 text-sm font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100";
 
-type FoundStudent = { id: string; name: string; mobile: string; email: string | null; studentCode: string | null };
+export type FoundStudent = { id: string; name: string; mobile: string; email: string | null; studentCode: string | null };
 type ApiStudentRow = { id: string; name: string; mobile: string; email: string | null; student_code: string | null };
 
 function getError(error: unknown, fallback: string): string {
@@ -182,22 +182,45 @@ function NewStudentPanel({ onCreated, onCancel }: { onCreated: (student: FoundSt
  * back to the normal review queue only when the submission itself is flagged
  * (duplicate evidence, or an amount mismatch) — see PaymentDecisionService.
  */
-export function EnrollStudentForm({ courses, redirectTo = "/staff/payment-submissions" }: { courses: StaffCourse[]; redirectTo?: string }) {
+export function EnrollStudentForm({
+  courses,
+  redirectTo = "/staff/payment-submissions",
+  initialStudent = null,
+}: {
+  courses: StaffCourse[];
+  redirectTo?: string;
+  /** Pre-selects the student when arriving from their own record, e.g. "Create payment submission" on a student's profile. */
+  initialStudent?: FoundStudent | null;
+}) {
   const router = useRouter();
   const { toast } = useToast();
   const mockMode = isMockDataEnabled();
 
-  const [student, setStudent] = useState<FoundStudent | null>(null);
+  const [student, setStudent] = useState<FoundStudent | null>(initialStudent);
   const [creatingNew, setCreatingNew] = useState(false);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const [values, setValues] = useState({ courseId: "", method: "esewa", amount: "", payer: "", reference: "", date: "", note: "" });
+  const [values, setValues] = useState({ courseId: "", batchId: "", method: "esewa", amount: "", payer: "", reference: "", date: "", note: "" });
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const selectedCourse = courses.find((course) => (course.id || course.slug) === values.courseId);
+  const courseBatches = selectedCourse?.batches ?? [];
+
+  /*
+   * A course with more than one open batch used to silently enroll into
+   * "whichever the backend picks first" — this always resolves a real
+   * batch selection into the request instead. Auto-picks the only batch
+   * when there is just one, so staff aren't forced through an extra click
+   * for the common case.
+   */
+  function selectCourse(courseId: string) {
+    const nextCourse = courses.find((course) => (course.id || course.slug) === courseId);
+    const batches = nextCourse?.batches ?? [];
+    setValues((current) => ({ ...current, courseId, batchId: batches.length === 1 ? batches[0].id : "" }));
+  }
 
   function studentCreated(created: FoundStudent, tempPassword: string | null) {
     setStudent(created);
@@ -216,6 +239,10 @@ export function EnrollStudentForm({ courses, redirectTo = "/staff/payment-submis
       setError("Select the course, enter the amount paid (0 for a full scholarship or waiver), and attach proof.");
       return;
     }
+    if (courseBatches.length > 1 && !values.batchId) {
+      setError("This course has more than one open batch — choose which one the student is joining.");
+      return;
+    }
     if (!["image/jpeg", "image/png", "application/pdf"].includes(file.type) || file.size > 8 * 1024 * 1024) {
       setError("Use JPG, PNG or PDF under 8 MB.");
       return;
@@ -230,6 +257,7 @@ export function EnrollStudentForm({ courses, redirectTo = "/staff/payment-submis
         Object.entries({
           student_id: student.id,
           course_id: values.courseId,
+          ...(values.batchId ? { batch_id: values.batchId } : {}),
           payment_method: values.method,
           amount_npr: values.amount,
           payer_name: values.payer || student.name,
@@ -306,7 +334,16 @@ export function EnrollStudentForm({ courses, redirectTo = "/staff/payment-submis
           <h2 className="text-xl font-bold text-slate-950">2. Payment received</h2>
           <p className="mt-1 text-sm text-slate-500">Use the details the student actually gave you. This activates their seat immediately, unless the evidence looks off — a duplicate screenshot, or an amount that does not match — in which case it goes to a second reviewer instead.</p>
           <form onSubmit={submit} className="mt-5 grid gap-5 sm:grid-cols-2">
-            <label className="text-sm font-semibold text-slate-700 sm:col-span-2">Course<select className={inputClass} value={values.courseId} onChange={(event) => setValues((current) => ({ ...current, courseId: event.target.value }))}><option value="">Select course</option>{courses.map((course) => <option key={course.id || course.slug} value={course.id || course.slug}>{course.title} · {course.batch}</option>)}</select></label>
+            <label className="text-sm font-semibold text-slate-700 sm:col-span-2">Course<select className={inputClass} value={values.courseId} onChange={(event) => selectCourse(event.target.value)}><option value="">Select course</option>{courses.map((course) => <option key={course.id || course.slug} value={course.id || course.slug}>{course.title} · {course.batch}</option>)}</select></label>
+            {courseBatches.length > 1 ? (
+              <label className="text-sm font-semibold text-slate-700 sm:col-span-2">
+                Batch
+                <select className={inputClass} value={values.batchId} onChange={(event) => setValues((current) => ({ ...current, batchId: event.target.value }))}>
+                  <option value="">Select batch</option>
+                  {courseBatches.map((batch) => <option key={batch.id} value={batch.id}>{batch.title} · {batch.schedule}</option>)}
+                </select>
+              </label>
+            ) : null}
             <label className="text-sm font-semibold text-slate-700">Expected amount<input value={selectedCourse?.price || 0} readOnly className={`${inputClass} bg-slate-100 text-slate-600`} /></label>
             <label className="text-sm font-semibold text-slate-700">Payment method<select className={inputClass} value={values.method} onChange={(event) => setValues((current) => ({ ...current, method: event.target.value }))}><option value="esewa">eSewa</option><option value="khalti">Khalti</option><option value="bank">Bank transfer</option><option value="cash">Cash receipt</option></select></label>
             <label className="text-sm font-semibold text-slate-700">Amount paid<input type="number" min="0" className={inputClass} value={values.amount} onChange={(event) => setValues((current) => ({ ...current, amount: event.target.value }))} /><span className="mt-1 block text-xs font-normal text-slate-400">For a full scholarship or fee waiver, enter 0 and attach the institution&apos;s authorization slip as proof below.</span></label>

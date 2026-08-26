@@ -257,10 +257,15 @@ return [
                 'resources.manage',
                 'announcements.view', 'reports.view', 'reports.export', 'audit.view',
             ],
-            // Admin runs day-to-day operations but cannot change settings,
-            // integrations or roles/permissions, and cannot manage Admin or
-            // Super Admin accounts (enforced in UserPolicy) — that stays
-            // exclusive to Super Admin.
+            // Admin has full day-to-day authority, including settings,
+            // integrations and roles/permissions — the one boundary that
+            // stays exclusive to Super Admin is managing another Admin or
+            // Super Admin account (enforced separately, in UserPolicy).
+            //
+            // Deliberately excludes sessions.start: starting a class is the
+            // assigned teacher's own act (ClassSessionPolicy::start() also
+            // requires teachesBatch()), not an admin function — admin can
+            // still view/reschedule/manage a session via sessions.manage.
             'admin' => [
                 'courses.view', 'courses.create', 'courses.update', 'courses.publish', 'courses.delete',
                 'categories.manage', 'faqs.manage',
@@ -269,7 +274,7 @@ return [
                 'enrollments.view', 'enrollments.manage',
                 'payments.view', 'payments.submit', 'payments.review', 'payments.adjust', 'payments.refund',
                 'receipts.view',
-                'sessions.view', 'sessions.manage', 'sessions.start',
+                'sessions.view', 'sessions.manage',
                 'attendance.view', 'attendance.finalize',
                 'recordings.view', 'recordings.manage',
                 'resources.view', 'resources.manage',
@@ -279,6 +284,7 @@ return [
                 'reports.view', 'reports.export', 'reports.financial',
                 'users.view', 'users.manage', 'users.delete', 'users.security',
                 'syllabus.manage', 'audit.view',
+                'settings.manage', 'roles.manage', 'integrations.manage',
             ],
             // Full wildcard: the only role that also bypasses individual
             // policy checks (see AuthServiceProvider::boot Gate::before).

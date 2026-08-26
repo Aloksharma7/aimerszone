@@ -138,6 +138,43 @@ class RecordingController extends Controller
     }
 
     /**
+     * Re-runs the YouTube check for a recording stuck in `processing` — the
+     * original verify() at store() time never gets a second chance on its
+     * own, so a video that was still encoding, or pasted before the
+     * institution's YouTube integration was connected, would otherwise stay
+     * invisible to students forever.
+     */
+    public function resync(Request $request, string $batchId, Recording $recording): JsonResponse
+    {
+        $this->resolveBatch($batchId, $request->user());
+
+        abort_unless($recording->batch_id === $batchId, 404);
+
+        $verified = $this->verify($recording->youtube_video_id);
+
+        $recording->fill([
+            'thumbnail_url' => $verified['thumbnail_url'] ?? $recording->thumbnail_url,
+            'duration_seconds' => $verified['duration_seconds'] ?? $recording->duration_seconds,
+            'state' => ($verified['state'] ?? null) === 'processed'
+                ? RecordingState::Available->value
+                : RecordingState::Processing->value,
+            'sync_message' => $verified['message'] ?? null,
+            'synced_at' => now(),
+        ])->save();
+
+        $this->audit->log('recording.resynced', $recording, $request->user(), properties: [
+            'video_id' => $recording->youtube_video_id,
+            'verified' => $verified['verified'] ?? false,
+        ]);
+
+        return ApiResponse::item([
+            'id' => $recording->id,
+            'state' => $recording->state->value,
+            'warning' => $verified['message'] ?? null,
+        ]);
+    }
+
+    /**
      * The video itself stays on YouTube; this only removes the LMS's
      * reference to it, freeing a wrongly-pasted id or fully retracting a
      * recording rather than just unpublishing it via release_at. A soft

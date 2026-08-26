@@ -13,6 +13,7 @@ import {
   UserRound,
 } from "lucide-react";
 import { Badge, ButtonLink, Panel, ProgressBar, StatusBadge } from "@/components/ui";
+import { JoinClassButton } from "@/components/student/secure-learning-actions";
 import type { Course } from "@/types/lms";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,8 @@ export function LiveClassCard({
   status = "Live now",
   href,
   teacherMode = false,
+  sessionId,
+  joinAvailable = false,
 }: {
   title: string;
   course: string;
@@ -32,8 +35,12 @@ export function LiveClassCard({
   status?: string;
   href: string;
   teacherMode?: boolean;
+  /** When set alongside joinAvailable, the card joins directly instead of just linking to the live tab. */
+  sessionId?: string;
+  joinAvailable?: boolean;
 }) {
   const live = status.toLowerCase().includes("live");
+  const canJoinDirectly = !teacherMode && Boolean(sessionId) && joinAvailable;
   return (
     <Panel className={cn("relative overflow-hidden border-0 text-white", live ? "bg-brand-900" : "bg-slate-900")}>
       <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-blue-500/20" />
@@ -55,10 +62,14 @@ export function LiveClassCard({
               <span className="inline-flex items-center gap-2"><UserRound className="h-4 w-4" />{teacher}</span>
             </div>
           </div>
-          <ButtonLink href={href} size="lg" className="w-full border-white bg-white text-brand-900 hover:bg-blue-50 lg:w-auto">
-            {teacherMode ? <Radio className="h-5 w-5" /> : <MonitorPlay className="h-5 w-5" />}
-            {teacherMode ? "Start class" : "Join class"}
-          </ButtonLink>
+          {canJoinDirectly ? (
+            <JoinClassButton sessionId={sessionId as string} className="w-full lg:w-auto" />
+          ) : (
+            <ButtonLink href={href} size="lg" className="w-full border-white bg-white text-brand-900 hover:bg-blue-50 lg:w-auto">
+              {teacherMode ? <Radio className="h-5 w-5" /> : <MonitorPlay className="h-5 w-5" />}
+              {teacherMode ? "Start class" : "View live class"}
+            </ButtonLink>
+          )}
         </div>
       </div>
     </Panel>

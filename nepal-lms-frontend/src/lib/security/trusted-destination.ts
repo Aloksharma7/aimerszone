@@ -49,6 +49,13 @@ export function trustedDestination(
     allowedHosts?: string[];
   },
 ): string | null {
+  // A caller passing undefined/null/"" (e.g. reading the wrong response
+  // field) must fail here, not silently resolve against currentOrigin —
+  // `new URL(undefined, currentOrigin)` coerces to the literal string
+  // "undefined" and returns a same-origin URL that looks "trusted" while
+  // pointing nowhere real.
+  if (typeof rawUrl !== "string" || rawUrl.trim() === "") return null;
+
   try {
     const currentOrigin = new URL(options.currentOrigin).origin;
     const url = new URL(rawUrl, currentOrigin);

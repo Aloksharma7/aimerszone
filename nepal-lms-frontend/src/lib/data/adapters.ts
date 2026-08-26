@@ -221,6 +221,7 @@ export function mapRecording(value: ApiRecording): Recording {
     duration: formatDuration(value.duration_seconds),
     progress,
     state,
+    syncMessage: value.sync_message,
     thumbnailUrl: value.thumbnail_url,
     videoId: value.youtube_video_id,
   };
@@ -316,6 +317,8 @@ export function mapPayment(value: ApiPayment): Payment {
     status: paymentStatus(value.status),
     reason: value.rejection_reason || undefined,
     receiptId: value.receipt_id || null,
+    proofAvailable: value.proof_preview_available ?? false,
+    proofMimeType: value.proof_mime || null,
   };
 }
 
