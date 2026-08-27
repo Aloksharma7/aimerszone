@@ -140,7 +140,7 @@ const navByRole: Record<PortalRole, NavItem[]> = {
     { label: "Content & PDFs", href: "/admin/content", icon: FileText },
     { label: "Students", href: "/admin/students", icon: Users, permission: "students.view" },
     { label: "Support Inbox", href: "/admin/support", icon: Headphones, permission: "support.view" },
-    { label: "Integrations", href: "/admin/integrations/zoom", icon: ShieldCheck, permission: "settings.manage" },
+    { label: "Integrations", href: "/admin/integrations", icon: ShieldCheck, permission: "settings.manage" },
     { label: "Settings & Audit", href: "/admin/settings", icon: Settings, permission: "settings.manage" },
     { label: "Roles & Permissions", href: "/admin/roles", icon: ShieldCheck, permission: "roles.manage" },
   ],

@@ -224,6 +224,8 @@ export function mapRecording(value: ApiRecording): Recording {
     syncMessage: value.sync_message,
     thumbnailUrl: value.thumbnail_url,
     videoId: value.youtube_video_id,
+    isPublicWarning: value.is_public_warning,
+    syllabusLessonId: value.syllabus_lesson_id,
   };
 }
 
@@ -239,6 +241,7 @@ export function mapResource(value: ApiResource): Resource {
     size: formatFileSize(value.size_bytes),
     released: formatDate(value.released_at),
     downloadUrl: value.download_url,
+    syllabusLessonId: value.syllabus_lesson_id,
   };
 }
 
@@ -249,7 +252,14 @@ export function mapSyllabusModule(value: ApiSyllabusModule): SyllabusModule {
     progress: value.progress_percent ?? 0,
     lessons: [...value.lessons]
       .sort((a, b) => a.order - b.order)
-      .map((lesson) => ({ id: lesson.id, title: lesson.title, type: lesson.type || "Lesson", state: lesson.state || "Available" })),
+      .map((lesson) => ({
+        id: lesson.id,
+        title: lesson.title,
+        type: lesson.type || "Lesson",
+        state: lesson.state || "Available",
+        recordingId: lesson.recording_id,
+        resourceId: lesson.resource_id,
+      })),
   };
 }
 

@@ -4,18 +4,19 @@ import { DataTable } from "@/components/portal-components";
 import { MetricCard, PageHeader, StatusBadge } from "@/components/ui";
 import { requirePermission, requirePortalAccess } from "@/lib/auth/server";
 import { getTeacherTestResults } from "@/lib/data/assessment";
+import { portalPath } from "@/lib/portal-path";
 
 export default async function TeacherTestResultsPage({ params }: { params: Promise<{ testId: string }> }) {
   const user = await requirePortalAccess("teacher");
   await requirePermission(user, "tests.manage");
   const { testId } = await params;
-  const results = await getTeacherTestResults(testId);
+  const [results, backHref] = await Promise.all([getTeacherTestResults(testId), portalPath(`/teacher/tests/${testId}`)]);
   if (!results) notFound();
 
   return (
     <>
       <PageHeader
-        back={{ href: `/teacher/tests/${testId}`, label: "Test builder" }}
+        back={{ href: backHref, label: "Test builder" }}
         eyebrow="Assessment results"
         title={results.test.title}
         description={`Pass mark ${results.test.passMark} of ${results.test.totalMarks}. Only submitted or graded attempts are shown.`}

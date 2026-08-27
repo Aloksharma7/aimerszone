@@ -28,6 +28,19 @@ export type PaginatedResponse<T> = {
   };
 };
 
+/** Normalized page info a list page needs to render a <Pagination>, independent of any one API's raw meta shape. */
+export type PageMeta = {
+  currentPage: number;
+  lastPage: number;
+  total: number;
+  from?: number | null;
+  to?: number | null;
+};
+
+export function pageMetaFrom(meta: PaginatedResponse<unknown>["meta"]): PageMeta {
+  return { currentPage: meta.current_page, lastPage: meta.last_page, total: meta.total, from: meta.from, to: meta.to };
+}
+
 export type AuthenticatedUser = {
   user: {
     id: string;

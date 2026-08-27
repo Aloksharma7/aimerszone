@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { AlertBox, Button, PageHeader, Panel, StatusBadge, labelledFieldClass } from "@/components/ui";
 import { browserRequest, createIdempotencyKey, normalizeApiError } from "@/lib/api/browser-client";
 import type { ApiResponse } from "@/lib/api/contracts";
+import { usePortalPath } from "@/lib/use-portal-path";
 import {
   isChoiceQuestion,
   questionTypeLabels,
@@ -297,6 +298,7 @@ function QuestionEditor({
 
 export function TestBuilder({ initialData }: { initialData: TeacherTestBuilderData }) {
   const router = useRouter();
+  const portalPath = usePortalPath();
   const [values, setValues] = useState(initialData);
   const [busy, setBusy] = useState<"save" | "publish" | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
@@ -366,7 +368,7 @@ export function TestBuilder({ initialData }: { initialData: TeacherTestBuilderDa
         title: mockMode ? "Preview validated" : publishAfter ? "Test published" : "Draft saved",
         message: mockMode ? "The complete assessment payload and answer-key rules are ready for Laravel." : publishAfter ? "The test is available according to the configured schedule." : "The draft and question order were saved.",
       });
-      if (!values.id && testId && !mockMode) router.replace(`/teacher/tests/${encodeURIComponent(testId)}`);
+      if (!values.id && testId && !mockMode) router.replace(portalPath(`/teacher/tests/${encodeURIComponent(testId)}`));
       router.refresh();
     } catch (error) {
       setNotice({ tone: "danger", title: publishAfter ? "Test not published" : "Draft not saved", message: apiMessage(error) });
@@ -377,7 +379,7 @@ export function TestBuilder({ initialData }: { initialData: TeacherTestBuilderDa
 
   return (
     <>
-      <PageHeader back={{ href: "/teacher/content", label: "Tests & content" }}
+      <PageHeader back={{ href: portalPath("/teacher/content"), label: "Tests & content" }}
         eyebrow="Test builder"
         title={editing ? values.title || "Edit test" : "Create a new test"}
         description={editing ? "Update settings and questions for an assigned batch." : "Set the batch, availability and scoring rules before publishing."}

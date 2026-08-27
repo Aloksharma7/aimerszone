@@ -12,10 +12,12 @@ use App\Services\AccessGuard;
 use App\Services\AuditLogger;
 use App\Services\Integrations\IntegrationException;
 use App\Services\Integrations\YouTubeClient;
+use App\Models\SyllabusModule;
 use App\Services\SettingsRepository;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * Recording release.
@@ -45,8 +47,14 @@ class RecordingController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
+        // is_public_warning is teacher-only operational detail — merged in
+        // here rather than added to the shared RecordingResource, which the
+        // student-facing endpoints also use.
         return ApiResponse::collection($recordings->map(
-            fn (Recording $recording) => (new RecordingResource($recording))->toArray($request),
+            fn (Recording $recording) => [
+                ...(new RecordingResource($recording))->toArray($request),
+                'is_public_warning' => $recording->is_youtube_public,
+            ],
         ));
     }
 
@@ -59,6 +67,9 @@ class RecordingController extends Controller
             'title' => ['required', 'string', 'min:3', 'max:180'],
             'youtube_video_id' => ['required', 'string', 'regex:/^[A-Za-z0-9_-]{11}$/'],
             'module_title' => ['nullable', 'string', 'max:180'],
+            'syllabus_lesson_id' => ['nullable', 'string', Rule::exists('syllabus_lessons', 'id')->where(
+                fn ($query) => $query->whereIn('syllabus_module_id', SyllabusModule::where('course_id', $batch->course_id)->select('id')),
+            )],
             'release_at' => ['nullable', 'date'],
         ]);
 
@@ -76,9 +87,10 @@ class RecordingController extends Controller
 
         $recording = Recording::create([
             'batch_id' => $batch->getKey(),
-            'class_session_id' => $data['session_id'] ?: null,
+            'class_session_id' => $data['session_id'] ?? null,
             'title' => $data['title'],
             'module_title' => $data['module_title'] ?? null,
+            'syllabus_lesson_id' => $data['syllabus_lesson_id'] ?? null,
             'source' => 'youtube',
             'youtube_video_id' => $data['youtube_video_id'],
             'thumbnail_url' => $verified['thumbnail_url'] ?? null,
@@ -93,6 +105,7 @@ class RecordingController extends Controller
                 ? RecordingState::Available->value
                 : RecordingState::Processing->value,
             'sync_message' => $verified['message'] ?? null,
+            'is_youtube_public' => $verified['public'] ?? false,
             'synced_at' => now(),
             'created_by' => $request->user()->getKey(),
         ]);
@@ -110,18 +123,22 @@ class RecordingController extends Controller
             'id' => $recording->id,
             'state' => $recording->state->value,
             'warning' => $verified['message'] ?? null,
+            'is_public' => $verified['public'] ?? false,
         ], status: 201);
     }
 
     public function update(Request $request, string $batchId, Recording $recording): JsonResponse
     {
-        $this->resolveBatch($batchId, $request->user());
+        $batch = $this->resolveBatch($batchId, $request->user());
 
         abort_unless($recording->batch_id === $batchId, 404);
 
         $data = $request->validate([
             'title' => ['sometimes', 'string', 'min:3', 'max:180'],
             'module_title' => ['sometimes', 'nullable', 'string', 'max:180'],
+            'syllabus_lesson_id' => ['sometimes', 'nullable', 'string', Rule::exists('syllabus_lessons', 'id')->where(
+                fn ($query) => $query->whereIn('syllabus_module_id', SyllabusModule::where('course_id', $batch->course_id)->select('id')),
+            )],
             'release_at' => ['sometimes', 'nullable', 'date'],
         ]);
 
@@ -159,6 +176,7 @@ class RecordingController extends Controller
                 ? RecordingState::Available->value
                 : RecordingState::Processing->value,
             'sync_message' => $verified['message'] ?? null,
+            'is_youtube_public' => $verified['public'] ?? false,
             'synced_at' => now(),
         ])->save();
 
@@ -171,6 +189,7 @@ class RecordingController extends Controller
             'id' => $recording->id,
             'state' => $recording->state->value,
             'warning' => $verified['message'] ?? null,
+            'is_public' => $verified['public'] ?? false,
         ]);
     }
 
@@ -203,7 +222,7 @@ class RecordingController extends Controller
      * When YouTube is not connected the recording is still saved — the teacher
      * gets a warning rather than a blocked workflow.
      *
-     * @return array{verified: bool, state?: string, duration_seconds?: int, thumbnail_url?: ?string, message?: string}
+     * @return array{verified: bool, public?: bool, state?: string, duration_seconds?: int, thumbnail_url?: ?string, message?: string}
      */
     protected function verify(string $videoId): array
     {
@@ -228,22 +247,23 @@ class RecordingController extends Controller
             );
         }
 
-        if (! $this->youtube->isSafelyRestricted($video)) {
-            // A public video is reachable by anyone with the link, which would
-            // hand paid course content to the open internet.
-            throw DomainException::unprocessable(
-                'That video is public. Set it to unlisted on YouTube before releasing it here.',
-                'video_public',
-                ['youtube_video_id' => ['Set the video to unlisted before releasing it.']],
-            );
-        }
+        // A public video is reachable by anyone with the link, which hands paid
+        // course content to the open internet — allowed by choice, not blocked,
+        // but flagged so the teacher list keeps warning about it until it's
+        // switched to unlisted.
+        $isPublic = ! $this->youtube->isSafelyRestricted($video);
 
         return [
             'verified' => true,
+            'public' => $isPublic,
             'state' => $video['state'],
             'duration_seconds' => $video['duration_seconds'],
             'thumbnail_url' => $video['thumbnail_url'],
-            'message' => $video['state'] === 'processed' ? null : 'YouTube is still processing this video.',
+            'message' => match (true) {
+                $isPublic => 'This video is public on YouTube — anyone with the link can watch it, even people who never enrolled. Set it to unlisted when you can.',
+                $video['state'] !== 'processed' => 'YouTube is still processing this video.',
+                default => null,
+            },
         ];
     }
 }

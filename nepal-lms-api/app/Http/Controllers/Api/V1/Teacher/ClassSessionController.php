@@ -333,7 +333,14 @@ class ClassSessionController extends Controller
             $session->refresh();
         }
 
-        if (blank($session->zoom_start_url)) {
+        // Mirrors the student join() fallback: a provider outage (or, as on a
+        // free Zoom plan, no provider integration at all) must not block the
+        // teacher's own start path any more than it blocks the student's —
+        // the manual link the teacher published is exactly what students are
+        // about to be handed, so it is what "start" opens too.
+        $redirectUrl = $session->zoom_start_url ?: ($session->fallback_active ? $session->fallback_join_url : null);
+
+        if (blank($redirectUrl)) {
             throw DomainException::conflict(
                 'No host link is available. Publish a manual fallback link so students can still join.',
                 'host_link_unavailable',
@@ -351,7 +358,7 @@ class ClassSessionController extends Controller
         // before the class is genuinely live trains students to ignore it.
         $notified = $this->notifications->classStarted($session);
 
-        return ApiResponse::item(['redirect_url' => $session->zoom_start_url, 'students_notified' => $notified])
+        return ApiResponse::item(['redirect_url' => $redirectUrl, 'students_notified' => $notified])
             ->header('Cache-Control', 'no-store, private');
     }
 

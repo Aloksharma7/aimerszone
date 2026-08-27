@@ -1,6 +1,7 @@
 import "server-only";
 
-import type { ApiResponse, PaginatedResponse } from "@/lib/api/contracts";
+import type { ApiResponse, PageMeta, PaginatedResponse } from "@/lib/api/contracts";
+import { pageMetaFrom } from "@/lib/api/contracts";
 import { serverApiFetch } from "@/lib/api/server-client";
 import {
   mapAnnouncement,
@@ -122,6 +123,37 @@ export async function getStudentRecordings(enrollmentId?: string): Promise<Recor
   return response.data.map(mapRecording);
 }
 
+const RECORDINGS_PER_PAGE = 24;
+
+/**
+ * Paginated, server-filtered library for the /student/recordings screen
+ * itself. Kept separate from getStudentRecordings() — that one is also used
+ * to feed this same page's metric cards, the per-course recordings tab
+ * (which hits a different, unpaginated endpoint), and the recording detail
+ * page's "related recordings" panel, none of which should be capped to a
+ * single page's worth of results.
+ */
+export async function getStudentRecordingsPage(params: { page?: number; q?: string } = {}): Promise<{ items: Recording[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const term = (params.q || "").trim().toLocaleLowerCase();
+    const all = (recordings as unknown as Recording[]).map((recording) => ({ ...recording, enrollmentId: activeEnrollments[0]?.id }));
+    const filtered = all.filter((item) => !term || [item.title, item.course, item.module, item.teacher].some((value) => String(value ?? "").toLocaleLowerCase().includes(term)));
+    const total = filtered.length;
+    const lastPage = Math.max(1, Math.ceil(total / RECORDINGS_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * RECORDINGS_PER_PAGE;
+    const items = filtered.slice(start, start + RECORDINGS_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(RECORDINGS_PER_PAGE), page: String(page) });
+  if (params.q) query.set("q", params.q);
+  const response = await serverApiFetch<PaginatedResponse<ApiRecording>>(`/api/v1/student/recordings?${query.toString()}`);
+  return { items: response.data.map(mapRecording), meta: pageMetaFrom(response.meta) };
+}
+
 export async function getStudentRecording(recordingId: string, enrollmentId?: string): Promise<Recording | null> {
   if (isMockDataEnabled()) {
     const item = (recordings as unknown as Recording[]).find((recording) => recording.id === recordingId);
@@ -143,6 +175,37 @@ export async function getStudentResources(enrollmentId?: string): Promise<Resour
     : "/api/v1/student/resources";
   const response = await serverApiFetch<ApiResponse<ApiResource[]> | PaginatedResponse<ApiResource>>(path);
   return response.data.map(mapResource);
+}
+
+const RESOURCES_PER_PAGE = 24;
+
+/**
+ * Paginated, server-filtered library for the /student/resources screen
+ * itself. Kept separate from getStudentResources() — that one is also used
+ * to feed this same page's metric cards, the per-course resources tab
+ * (which hits a different, unpaginated endpoint), and the recording detail
+ * page's "related resources" panel, none of which should be capped to a
+ * single page's worth of results.
+ */
+export async function getStudentResourcesPage(params: { page?: number; q?: string } = {}): Promise<{ items: Resource[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const term = (params.q || "").trim().toLocaleLowerCase();
+    const all = resources.map((resource) => ({ ...resource, enrollmentId: activeEnrollments[0]?.id, course: activeEnrollments[0]?.course.title }));
+    const filtered = all.filter((item) => !term || [item.title, item.course, item.module, item.type].some((value) => String(value ?? "").toLocaleLowerCase().includes(term)));
+    const total = filtered.length;
+    const lastPage = Math.max(1, Math.ceil(total / RESOURCES_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * RESOURCES_PER_PAGE;
+    const items = filtered.slice(start, start + RESOURCES_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(RESOURCES_PER_PAGE), page: String(page) });
+  if (params.q) query.set("q", params.q);
+  const response = await serverApiFetch<PaginatedResponse<ApiResource>>(`/api/v1/student/resources?${query.toString()}`);
+  return { items: response.data.map(mapResource), meta: pageMetaFrom(response.meta) };
 }
 
 export async function getStudentSyllabus(enrollmentId: string): Promise<SyllabusModule[]> {
@@ -179,6 +242,36 @@ export async function getStudentPayments(): Promise<Payment[]> {
   if (isMockDataEnabled()) return payments as unknown as Payment[];
   const response = await serverApiFetch<ApiResponse<ApiPayment[]> | PaginatedResponse<ApiPayment>>("/api/v1/student/payments");
   return response.data.map(mapPayment);
+}
+
+const PAYMENTS_PER_PAGE = 20;
+
+/**
+ * Paginated payment history for the /student/payments screen itself. Kept
+ * separate from getStudentPayments() — that one still feeds this same
+ * page's metric cards, the "awaiting approval" banner on /student/courses,
+ * and getStudentPayment()'s single-record lookup, none of which should be
+ * capped to a single page's worth of results.
+ *
+ * The backend (Student\PaymentController) has no filter for this endpoint
+ * beyond pagination.
+ */
+export async function getStudentPaymentsPage(params: { page?: number } = {}): Promise<{ items: Payment[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const all = payments as unknown as Payment[];
+    const total = all.length;
+    const lastPage = Math.max(1, Math.ceil(total / PAYMENTS_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * PAYMENTS_PER_PAGE;
+    const items = all.slice(start, start + PAYMENTS_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(PAYMENTS_PER_PAGE), page: String(page) });
+  const response = await serverApiFetch<PaginatedResponse<ApiPayment>>(`/api/v1/student/payments?${query.toString()}`);
+  return { items: response.data.map(mapPayment), meta: pageMetaFrom(response.meta) };
 }
 
 export async function getStudentPayment(paymentId: string): Promise<Payment | null> {

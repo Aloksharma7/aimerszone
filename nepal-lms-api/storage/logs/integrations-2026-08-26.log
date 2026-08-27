@@ -1,0 +1,12 @@
+[2026-08-26 18:44:06] local.WARNING: YouTube video.read failed {"reference":"8WIBezcaXp0","message":"The request is not properly authorized to access video file or processing information. Note that the <code>fileDetails</code>, <code>processingDetails</code>, and <code>suggestions</code> parts are only available to that video's owner."} 
+[2026-08-26 18:46:05] testing.WARNING: Push payment.approved failed {"message":"not registered"} 
+[2026-08-26 19:01:03] local.WARNING: YouTube video.read failed {"reference":"8WIBezcaXp0","message":"cURL error 60: SSL certificate problem: unable to get local issuer certificate (see https://curl.se/libcurl/c/libcurl-errors.html) for https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,status&id=8WIBezcaXp0"} 
+[2026-08-26 19:01:31] local.WARNING: YouTube video.read failed {"reference":"8WIBezcaXp0","message":"cURL error 60: SSL certificate problem: unable to get local issuer certificate (see https://curl.se/libcurl/c/libcurl-errors.html) for https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,status&id=8WIBezcaXp0"} 
+[2026-08-26 19:01:37] local.WARNING: YouTube video.read failed {"reference":"8WIBezcaXp0","message":"cURL error 60: SSL certificate problem: unable to get local issuer certificate (see https://curl.se/libcurl/c/libcurl-errors.html) for https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,status&id=8WIBezcaXp0"} 
+[2026-08-26 19:11:34] testing.WARNING: Push payment.approved failed {"message":"not registered"} 
+[2026-08-26 19:17:17] testing.WARNING: Push payment.approved failed {"message":"not registered"} 
+[2026-08-26 19:30:08] testing.WARNING: Push payment.approved failed {"message":"not registered"} 
+[2026-08-26 20:39:21] testing.WARNING: Push payment.approved failed {"message":"not registered"} 
+[2026-08-26 20:47:56] testing.WARNING: Push payment.approved failed {"message":"not registered"} 
+[2026-08-26 21:19:35] testing.WARNING: Push payment.approved failed {"message":"not registered"} 
+[2026-08-26 21:29:11] testing.WARNING: Push payment.approved failed {"message":"not registered"} 

@@ -1,6 +1,7 @@
 import "server-only";
 
-import type { ApiResponse, PaginatedResponse } from "@/lib/api/contracts";
+import type { ApiResponse, PageMeta, PaginatedResponse } from "@/lib/api/contracts";
+import { pageMetaFrom } from "@/lib/api/contracts";
 import { isServerApiError, serverApiFetch } from "@/lib/api/server-client";
 import type { ApiPaymentQueueItem } from "@/lib/data/api-dtos";
 import { isMockDataEnabled } from "@/lib/data/config";
@@ -156,6 +157,45 @@ export async function getAccountingPayments(): Promise<PaymentQueueItem[]> {
   if (isMockDataEnabled()) return paymentQueue;
   const response = await serverApiFetch<ApiResponse<ApiPaymentQueueItem[]> | PaginatedResponse<ApiPaymentQueueItem>>("/api/v1/accounting/payments?per_page=100");
   return response.data.map(mapQueue);
+}
+
+const PAYMENTS_PER_PAGE = 20;
+
+/**
+ * Paginated, server-filtered payment queue for the /accounting/payments
+ * table itself. Kept separate from getAccountingPayments() — that one
+ * returns an unpaginated batch and still feeds this page's own metric cards
+ * (Submitted / Under review / Flagged), which are computed from the full
+ * fetched set rather than a single page.
+ *
+ * The backend (Accounting\PaymentController) filters on `status` and `q`
+ * (a student-name search) only — the page's "method" and "sort" controls
+ * have no backend equivalent, so they keep applying to whatever page of
+ * results is currently on screen.
+ */
+export async function getAccountingPaymentsPage(params: { page?: number; q?: string; status?: string } = {}): Promise<{ items: PaymentQueueItem[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const term = (params.q || "").trim().toLocaleLowerCase();
+    const filtered = paymentQueue.filter(
+      (item) =>
+        (!term || [item.id, item.student, item.course].some((value) => String(value ?? "").toLocaleLowerCase().includes(term))) &&
+        (!params.status || item.status === params.status),
+    );
+    const total = filtered.length;
+    const lastPage = Math.max(1, Math.ceil(total / PAYMENTS_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * PAYMENTS_PER_PAGE;
+    const items = filtered.slice(start, start + PAYMENTS_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(PAYMENTS_PER_PAGE), page: String(page) });
+  if (params.q) query.set("q", params.q);
+  if (params.status) query.set("status", params.status);
+  const response = await serverApiFetch<PaginatedResponse<ApiPaymentQueueItem>>(`/api/v1/accounting/payments?${query.toString()}`);
+  return { items: response.data.map(mapQueue), meta: pageMetaFrom(response.meta) };
 }
 
 export async function getAccountingPayment(paymentId: string): Promise<AccountingPaymentDetail | null> {

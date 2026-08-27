@@ -1,10 +1,11 @@
 import { GraduationCap, Plus, Search } from "lucide-react";
 import { ApiExportLink } from "@/components/api-actions";
 import { ListFilters } from "@/components/list-filters";
+import { Pagination } from "@/components/pagination";
 import { DataTable } from "@/components/portal-components";
 import { MetricCard, PageHeader, Panel, StatusBadge } from "@/components/ui";
-import { getStaffEnrollments } from "@/lib/data/staff";
-import { buildQueryString, firstParam, matchesQuery, type PageSearchParams } from "@/lib/search-params";
+import { getStaffEnrollments, getStaffEnrollmentsPage } from "@/lib/data/staff";
+import { buildQueryString, firstParam, pageParam, type PageSearchParams } from "@/lib/search-params";
 import { portalPath } from "@/lib/portal-path";
 
 export default async function StaffEnrollmentsPage({ searchParams }: { searchParams: PageSearchParams }) {
@@ -12,8 +13,11 @@ export default async function StaffEnrollmentsPage({ searchParams }: { searchPar
   const raw = await searchParams;
   const q = firstParam(raw.q);
   const status = firstParam(raw.status);
-  const enrollments = await getStaffEnrollments();
-  const filtered = enrollments.filter((item) => matchesQuery(q, item.id, item.student, item.course, item.batch) && (!status || item.status === status));
+  const page = pageParam(raw);
+  const [enrollments, { items, meta }] = await Promise.all([
+    getStaffEnrollments(),
+    getStaffEnrollmentsPage({ page, status }),
+  ]);
   const active = enrollments.filter((item) => item.status === "Active").length;
   const expired = enrollments.filter((item) => item.status === "Expired").length;
   const exportQuery = buildQueryString({ q, status });
@@ -33,7 +37,8 @@ export default async function StaffEnrollmentsPage({ searchParams }: { searchPar
           resetHref={enrollmentsBase}
           fields={[{ name: "status", label: "Enrollment status", value: status, options: [{ value: "", label: "All statuses" }, { value: "Active", label: "Active" }, { value: "Pending", label: "Pending" }, { value: "Paused", label: "Paused" }, { value: "Expired", label: "Expired" }] }]}
         />
-        <div className="mt-5"><DataTable rowKey="id" rows={filtered.map((item) => ({ ...item, access: item.accessUntil })) as unknown as Record<string, unknown>[]} columns={[{ key: "id", label: "Enrollment" }, { key: "student", label: "Student" }, { key: "course", label: "Course" }, { key: "batch", label: "Batch" }, { key: "access", label: "Access until" }, { key: "status", label: "Status", render: (row) => <StatusBadge status={String(row.status)} /> }]} /></div>
+        <div className="mt-5"><DataTable rowKey="id" rows={items.map((item) => ({ ...item, access: item.accessUntil })) as unknown as Record<string, unknown>[]} columns={[{ key: "id", label: "Enrollment" }, { key: "student", label: "Student" }, { key: "course", label: "Course" }, { key: "batch", label: "Batch" }, { key: "access", label: "Access until" }, { key: "status", label: "Status", render: (row) => <StatusBadge status={String(row.status)} /> }]} /></div>
+        <Pagination meta={meta} buildHref={(target) => `${enrollmentsBase}${buildQueryString({ q, status, page: String(target) })}`} />
       </Panel>
     </>
   );

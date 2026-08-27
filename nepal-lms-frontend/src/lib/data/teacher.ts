@@ -1,6 +1,7 @@
 import "server-only";
 
-import type { ApiResponse, PaginatedResponse } from "@/lib/api/contracts";
+import type { ApiResponse, PageMeta, PaginatedResponse } from "@/lib/api/contracts";
+import { pageMetaFrom } from "@/lib/api/contracts";
 import { isServerApiError, serverApiFetch } from "@/lib/api/server-client";
 import { mapAnnouncement, mapRecording } from "@/lib/data/adapters";
 import type { ApiAnnouncement, ApiRecording } from "@/lib/data/api-dtos";
@@ -12,6 +13,7 @@ import {
   recordings,
   staffStudents,
   studentTests,
+  syllabusModules,
   teacherBatches,
 } from "@/data/mock";
 import type { Announcement, Recording, StaffStudent, TeacherBatch } from "@/types/lms";
@@ -406,6 +408,36 @@ export async function getTeacherBatches(): Promise<TeacherBatch[]> {
   return response.data.map(mapTeacherBatch);
 }
 
+const BATCHES_PER_PAGE = 20;
+
+/**
+ * Paginated batch list for the /teacher/batches screen's grid. Kept
+ * separate from getTeacherBatches() — that one returns an unpaginated batch
+ * and is also used by the announcements batch picker, the new/recurring
+ * class batch pickers, and this same page's own metric cards, none of which
+ * should be capped to a single page's worth of results.
+ *
+ * The backend (Teacher\BatchController) has no search or status filter for
+ * this endpoint — only pagination — so a typed search term is matched
+ * against whatever page is currently on screen, same as before.
+ */
+export async function getTeacherBatchesPage(params: { page?: number } = {}): Promise<{ items: TeacherBatch[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const total = teacherBatches.length;
+    const lastPage = Math.max(1, Math.ceil(total / BATCHES_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * BATCHES_PER_PAGE;
+    const items = teacherBatches.slice(start, start + BATCHES_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(BATCHES_PER_PAGE), page: String(page) });
+  const response = await serverApiFetch<PaginatedResponse<ApiTeacherBatch>>(`/api/v1/teacher/batches?${query.toString()}`);
+  return { items: response.data.map(mapTeacherBatch), meta: pageMetaFrom(response.meta) };
+}
+
 export async function getTeacherBatch(batchId: string): Promise<TeacherBatchDetail | null> {
   if (isMockDataEnabled()) {
     const batch = teacherBatches.find((item) => item.id === batchId);
@@ -468,18 +500,79 @@ export async function getTeacherBatchSessionOptions(batchId: string): Promise<Te
   }));
 }
 
-export async function getTeacherAnnouncements(): Promise<Announcement[]> {
-  if (isMockDataEnabled()) return announcements;
-  const response = await serverApiFetch<ApiResponse<ApiAnnouncement[]> | PaginatedResponse<ApiAnnouncement>>("/api/v1/teacher/announcements?per_page=100");
-  return response.data.map(mapAnnouncement);
+export type SyllabusLessonOption = { id: string; title: string; type: string };
+export type SyllabusOutlineModule = { id: string; title: string; lessons: SyllabusLessonOption[] };
+
+/** For the "which lesson is this for" picker on the recording and resource upload forms. */
+export async function getBatchSyllabusOutline(batchId: string): Promise<SyllabusOutlineModule[]> {
+  if (isMockDataEnabled()) return syllabusModules.map((module) => ({
+    id: module.id,
+    title: module.title,
+    lessons: module.lessons.map((lesson, index) => ({ id: `${module.id}-lesson-${index}`, title: lesson.title, type: lesson.type })),
+  }));
+
+  const response = await serverApiFetch<ApiResponse<SyllabusOutlineModule[]>>(`/api/v1/teacher/batches/${encodeURIComponent(batchId)}/syllabus-modules`);
+  return response.data;
 }
 
-export async function getTeacherClasses(date?: string): Promise<TeacherSession[]> {
-  if (isMockDataEnabled()) return mockTeacherSessions();
-  const query = new URLSearchParams({ per_page: "100" });
-  if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) query.set("date", date);
-  const response = await serverApiFetch<ApiResponse<ApiTeacherSession[]> | PaginatedResponse<ApiTeacherSession>>(`/api/v1/teacher/classes?${query.toString()}`);
-  return response.data.map(mapTeacherSession);
+const ANNOUNCEMENTS_PER_PAGE = 20;
+
+/**
+ * Paginated announcement feed for the /teacher/announcements screen — the
+ * only consumer of this data, so it is safe to convert in place rather than
+ * adding a parallel xxxPage() function. The backend has no filter for this
+ * endpoint beyond pagination.
+ */
+export async function getTeacherAnnouncements(params: { page?: number } = {}): Promise<{ items: Announcement[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const total = announcements.length;
+    const lastPage = Math.max(1, Math.ceil(total / ANNOUNCEMENTS_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * ANNOUNCEMENTS_PER_PAGE;
+    const items = announcements.slice(start, start + ANNOUNCEMENTS_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(ANNOUNCEMENTS_PER_PAGE), page: String(page) });
+  const response = await serverApiFetch<PaginatedResponse<ApiAnnouncement>>(`/api/v1/teacher/announcements?${query.toString()}`);
+  return { items: response.data.map(mapAnnouncement), meta: pageMetaFrom(response.meta) };
+}
+
+const CLASSES_PER_PAGE = 50;
+
+/**
+ * Paginated class schedule for the /teacher/classes screen — the only
+ * consumer of this data, so it is safe to convert in place.
+ *
+ * The backend (Teacher\ClassSessionController) has no `date` filter; it only
+ * understands `from`/`to`, `batch_id` and `status`. The previous
+ * implementation sent a `date` param the controller silently ignored, so the
+ * day-navigation arrows never actually scoped anything server-side — this
+ * now sends the selected day as a from/to window instead, which the
+ * controller does understand.
+ */
+export async function getTeacherClasses(params: { date?: string; page?: number } = {}): Promise<{ items: TeacherSession[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const all = mockTeacherSessions();
+    const total = all.length;
+    const lastPage = Math.max(1, Math.ceil(total / CLASSES_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * CLASSES_PER_PAGE;
+    const items = all.slice(start, start + CLASSES_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(CLASSES_PER_PAGE), page: String(page) });
+  if (params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date)) {
+    query.set("from", `${params.date}T00:00:00`);
+    query.set("to", `${params.date}T23:59:59`);
+  }
+  const response = await serverApiFetch<PaginatedResponse<ApiTeacherSession>>(`/api/v1/teacher/classes?${query.toString()}`);
+  return { items: response.data.map(mapTeacherSession), meta: pageMetaFrom(response.meta) };
 }
 
 export async function getTeacherClass(sessionId: string): Promise<TeacherSession | null> {

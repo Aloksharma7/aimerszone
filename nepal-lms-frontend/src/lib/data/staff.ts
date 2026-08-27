@@ -1,6 +1,7 @@
 import "server-only";
 
-import type { ApiResponse, PaginatedResponse } from "@/lib/api/contracts";
+import type { ApiResponse, PageMeta, PaginatedResponse } from "@/lib/api/contracts";
+import { pageMetaFrom } from "@/lib/api/contracts";
 import { serverApiFetch } from "@/lib/api/server-client";
 import { mapCourse, mapStaffStudent } from "@/lib/data/adapters";
 import type { ApiCourseDetail, ApiCourseSummary, ApiPaymentQueueItem, ApiStaffEnrollment, ApiStaffStudent } from "@/lib/data/api-dtos";
@@ -52,6 +53,40 @@ export async function getStaffStudents(): Promise<StaffStudent[]> {
   return response.data.map(mapStaffStudent);
 }
 
+const STUDENTS_PER_PAGE = 20;
+
+/**
+ * Paginated, server-filtered student list for the /staff/students screen
+ * itself. Kept separate from getStaffStudents() — that one returns an
+ * unpaginated batch and is also used to populate the support-actions student
+ * picker and the dashboard's "recent students" preview, neither of which
+ * should be capped to a single page's worth of results.
+ */
+export async function getStaffStudentsPage(params: { page?: number; q?: string; status?: string } = {}): Promise<{ items: StaffStudent[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const term = (params.q || "").trim().toLocaleLowerCase();
+    const filtered = staffStudents.filter(
+      (item) =>
+        (!term || [item.id, item.name, item.phone, item.course].some((value) => String(value ?? "").toLocaleLowerCase().includes(term))) &&
+        (!params.status || item.status === params.status),
+    );
+    const total = filtered.length;
+    const lastPage = Math.max(1, Math.ceil(total / STUDENTS_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * STUDENTS_PER_PAGE;
+    const items = filtered.slice(start, start + STUDENTS_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(STUDENTS_PER_PAGE), page: String(page) });
+  if (params.q) query.set("q", params.q);
+  if (params.status) query.set("status", params.status);
+  const response = await serverApiFetch<PaginatedResponse<ApiStaffStudent>>(`/api/v1/staff/students?${query.toString()}`);
+  return { items: response.data.map(mapStaffStudent), meta: pageMetaFrom(response.meta) };
+}
+
 export async function getStaffStudent(studentId: string): Promise<StaffStudent | null> {
   if (isMockDataEnabled()) return staffStudents.find((item) => item.id === studentId) ?? null;
   try {
@@ -69,6 +104,37 @@ export async function getStaffPaymentSubmissions(): Promise<PaymentQueueItem[]> 
   return response.data.map(mapPaymentQueue);
 }
 
+const PAYMENT_SUBMISSIONS_PER_PAGE = 20;
+
+/**
+ * Paginated, server-filtered submission list for the /staff/payment-submissions
+ * screen itself. Kept separate from getStaffPaymentSubmissions() — that one
+ * returns an unpaginated batch and is also used by the staff dashboard for
+ * the submission-queue preview and pending count, which should not be capped
+ * to a single page's worth of results.
+ *
+ * The backend (Staff\PaymentSubmissionController) only filters on `status` —
+ * there is no server-side text search for this endpoint.
+ */
+export async function getStaffPaymentSubmissionsPage(params: { page?: number; status?: string } = {}): Promise<{ items: PaymentQueueItem[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const filtered = paymentQueue.filter((item) => !params.status || item.status === params.status);
+    const total = filtered.length;
+    const lastPage = Math.max(1, Math.ceil(total / PAYMENT_SUBMISSIONS_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * PAYMENT_SUBMISSIONS_PER_PAGE;
+    const items = filtered.slice(start, start + PAYMENT_SUBMISSIONS_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(PAYMENT_SUBMISSIONS_PER_PAGE), page: String(page) });
+  if (params.status) query.set("status", params.status);
+  const response = await serverApiFetch<PaginatedResponse<ApiPaymentQueueItem>>(`/api/v1/staff/payment-submissions?${query.toString()}`);
+  return { items: response.data.map(mapPaymentQueue), meta: pageMetaFrom(response.meta) };
+}
+
 export async function getStaffPaymentSubmission(paymentId: string): Promise<PaymentQueueItem | null> {
   if (isMockDataEnabled()) return paymentQueue.find((item) => item.id === paymentId) ?? null;
   try {
@@ -80,23 +146,89 @@ export async function getStaffPaymentSubmission(paymentId: string): Promise<Paym
   }
 }
 
-export async function getStaffEnrollments(): Promise<StaffEnrollment[]> {
-  if (isMockDataEnabled()) return mockStaffEnrollments();
-  const response = await serverApiFetch<PaginatedResponse<ApiStaffEnrollment>>("/api/v1/staff/enrollments?per_page=100");
-  return response.data.map((item) => ({
+function mapStaffEnrollment(item: ApiStaffEnrollment): StaffEnrollment {
+  return {
     id: item.id,
     student: item.student_name,
     course: item.course_title,
     batch: item.batch_title,
     accessUntil: formatDate(item.access_end_at),
     status: item.status.replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase()),
-  }));
+  };
+}
+
+export async function getStaffEnrollments(): Promise<StaffEnrollment[]> {
+  if (isMockDataEnabled()) return mockStaffEnrollments();
+  const response = await serverApiFetch<PaginatedResponse<ApiStaffEnrollment>>("/api/v1/staff/enrollments?per_page=100");
+  return response.data.map(mapStaffEnrollment);
+}
+
+const ENROLLMENTS_PER_PAGE = 20;
+
+/**
+ * Paginated, server-filtered enrollment list for the /staff/enrollments
+ * screen's table. Kept separate from getStaffEnrollments() — that one
+ * still feeds the page's own metric cards (Active / All / Expired), which
+ * are computed from the full fetched set rather than a single page.
+ *
+ * The backend (Staff\EnrollmentController) only filters on `status` and
+ * `batch_id` — there is no server-side text search for this endpoint, so a
+ * typed search term is not forwarded.
+ */
+export async function getStaffEnrollmentsPage(params: { page?: number; status?: string } = {}): Promise<{ items: StaffEnrollment[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const all = mockStaffEnrollments();
+    const filtered = all.filter((item) => !params.status || item.status === params.status);
+    const total = filtered.length;
+    const lastPage = Math.max(1, Math.ceil(total / ENROLLMENTS_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * ENROLLMENTS_PER_PAGE;
+    const items = filtered.slice(start, start + ENROLLMENTS_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(ENROLLMENTS_PER_PAGE), page: String(page) });
+  if (params.status) query.set("status", params.status);
+  const response = await serverApiFetch<PaginatedResponse<ApiStaffEnrollment>>(`/api/v1/staff/enrollments?${query.toString()}`);
+  return { items: response.data.map(mapStaffEnrollment), meta: pageMetaFrom(response.meta) };
 }
 
 export async function getStaffCourses(): Promise<StaffCourse[]> {
   if (isMockDataEnabled()) return mockStaffCourses();
   const response = await serverApiFetch<PaginatedResponse<ApiCourseSummary>>("/api/v1/staff/courses?per_page=100");
   return response.data.map((value) => ({ ...mapCourse(value), id: value.id }));
+}
+
+const COURSES_PER_PAGE = 20;
+
+/**
+ * Paginated, server-filtered course list for the /staff/courses screen
+ * itself. Kept separate from getStaffCourses() — that one returns an
+ * unpaginated batch and is also used by the enroll wizard's course picker and
+ * the staff dashboard's published-course count, neither of which should be
+ * capped to a single page's worth of results.
+ */
+export async function getStaffCoursesPage(params: { page?: number; q?: string } = {}): Promise<{ items: StaffCourse[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const all = mockStaffCourses();
+    const term = (params.q || "").trim().toLocaleLowerCase();
+    const filtered = all.filter((item) => !term || [item.title, item.slug, item.category].some((value) => String(value ?? "").toLocaleLowerCase().includes(term)));
+    const total = filtered.length;
+    const lastPage = Math.max(1, Math.ceil(total / COURSES_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * COURSES_PER_PAGE;
+    const items = filtered.slice(start, start + COURSES_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(COURSES_PER_PAGE), page: String(page) });
+  if (params.q) query.set("q", params.q);
+  const response = await serverApiFetch<PaginatedResponse<ApiCourseSummary>>(`/api/v1/staff/courses?${query.toString()}`);
+  return { items: response.data.map((value) => ({ ...mapCourse(value), id: value.id })), meta: pageMetaFrom(response.meta) };
 }
 
 export async function getStaffCourse(courseId: string): Promise<StaffCourse | null> {

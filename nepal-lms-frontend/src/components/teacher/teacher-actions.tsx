@@ -1,15 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, CheckCircle2, Link2, LoaderCircle, MonitorPlay, RefreshCw, Save, Send, UploadCloud, UserCheck } from "lucide-react";
 import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@/lib/api/browser-client";
-import type { TeacherAttendanceDetail, TeacherSessionOption } from "@/lib/data/teacher";
+import type { SyllabusOutlineModule, TeacherAttendanceDetail, TeacherSessionOption } from "@/lib/data/teacher";
 import { trustedDestination } from "@/lib/security/trusted-destination";
 import type { TeacherBatch } from "@/types/lms";
 import { Button, StatusBadge } from "@/components/ui";
 
 const mockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
+
+/** Formats a Date as the local wall-clock string an <input type="datetime-local"> expects. */
+function toDateTimeLocalValue(date: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
 
 function ErrorNotice({ error }: { error: NormalizedApiError | null }) {
   if (!error) return null;
@@ -24,6 +30,11 @@ function ErrorNotice({ error }: { error: NormalizedApiError | null }) {
 function SuccessNotice({ message }: { message: string | null }) {
   if (!message) return null;
   return <div role="status" className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-800">{message}</div>;
+}
+
+function WarningNotice({ message }: { message: string | null }) {
+  if (!message) return null;
+  return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{message}</div>;
 }
 
 export function StartTeacherClassButton({ sessionId, enabled = true }: { sessionId: string; enabled?: boolean }) {
@@ -68,6 +79,7 @@ export function StartTeacherClassButton({ sessionId, enabled = true }: { session
 }
 
 export function TeacherAttendanceEditor({ detail }: { detail: TeacherAttendanceDetail }) {
+  const router = useRouter();
   const canFinalize = detail.session.canFinalizeAttendance !== false;
   const initialRows = useMemo(() => detail.rows.map((row) => ({ ...row, overrideReason: row.overrideReason || "" })), [detail.rows]);
   const [rows, setRows] = useState(initialRows);
@@ -115,6 +127,7 @@ export function TeacherAttendanceEditor({ detail }: { detail: TeacherAttendanceD
         headers: { "Idempotency-Key": createIdempotencyKey(`attendance-${mode}`) },
       });
       setSuccess(mode === "finalize" ? "Attendance finalized successfully." : "Attendance draft saved.");
+      if (mode === "finalize") router.refresh();
     } catch (caught) {
       setError(caught as NormalizedApiError);
     } finally {
@@ -212,15 +225,19 @@ function extractYoutubeVideoId(input: string): string | null {
   return null;
 }
 
-export function TeacherRecordingForm({ batchId, sessionOptions = [] }: { batchId: string; sessionOptions?: TeacherSessionOption[] }) {
+export function TeacherRecordingForm({ batchId, sessionOptions = [], syllabusOutline = [] }: { batchId: string; sessionOptions?: TeacherSessionOption[]; syllabusOutline?: SyllabusOutlineModule[] }) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<NormalizedApiError | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
+  const [defaultReleaseAt] = useState(() => toDateTimeLocalValue(new Date()));
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (loading) return;
-    const form = new FormData(event.currentTarget);
+    const formEl = event.currentTarget;
+    const form = new FormData(formEl);
     const videoId = extractYoutubeVideoId(String(form.get("youtube_video_id") || ""));
     if (!videoId) {
       setError({ status: 422, code: "validation_failed", message: "Paste the video's YouTube link, or just its video id.", retryable: false });
@@ -229,24 +246,32 @@ export function TeacherRecordingForm({ batchId, sessionOptions = [] }: { batchId
     setLoading(true);
     setError(null);
     setSuccess(null);
+    setWarning(null);
     try {
       if (mockMode) {
         setSuccess("Preview validated. Laravel will verify this video ID, confirm batch ownership, and save the release record.");
         return;
       }
-      await browserRequest({
+      const response = await browserRequest<{ data: { id: string; state: string; warning: string | null; is_public: boolean } }>({
         url: `/api/v1/teacher/batches/${encodeURIComponent(batchId)}/recordings`,
         method: "POST",
         data: {
           session_id: String(form.get("session_id") || "") || null,
           title: String(form.get("title") || "").trim(),
           youtube_video_id: videoId,
+          syllabus_lesson_id: String(form.get("syllabus_lesson_id") || "") || null,
           release_at: String(form.get("release_at") || "") || null,
         },
         headers: { "Idempotency-Key": createIdempotencyKey("recording-create") },
       });
-      event.currentTarget.reset();
-      setSuccess("Recording saved successfully.");
+      formEl.reset();
+      if (response.data.is_public) {
+        setSuccess("Recording saved successfully.");
+        setWarning(response.data.warning);
+      } else {
+        setSuccess(response.data.warning ? `Recording saved. ${response.data.warning}` : "Recording saved successfully.");
+      }
+      router.refresh();
     } catch (caught) {
       setError(caught as NormalizedApiError);
     } finally {
@@ -258,9 +283,10 @@ export function TeacherRecordingForm({ batchId, sessionOptions = [] }: { batchId
     <form onSubmit={submit} className="mt-5 space-y-4" noValidate>
       <label className="block text-sm font-semibold text-slate-700">Related session <span className="font-normal text-slate-400">(optional)</span><select name="session_id" className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100"><option value="">Not tied to a specific class</option>{sessionOptions.map((session) => <option key={session.id} value={session.id}>{session.label}</option>)}</select></label>
       <label className="block text-sm font-semibold text-slate-700">Title<input name="title" required maxLength={150} className="mt-2 h-10 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" /></label>
+      <label className="block text-sm font-semibold text-slate-700">Syllabus lesson <span className="font-normal text-slate-400">(optional)</span><select name="syllabus_lesson_id" className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100"><option value="">Not tied to a lesson</option>{syllabusOutline.map((module) => <optgroup key={module.id} label={module.title}>{module.lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}</optgroup>)}</select></label>
       <label className="block text-sm font-semibold text-slate-700">YouTube link or video ID<input name="youtube_video_id" required className="mt-2 h-10 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" placeholder="Paste the video's YouTube link" autoComplete="off" /></label>
-      <label className="block text-sm font-semibold text-slate-700">Release date<input name="release_at" type="datetime-local" className="mt-2 h-10 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" /></label>
-      <ErrorNotice error={error} /><SuccessNotice message={success} />
+      <label className="block text-sm font-semibold text-slate-700">Release date<input name="release_at" type="datetime-local" defaultValue={defaultReleaseAt} className="mt-2 h-10 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" /></label>
+      <ErrorNotice error={error} /><SuccessNotice message={success} /><WarningNotice message={warning} />
       <Button type="submit" className="w-full" disabled={loading}><UploadCloud className="h-4 w-4" />{loading ? "Saving…" : "Save recording"}</Button>
     </form>
   );
@@ -275,7 +301,8 @@ export function TeacherAnnouncementForm({ batches }: { batches: TeacherBatch[] }
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (loading) return;
-    const form = new FormData(event.currentTarget);
+    const formEl = event.currentTarget;
+    const form = new FormData(formEl);
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -295,7 +322,7 @@ export function TeacherAnnouncementForm({ batches }: { batches: TeacherBatch[] }
         return;
       }
       await browserRequest({ url: "/api/v1/teacher/announcements", method: "POST", data, headers: { "Idempotency-Key": createIdempotencyKey("announcement") } });
-      event.currentTarget.reset();
+      formEl.reset();
       setSuccess("Announcement published successfully.");
       router.refresh();
     } catch (caught) {
@@ -323,6 +350,15 @@ export function TeacherSessionForm({ batches }: { batches: TeacherBatch[] }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<NormalizedApiError | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const endsAtRef = useRef<HTMLInputElement | null>(null);
+  const [defaultStartsAt] = useState(() => toDateTimeLocalValue(new Date()));
+  const [defaultEndsAt] = useState(() => toDateTimeLocalValue(new Date(Date.now() + 60 * 60 * 1000)));
+
+  function handleStartsAtChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const start = new Date(event.target.value);
+    if (Number.isNaN(start.getTime()) || !endsAtRef.current) return;
+    endsAtRef.current.value = toDateTimeLocalValue(new Date(start.getTime() + 60 * 60 * 1000));
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -366,8 +402,8 @@ export function TeacherSessionForm({ batches }: { batches: TeacherBatch[] }) {
     <form onSubmit={submit} className="grid gap-5 sm:grid-cols-2" noValidate>
       <label className="text-sm font-semibold text-slate-700 sm:col-span-2">Assigned batch<select name="batch_id" required className="mt-2 h-11 w-full rounded-lg border border-slate-300 bg-white px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100"><option value="">Select batch</option>{batches.map((batch) => <option key={batch.id} value={batch.id}>{batch.course} · {batch.batch}</option>)}</select></label>
       <label className="text-sm font-semibold text-slate-700 sm:col-span-2">Session title<input name="title" required minLength={3} maxLength={150} className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" placeholder="Topic or class title" /></label>
-      <label className="text-sm font-semibold text-slate-700">Starts at<input name="starts_at" type="datetime-local" required className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" /></label>
-      <label className="text-sm font-semibold text-slate-700">Ends at<input name="ends_at" type="datetime-local" required className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" /></label>
+      <label className="text-sm font-semibold text-slate-700">Starts at<input name="starts_at" type="datetime-local" required defaultValue={defaultStartsAt} onChange={handleStartsAtChange} className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" /></label>
+      <label className="text-sm font-semibold text-slate-700">Ends at<input ref={endsAtRef} name="ends_at" type="datetime-local" required defaultValue={defaultEndsAt} className="mt-2 h-11 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" /></label>
       <label className="text-sm font-semibold text-slate-700 sm:col-span-2">Instructions<textarea name="instructions" maxLength={1500} className="mt-2 min-h-28 w-full rounded-lg border border-slate-300 p-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" placeholder="Optional preparation or class instructions" /></label>
       <div className="space-y-3 sm:col-span-2"><ErrorNotice error={error} /><SuccessNotice message={success} /><Button type="submit" disabled={loading}>{loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CalendarDays className="h-4 w-4" />}{loading ? "Creating…" : "Create session"}</Button></div>
     </form>

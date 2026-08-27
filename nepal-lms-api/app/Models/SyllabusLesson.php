@@ -30,4 +30,14 @@ class SyllabusLesson extends Model
         return $this->hasMany(LessonCompletion::class);
     }
 
+    public function recordings(): HasMany
+    {
+        return $this->hasMany(Recording::class);
+    }
+
+    public function resources(): HasMany
+    {
+        return $this->hasMany(Resource::class);
+    }
+
 }

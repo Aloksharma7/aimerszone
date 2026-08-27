@@ -17,7 +17,8 @@ class Recording extends Model
     protected $fillable = [
         'batch_id', 'class_session_id', 'title', 'module_title', 'description', 'source',
         'youtube_video_id', 'storage_path', 'storage_disk', 'external_url', 'thumbnail_url',
-        'duration_seconds', 'recorded_at', 'released_at', 'state', 'sync_message', 'synced_at', 'created_by',
+        'duration_seconds', 'recorded_at', 'released_at', 'state', 'sync_message', 'is_youtube_public',
+        'syllabus_lesson_id', 'synced_at', 'created_by',
     ];
 
     protected $hidden = ['storage_path', 'external_url'];
@@ -30,6 +31,7 @@ class Recording extends Model
             'released_at' => 'datetime',
             'synced_at' => 'datetime',
             'duration_seconds' => 'integer',
+            'is_youtube_public' => 'boolean',
         ];
     }
 
@@ -41,6 +43,11 @@ class Recording extends Model
     public function session(): BelongsTo
     {
         return $this->belongsTo(ClassSession::class, 'class_session_id');
+    }
+
+    public function syllabusLesson(): BelongsTo
+    {
+        return $this->belongsTo(SyllabusLesson::class);
     }
 
     public function progress(): HasMany

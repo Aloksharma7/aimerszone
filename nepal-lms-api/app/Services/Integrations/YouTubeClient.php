@@ -39,7 +39,12 @@ class YouTubeClient
     {
         $response = $this->call(
             'get',
-            '/videos?part=snippet,contentDetails,status,processingDetails&id='.urlencode($videoId),
+            // `processingDetails` is intentionally omitted: YouTube only returns it
+            // when the request is authorized as the video's own uploading channel,
+            // which would break verification for any video uploaded through a
+            // different channel than the one this app is connected with. None of
+            // its fields are read below, so nothing is lost by not asking for it.
+            '/videos?part=snippet,contentDetails,status&id='.urlencode($videoId),
             [],
             'video.read',
             $videoId,

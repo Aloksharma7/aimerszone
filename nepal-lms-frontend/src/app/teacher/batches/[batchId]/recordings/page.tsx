@@ -5,7 +5,7 @@ import { RecordingList } from "@/components/teacher/recording-list";
 import { TeacherRecordingForm } from "@/components/teacher/teacher-actions";
 import { ButtonLink, PageHeader, Panel } from "@/components/ui";
 import { getSessionUser, requirePermission } from "@/lib/auth/server";
-import { getTeacherBatch, getTeacherBatchRecordings, getTeacherBatchSessionOptions } from "@/lib/data/teacher";
+import { getBatchSyllabusOutline, getTeacherBatch, getTeacherBatchRecordings, getTeacherBatchSessionOptions } from "@/lib/data/teacher";
 import { firstParam, matchesQuery, type PageSearchParams } from "@/lib/search-params";
 
 export default async function TeacherRecordingsPage({ params, searchParams }: { params: Promise<{ batchId: string }>; searchParams: PageSearchParams }) {
@@ -14,7 +14,7 @@ export default async function TeacherRecordingsPage({ params, searchParams }: { 
   const user = await getSessionUser("teacher");
   if (!user) notFound();
   await requirePermission(user, "recordings.manage");
-  const [detail, items, sessionOptions] = await Promise.all([getTeacherBatch(batchId), getTeacherBatchRecordings(batchId), getTeacherBatchSessionOptions(batchId)]);
+  const [detail, items, sessionOptions, syllabusOutline] = await Promise.all([getTeacherBatch(batchId), getTeacherBatchRecordings(batchId), getTeacherBatchSessionOptions(batchId), getBatchSyllabusOutline(batchId)]);
   if (!detail) notFound();
   const filtered = items.filter((item) => matchesQuery(q, item.id, item.title, item.module, item.teacher, item.state));
 
@@ -27,7 +27,7 @@ export default async function TeacherRecordingsPage({ params, searchParams }: { 
           <div className="mt-4"><ListFilters searchValue={q} searchPlaceholder="Search recording or module" resetHref={`/teacher/batches/${encodeURIComponent(batchId)}/recordings`} /></div>
           <div className="mt-5"><RecordingList batchId={batchId} items={filtered} /></div>
         </Panel>
-        <aside id="add-recording"><Panel><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-700"><Youtube className="h-6 w-6" /></div><h2 className="mt-5 text-lg font-bold text-slate-950">Add recording</h2><TeacherRecordingForm batchId={batchId} sessionOptions={sessionOptions} /></Panel></aside>
+        <aside id="add-recording"><Panel><div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-700"><Youtube className="h-6 w-6" /></div><h2 className="mt-5 text-lg font-bold text-slate-950">Add recording</h2><TeacherRecordingForm batchId={batchId} sessionOptions={sessionOptions} syllabusOutline={syllabusOutline} /></Panel></aside>
       </div>
     </>
   );

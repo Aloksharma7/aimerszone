@@ -2,19 +2,27 @@ import Link from "next/link";
 import { CalendarDays, Plus, Users } from "lucide-react";
 import { ApiExportLink } from "@/components/api-actions";
 import { ListFilters } from "@/components/list-filters";
+import { Pagination } from "@/components/pagination";
 import { DataTable } from "@/components/portal-components";
 import { ButtonLink, MetricCard, PageHeader, Panel, ProgressBar, StatusBadge } from "@/components/ui";
-import { getAdminBatches } from "@/lib/data/admin";
-import { buildQueryString, firstParam, matchesQuery, type PageSearchParams } from "@/lib/search-params";
+import { getAdminBatches, getAdminBatchesPage } from "@/lib/data/admin";
+import { buildQueryString, firstParam, matchesQuery, pageParam, type PageSearchParams } from "@/lib/search-params";
 
 export default async function AdminBatchesPage({ searchParams }: { searchParams: PageSearchParams }) {
   const raw = await searchParams;
   const q = firstParam(raw.q);
   const status = firstParam(raw.status);
-  const batches = await getAdminBatches();
+  const page = pageParam(raw);
+  const [batches, { items: pageBatches, meta }] = await Promise.all([
+    getAdminBatches(),
+    getAdminBatchesPage({ page, status }),
+  ]);
   const students = batches.reduce((sum, batch) => sum + batch.students, 0);
   const capacity = batches.reduce((sum, batch) => sum + batch.capacity, 0);
-  const filtered = batches.filter((batch) => matchesQuery(q, batch.id, batch.name, batch.course, batch.teacher, batch.schedule) && (!status || batch.status === status));
+
+  // The backend has no text search for this endpoint, so the typed term is
+  // matched against whatever page of results is currently on screen.
+  const filtered = pageBatches.filter((batch) => matchesQuery(q, batch.id, batch.name, batch.course, batch.teacher, batch.schedule));
   const rows = filtered.map((batch) => ({ ...batch, capacityUse: `${batch.students}/${batch.capacity}`, capacityPercent: batch.capacity ? Math.round(batch.students / batch.capacity * 100) : 0 }));
   const exportQuery = buildQueryString({ q, status });
 
@@ -30,6 +38,7 @@ export default async function AdminBatchesPage({ searchParams }: { searchParams:
       <Panel className="mt-6">
         <ListFilters searchValue={q} searchPlaceholder="Search batch, course or teacher" resetHref="/admin/batches" fields={[{ name: "status", label: "Batch status", value: status, options: [{ value: "", label: "All statuses" }, { value: "Open", label: "Open" }, { value: "Ongoing", label: "Ongoing" }, { value: "Upcoming", label: "Upcoming" }, { value: "Draft", label: "Draft" }, { value: "Closed", label: "Closed" }] }]} />
         <div className="mt-5"><DataTable rowKey="id" rows={rows as unknown as Record<string, unknown>[]} columns={[{ key: "name", label: "Batch", render: (row) => <div><Link href={`/admin/batches/${String(row.id)}`} className="font-bold text-brand-700 hover:text-brand-900">{String(row.name)}</Link><p className="mt-1 text-xs text-slate-500">{String(row.course)}</p></div> }, { key: "teacher", label: "Teacher" }, { key: "schedule", label: "Schedule" }, { key: "capacityUse", label: "Capacity", render: (row) => <div className="min-w-28"><p className="mb-2 text-xs font-semibold text-slate-700">{String(row.capacityUse)}</p><ProgressBar value={Number(row.capacityPercent)} showValue={false} compact /></div> }, { key: "startDate", label: "Start" }, { key: "status", label: "Status", render: (row) => <StatusBadge status={String(row.status)} /> }]} /></div>
+        <Pagination meta={meta} buildHref={(target) => `/admin/batches${buildQueryString({ q, status, page: String(target) })}`} />
       </Panel>
     </>
   );

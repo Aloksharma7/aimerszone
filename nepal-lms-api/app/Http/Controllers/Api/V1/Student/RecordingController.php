@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Student;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\RecordingResource;
+use App\Models\LessonCompletion;
 use App\Models\Recording;
 use App\Models\RecordingProgress;
 use App\Services\AccessGuard;
@@ -110,6 +111,18 @@ class RecordingController extends Controller
 
         if ($percent >= 95) {
             $enrollment = $this->guard->enrollmentFor($request->user(), $recording->batch_id);
+
+            // Watching a lesson's video to the end is completing that
+            // lesson — the two used to be entirely separate signals, so a
+            // student could watch every recording and still show 0%
+            // syllabus progress until they also went and manually ticked
+            // every matching checkbox by hand.
+            if ($enrollment !== null && filled($recording->syllabus_lesson_id)) {
+                LessonCompletion::updateOrCreate(
+                    ['user_id' => $request->user()->getKey(), 'syllabus_lesson_id' => $recording->syllabus_lesson_id],
+                    ['enrollment_id' => $enrollment->getKey(), 'completed_at' => now()],
+                );
+            }
 
             if ($enrollment !== null) {
                 $this->progress->recalculate($enrollment);

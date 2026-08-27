@@ -1,23 +1,28 @@
+import Link from "next/link";
 import { Filter, Plus, Users } from "lucide-react";
 import { ApiExportLink } from "@/components/api-actions";
 import { ListFilters } from "@/components/list-filters";
+import { Pagination } from "@/components/pagination";
 import { DataTable } from "@/components/portal-components";
 import { ButtonLink, MetricCard, PageHeader, Panel, StatusBadge } from "@/components/ui";
-import { getStaffStudents } from "@/lib/data/staff";
+import { getStaffStudents, getStaffStudentsPage } from "@/lib/data/staff";
 import { portalPath } from "@/lib/portal-path";
-import { buildQueryString, firstParam, matchesQuery, searchTerm, type PageSearchParams } from "@/lib/search-params";
+import { buildQueryString, firstParam, pageParam, searchTerm, type PageSearchParams } from "@/lib/search-params";
 
 export default async function StaffStudentsPage({ searchParams }: { searchParams: PageSearchParams }) {
   const raw = await searchParams;
   const q = searchTerm(raw);
   const status = firstParam(raw.status);
-  const students = await getStaffStudents();
-  const filtered = students.filter((item) => matchesQuery(q, item.id, item.name, item.phone, item.email, item.course) && (!status || item.status === status));
+  const page = pageParam(raw);
+  const [students, { items, meta }, base, enrollPath] = await Promise.all([
+    getStaffStudents(),
+    getStaffStudentsPage({ page, q, status }),
+    portalPath("/staff/students"),
+    portalPath("/staff/enroll"),
+  ]);
   const active = students.filter((item) => item.status === "Active").length;
   const pending = students.filter((item) => item.status === "Pending").length;
   const exportQuery = buildQueryString({ q, status });
-  const base = await portalPath("/staff/students");
-  const enrollPath = await portalPath("/staff/enroll");
 
   return (
     <>
@@ -34,7 +39,8 @@ export default async function StaffStudentsPage({ searchParams }: { searchParams
           resetHref={base}
           fields={[{ name: "status", label: "Student status", value: status, options: [{ value: "", label: "All statuses" }, { value: "Active", label: "Active" }, { value: "Pending", label: "Pending" }, { value: "Suspended", label: "Suspended" }] }]}
         />
-        <div className="mt-5"><DataTable rowKey="id" rows={filtered as unknown as Record<string, unknown>[]} columns={[{ key: "id", label: "Student ID" }, { key: "name", label: "Student" }, { key: "phone", label: "Phone" }, { key: "course", label: "Current / Intended Course" }, { key: "joined", label: "Created" }, { key: "status", label: "Status", render: (row) => <StatusBadge status={String(row.status)} /> }]} /></div>
+        <div className="mt-5"><DataTable rowKey="id" rows={items as unknown as Record<string, unknown>[]} columns={[{ key: "id", label: "Student ID" }, { key: "name", label: "Student", render: (row) => <Link href={`${base}/${encodeURIComponent(String(row.id))}`} className="font-bold text-brand-700 hover:text-brand-900">{String(row.name)}</Link> }, { key: "phone", label: "Phone" }, { key: "course", label: "Current / Intended Course" }, { key: "joined", label: "Created" }, { key: "status", label: "Status", render: (row) => <StatusBadge status={String(row.status)} /> }]} /></div>
+        <Pagination meta={meta} buildHref={(target) => `${base}${buildQueryString({ search: q, status, page: String(target) })}`} />
       </Panel>
     </>
   );

@@ -6,12 +6,14 @@ use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ResourceFileResource;
 use App\Models\Resource;
+use App\Models\SyllabusModule;
 use App\Services\AccessGuard;
 use App\Services\AuditLogger;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 /**
  * Uploading notes and PDFs.
@@ -64,6 +66,9 @@ class ResourceController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'min:2', 'max:180'],
             'module_title' => ['nullable', 'string', 'max:180'],
+            'syllabus_lesson_id' => ['nullable', 'string', Rule::exists('syllabus_lessons', 'id')->where(
+                fn ($query) => $query->whereIn('syllabus_module_id', SyllabusModule::where('course_id', $batch->course_id)->select('id')),
+            )],
             'release_now' => ['nullable', 'boolean'],
             'release_at' => ['nullable', 'date'],
 
@@ -97,6 +102,7 @@ class ResourceController extends Controller
             'course_id' => $batch->course_id,
             'title' => $data['title'],
             'module_title' => $data['module_title'] ?? null,
+            'syllabus_lesson_id' => $data['syllabus_lesson_id'] ?? null,
             'file_type' => strtoupper($file->getClientOriginalExtension() ?: 'FILE'),
             'mime_type' => $mime,
             'size_bytes' => $file->getSize(),
@@ -123,13 +129,16 @@ class ResourceController extends Controller
     /** Rename, re-file under a module, or release/withdraw. */
     public function update(Request $request, string $batchId, Resource $resource): JsonResponse
     {
-        $this->resolveBatch($batchId, $request->user());
+        $batch = $this->resolveBatch($batchId, $request->user());
 
         abort_unless($resource->batch_id === $batchId, 404);
 
         $data = $request->validate([
             'title' => ['sometimes', 'string', 'min:2', 'max:180'],
             'module_title' => ['sometimes', 'nullable', 'string', 'max:180'],
+            'syllabus_lesson_id' => ['sometimes', 'nullable', 'string', Rule::exists('syllabus_lessons', 'id')->where(
+                fn ($query) => $query->whereIn('syllabus_module_id', SyllabusModule::where('course_id', $batch->course_id)->select('id')),
+            )],
             'release_at' => ['sometimes', 'nullable', 'date'],
             'is_public' => ['sometimes', 'boolean'],
         ]);

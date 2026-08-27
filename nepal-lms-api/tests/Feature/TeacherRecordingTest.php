@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Enums\RoleKey;
 use App\Models\Recording;
 use App\Models\RecordingProgress;
+use App\Services\Integrations\YouTubeClient;
+use App\Services\SettingsRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\BuildsLmsFixtures;
 use Tests\TestCase;
@@ -97,6 +99,63 @@ class TeacherRecordingTest extends TestCase
         // no-op — the exact capability that did not exist before this fix.
         $this->assertTrue($recording->synced_at->gt(now()->subMinute()));
         $this->assertDatabaseHas('audit_logs', ['action' => 'recording.resynced', 'target_id' => $recording->getKey()]);
+    }
+
+    /**
+     * A public video is a costly mistake (paid content freely watchable by
+     * anyone with the link, no enrollment needed) but not one the platform
+     * blocks outright — the institution chose to allow it with a standing
+     * warning rather than a hard stop, since some content is intentionally
+     * public. is_youtube_public is teacher-only, so it must not leak onto
+     * the shared, student-facing recording payload.
+     */
+    public function test_a_public_video_is_saved_and_flagged_rather_than_rejected(): void
+    {
+        app(SettingsRepository::class)->set('integrations', 'youtube_enabled', true);
+
+        $this->mock(YouTubeClient::class, function ($mock) {
+            $mock->shouldReceive('isConfigured')->andReturn(true);
+            $mock->shouldReceive('video')->andReturn([
+                'video_id' => 'dQw4w9WgXcQ',
+                'title' => 'Public test video',
+                'duration_seconds' => 120,
+                'privacy' => 'public',
+                'state' => 'processed',
+                'thumbnail_url' => 'https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg',
+            ]);
+            $mock->shouldReceive('isSafelyRestricted')->andReturn(false);
+        });
+
+        $batch = $this->makeBatch($this->makeCourse());
+        $teacher = $this->makeUser(RoleKey::Teacher);
+        $batch->teachers()->attach($teacher->getKey(), ['is_lead' => true]);
+
+        $response = $this->actingAs($teacher)
+            ->postJson('/api/v1/teacher/batches/'.$batch->getKey().'/recordings', [
+                'title' => 'Public test video',
+                'youtube_video_id' => 'dQw4w9WgXcQ',
+            ])
+            ->assertCreated();
+
+        $this->assertNotNull($response->json('data.warning'));
+
+        $recording = Recording::where('youtube_video_id', 'dQw4w9WgXcQ')->firstOrFail();
+        $this->assertTrue($recording->is_youtube_public);
+        $this->assertSame('available', $recording->state->value);
+
+        $this->actingAs($teacher)
+            ->getJson('/api/v1/teacher/batches/'.$batch->getKey().'/recordings')
+            ->assertOk()
+            ->assertJsonPath('data.0.is_public_warning', true);
+
+        $student = $this->makeUser(RoleKey::Student);
+        $this->enroll($student, $batch);
+        $recording->update(['released_at' => now()->subMinute()]);
+
+        $this->actingAs($student)
+            ->getJson('/api/v1/student/recordings')
+            ->assertOk()
+            ->assertJsonMissingPath('data.0.is_public_warning');
     }
 
     public function test_a_teacher_cannot_delete_a_recording_from_a_batch_they_do_not_teach(): void

@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { rewritePortalSegment } from "./portal-segment";
 
 /**
  * Rewrites a portal-relative path onto whichever portal the request is in.
@@ -16,10 +17,5 @@ export async function portalPath(path: string): Promise<string> {
   const current = headerStore.get("x-lms-path") || "";
   const portal = current.split("?")[0].split("/").filter(Boolean)[0];
 
-  if (!portal) return path;
-
-  const segments = path.split("/").filter(Boolean);
-  if (segments.length === 0 || segments[0] === portal) return path;
-
-  return `/${[portal, ...segments.slice(1)].join("/")}`;
+  return rewritePortalSegment(portal, path);
 }

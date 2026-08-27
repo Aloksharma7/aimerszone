@@ -1,6 +1,7 @@
 import "server-only";
 
-import type { ApiResponse, PaginatedResponse } from "@/lib/api/contracts";
+import type { ApiResponse, PageMeta, PaginatedResponse } from "@/lib/api/contracts";
+import { pageMetaFrom } from "@/lib/api/contracts";
 import { isServerApiError, serverApiFetch } from "@/lib/api/server-client";
 import { mapCourse, mapTeacher } from "@/lib/data/adapters";
 import type { ApiCourseDetail, ApiCourseSummary, ApiTeacher } from "@/lib/data/api-dtos";
@@ -231,10 +232,53 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
   };
 }
 
+function mockAdminCourses(): StaffCourse[] {
+  return (courses as unknown as Course[]).map((course) => ({ ...course, id: course.id || course.slug, published: course.published ?? true, enrollments: 0, batchCount: 1, lastUpdated: course.updatedAt || "Recently" }));
+}
+
 export async function getAdminCourses(): Promise<StaffCourse[]> {
-  if (isMockDataEnabled()) return (courses as unknown as Course[]).map((course) => ({ ...course, id: course.id || course.slug, published: course.published ?? true, enrollments: 0, batchCount: 1, lastUpdated: course.updatedAt || "Recently" }));
+  if (isMockDataEnabled()) return mockAdminCourses();
   const response = await serverApiFetch<ApiResponse<ApiCourseSummary[]> | PaginatedResponse<ApiCourseSummary>>("/api/v1/admin/courses?per_page=100");
   return response.data.map((item) => ({ ...mapCourse(item), enrollments: 0, batchCount: item.available_batches ?? item.batches?.length ?? 0, lastUpdated: item.updated_at ? formatDateTime(item.updated_at) : "Not available" }));
+}
+
+const ADMIN_COURSES_PER_PAGE = 20;
+
+/**
+ * Paginated, server-filtered course list for the /admin/courses table
+ * itself. Kept separate from getAdminCourses() — that one returns an
+ * unpaginated batch and is also used by the batch create/edit forms' course
+ * picker and this same page's own metric cards, neither of which should be
+ * capped to a single page's worth of results.
+ *
+ * The backend (Admin\CourseController) filters on `q`, `status` and
+ * `category_id`. The page's category dropdown is built from category
+ * *names* rather than ids (there is no lookup from name to id at this
+ * level), so that one filter still applies to whatever page is on screen.
+ */
+export async function getAdminCoursesPage(params: { page?: number; q?: string; status?: string } = {}): Promise<{ items: StaffCourse[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const term = (params.q || "").trim().toLocaleLowerCase();
+    const filtered = mockAdminCourses().filter((item) => {
+      const status = item.published ? "Published" : "Draft";
+      return (!term || [item.title, item.slug, item.code, item.category].some((value) => String(value ?? "").toLocaleLowerCase().includes(term)))
+        && (!params.status || status === params.status);
+    });
+    const total = filtered.length;
+    const lastPage = Math.max(1, Math.ceil(total / ADMIN_COURSES_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * ADMIN_COURSES_PER_PAGE;
+    const items = filtered.slice(start, start + ADMIN_COURSES_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(ADMIN_COURSES_PER_PAGE), page: String(page) });
+  if (params.q) query.set("q", params.q);
+  if (params.status) query.set("status", params.status);
+  const response = await serverApiFetch<PaginatedResponse<ApiCourseSummary>>(`/api/v1/admin/courses?${query.toString()}`);
+  return { items: response.data.map((item) => ({ ...mapCourse(item), enrollments: 0, batchCount: item.available_batches ?? item.batches?.length ?? 0, lastUpdated: item.updated_at ? formatDateTime(item.updated_at) : "Not available" })), meta: pageMetaFrom(response.meta) };
 }
 
 export async function getAdminCourse(courseId: string): Promise<StaffCourse | null> {
@@ -255,6 +299,38 @@ export async function getAdminBatches(): Promise<AdminBatch[]> {
   if (isMockDataEnabled()) return adminBatches;
   const response = await serverApiFetch<ApiResponse<ApiAdminBatch[]> | PaginatedResponse<ApiAdminBatch>>("/api/v1/admin/batches?per_page=100");
   return response.data.map(mapBatch);
+}
+
+const ADMIN_BATCHES_PER_PAGE = 20;
+
+/**
+ * Paginated, server-filtered batch list for the /admin/batches table itself.
+ * Kept separate from getAdminBatches() — that one returns an unpaginated
+ * batch and is also used by the announcements batch picker and this same
+ * page's own metric cards, neither of which should be capped to a single
+ * page's worth of results.
+ *
+ * The backend (Admin\BatchController) filters on `status` and `course_id`
+ * only — there is no server-side text search for this endpoint, so a typed
+ * search term is matched against whatever page is currently on screen.
+ */
+export async function getAdminBatchesPage(params: { page?: number; status?: string } = {}): Promise<{ items: AdminBatch[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const filtered = adminBatches.filter((item) => !params.status || item.status === params.status);
+    const total = filtered.length;
+    const lastPage = Math.max(1, Math.ceil(total / ADMIN_BATCHES_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * ADMIN_BATCHES_PER_PAGE;
+    const items = filtered.slice(start, start + ADMIN_BATCHES_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(ADMIN_BATCHES_PER_PAGE), page: String(page) });
+  if (params.status) query.set("status", params.status);
+  const response = await serverApiFetch<PaginatedResponse<ApiAdminBatch>>(`/api/v1/admin/batches?${query.toString()}`);
+  return { items: response.data.map(mapBatch), meta: pageMetaFrom(response.meta) };
 }
 
 export async function getAdminBatch(batchId: string): Promise<AdminBatch | null> {
@@ -406,6 +482,46 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
   return response.data.map(mapUser);
 }
 
+const ADMIN_USERS_PER_PAGE = 20;
+
+/**
+ * Paginated, server-filtered user list for the /admin/users table itself.
+ * Kept separate from getAdminUsers() — that one returns an unpaginated
+ * batch and still feeds this same page's own metric cards (Active /
+ * Privileged / Suspended), which are computed from the full fetched set
+ * rather than a single page.
+ *
+ * The backend (Admin\UserController) filters on `q`, `role` (a role key,
+ * not the display name shown in the table) and `status`. The page's role
+ * dropdown is built from role *names*, so that filter still applies to
+ * whatever page is on screen; the mfa filter has no backend equivalent
+ * either and does the same.
+ */
+export async function getAdminUsersPage(params: { page?: number; q?: string; status?: string } = {}): Promise<{ items: AdminUser[]; meta: PageMeta }> {
+  const page = params.page && params.page > 0 ? params.page : 1;
+
+  if (isMockDataEnabled()) {
+    const term = (params.q || "").trim().toLocaleLowerCase();
+    const filtered = adminUsers.filter(
+      (item) =>
+        (!term || [item.id, item.name, item.email, item.phone, item.role].some((value) => String(value ?? "").toLocaleLowerCase().includes(term))) &&
+        (!params.status || item.status === params.status),
+    );
+    const total = filtered.length;
+    const lastPage = Math.max(1, Math.ceil(total / ADMIN_USERS_PER_PAGE));
+    const currentPage = Math.min(page, lastPage);
+    const start = (currentPage - 1) * ADMIN_USERS_PER_PAGE;
+    const items = filtered.slice(start, start + ADMIN_USERS_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+
+  const query = new URLSearchParams({ per_page: String(ADMIN_USERS_PER_PAGE), page: String(page) });
+  if (params.q) query.set("q", params.q);
+  if (params.status) query.set("status", params.status);
+  const response = await serverApiFetch<PaginatedResponse<ApiAdminUser>>(`/api/v1/admin/users?${query.toString()}`);
+  return { items: response.data.map(mapUser), meta: pageMetaFrom(response.meta) };
+}
+
 export async function getAdminUser(userId: string): Promise<AdminUserDetail | null> {
   if (isMockDataEnabled()) {
     const user = adminUsers.find((item) => item.id === userId) || adminUsers[0];
@@ -466,12 +582,32 @@ export async function getAdminAnnouncements(): Promise<{ items: AdminAnnouncemen
   return { items: response.data.items.map(mapAnnouncement), metrics: { publishedMonth: response.data.metrics.published_month, scheduled: response.data.metrics.scheduled, nextScheduled: response.data.metrics.next_scheduled_label, deliveryRate: `${response.data.metrics.delivery_rate_percent}%` } };
 }
 
-export async function getAdminAuditLogs(filters: Record<string, string | undefined> = {}): Promise<AuditEntry[]> {
-  if (isMockDataEnabled()) return [...auditEntries, { id: "AUD-090808", actor: "superadmin@example.test", action: "Role permission reviewed", target: "Staff", time: "8 Aug, 5:25 PM", reason: "Quarterly access review" }, { id: "AUD-090807", actor: "staff@example.test", action: "Refund approved", target: "REF-2083-0018", time: "8 Aug, 4:42 PM", reason: "Duplicate payment confirmed" }, { id: "AUD-090806", actor: "superadmin@example.test", action: "Zoom policy changed", target: "Integration settings", time: "8 Aug, 3:10 PM", reason: "Enable daily reconciliation" }];
-  const query = new URLSearchParams({ per_page: "100" });
+const AUDIT_LOGS_PER_PAGE = 25;
+
+/**
+ * Paginated, server-filtered audit trail for the /admin/audit-logs screen —
+ * the only consumer of this data, so it is safe to convert in place rather
+ * than adding a parallel xxxPage() function.
+ *
+ * The backend (Admin\AuditLogController) filters on `search`, `actor_type`,
+ * `action_group`, `from` and `to` — matching the page's own filter bar.
+ */
+export async function getAdminAuditLogs(filters: Record<string, string | undefined> = {}, page = 1): Promise<{ items: AuditEntry[]; meta: PageMeta }> {
+  if (isMockDataEnabled()) {
+    const all = [...auditEntries, { id: "AUD-090808", actor: "superadmin@example.test", action: "Role permission reviewed", target: "Staff", time: "8 Aug, 5:25 PM", reason: "Quarterly access review" }, { id: "AUD-090807", actor: "staff@example.test", action: "Refund approved", target: "REF-2083-0018", time: "8 Aug, 4:42 PM", reason: "Duplicate payment confirmed" }, { id: "AUD-090806", actor: "superadmin@example.test", action: "Zoom policy changed", target: "Integration settings", time: "8 Aug, 3:10 PM", reason: "Enable daily reconciliation" }];
+    const term = (filters.search || "").trim().toLocaleLowerCase();
+    const filtered = all.filter((item) => !term || [item.actor, item.action, item.target, item.reason].some((value) => String(value ?? "").toLocaleLowerCase().includes(term)));
+    const total = filtered.length;
+    const lastPage = Math.max(1, Math.ceil(total / AUDIT_LOGS_PER_PAGE));
+    const currentPage = Math.min(page && page > 0 ? page : 1, lastPage);
+    const start = (currentPage - 1) * AUDIT_LOGS_PER_PAGE;
+    const items = filtered.slice(start, start + AUDIT_LOGS_PER_PAGE);
+    return { items, meta: { currentPage, lastPage, total, from: total ? start + 1 : null, to: total ? start + items.length : null } };
+  }
+  const query = new URLSearchParams({ per_page: String(AUDIT_LOGS_PER_PAGE), page: String(page && page > 0 ? page : 1) });
   for (const key of ["search", "actor_type", "action_group", "from", "to"]) { const value = filters[key]?.trim(); if (value) query.set(key, value.slice(0, 160)); }
-  const response = await serverApiFetch<ApiResponse<ApiAuditEntry[]> | PaginatedResponse<ApiAuditEntry>>(`/api/v1/admin/audit-logs?${query.toString()}`);
-  return response.data.map(mapAudit);
+  const response = await serverApiFetch<PaginatedResponse<ApiAuditEntry>>(`/api/v1/admin/audit-logs?${query.toString()}`);
+  return { items: response.data.map(mapAudit), meta: pageMetaFrom(response.meta) };
 }
 
 export async function getAdminFinanceOverview(): Promise<AdminFinanceOverview> {

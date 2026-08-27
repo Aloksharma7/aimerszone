@@ -6,6 +6,7 @@ import { Download, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@/lib/api/browser-client";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { isMockDataEnabled } from "@/lib/data/config";
+import type { SyllabusOutlineModule } from "@/lib/data/teacher";
 
 export type TeacherResource = {
   id: string;
@@ -33,12 +34,12 @@ function humanSize(bytes: number | null): string {
  * Release is separate from upload on purpose: a teacher can stage a whole
  * module ahead of time and make it visible when the class reaches that point.
  */
-export function ResourceManager({ batchId, resources }: { batchId: string; resources: TeacherResource[] }) {
+export function ResourceManager({ batchId, resources, syllabusOutline = [] }: { batchId: string; resources: TeacherResource[]; syllabusOutline?: SyllabusOutlineModule[] }) {
   const router = useRouter();
   const mockMode = isMockDataEnabled();
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const [values, setValues] = useState({ title: "", moduleTitle: "", releaseNow: true });
+  const [values, setValues] = useState({ title: "", moduleTitle: "", syllabusLessonId: "", releaseNow: true });
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +70,7 @@ export function ResourceManager({ batchId, resources }: { batchId: string; resou
       const form = new FormData();
       form.append("title", values.title.trim());
       if (values.moduleTitle.trim()) form.append("module_title", values.moduleTitle.trim());
+      if (values.syllabusLessonId) form.append("syllabus_lesson_id", values.syllabusLessonId);
       form.append("release_now", values.releaseNow ? "1" : "0");
       form.append("file", file);
 
@@ -80,7 +82,7 @@ export function ResourceManager({ batchId, resources }: { batchId: string; resou
       });
 
       setNotice(values.releaseNow ? "Uploaded and released to students." : "Uploaded. Release it when you are ready.");
-      setValues({ title: "", moduleTitle: "", releaseNow: true });
+      setValues({ title: "", moduleTitle: "", syllabusLessonId: "", releaseNow: true });
       setFile(null);
       if (fileInput.current) fileInput.current.value = "";
       router.refresh();
@@ -236,13 +238,25 @@ export function ResourceManager({ batchId, resources }: { batchId: string; resou
           </label>
 
           <label className="grid gap-1.5">
-            <span className="text-sm font-semibold text-slate-800">Module <span className="font-normal text-slate-500">(optional)</span></span>
+            <span className="text-sm font-semibold text-slate-800">Module label <span className="font-normal text-slate-500">(optional)</span></span>
             <input
               value={values.moduleTitle}
               onChange={(event) => setValues((c) => ({ ...c, moduleTitle: event.target.value }))}
               className="h-11 rounded-lg border border-slate-300 px-3 text-sm"
               placeholder="Elasticity"
             />
+          </label>
+
+          <label className="grid gap-1.5">
+            <span className="text-sm font-semibold text-slate-800">Syllabus lesson <span className="font-normal text-slate-500">(optional)</span></span>
+            <select
+              value={values.syllabusLessonId}
+              onChange={(event) => setValues((c) => ({ ...c, syllabusLessonId: event.target.value }))}
+              className="h-11 rounded-lg border border-slate-300 bg-white px-3 text-sm"
+            >
+              <option value="">Not tied to a lesson</option>
+              {syllabusOutline.map((module) => <optgroup key={module.id} label={module.title}>{module.lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}</optgroup>)}
+            </select>
           </label>
 
           <label className="grid gap-1.5">

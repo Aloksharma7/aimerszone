@@ -170,6 +170,8 @@ export type Recording = {
   syncMessage?: string | null;
   thumbnailUrl?: string | null;
   videoId?: string | null;
+  isPublicWarning?: boolean;
+  syllabusLessonId?: string | null;
 };
 
 export type Resource = {
@@ -183,6 +185,7 @@ export type Resource = {
   size: string;
   released: string;
   downloadUrl?: string | null;
+  syllabusLessonId?: string | null;
 };
 
 export type SyllabusLesson = {
@@ -190,6 +193,8 @@ export type SyllabusLesson = {
   title: string;
   type: string;
   state: string;
+  recordingId?: string | null;
+  resourceId?: string | null;
 };
 
 export type SyllabusModule = {

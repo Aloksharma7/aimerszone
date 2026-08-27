@@ -82,7 +82,8 @@ export function AccountProfileManager({
   async function changePassword(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (passwordBusy) return;
-    const form = new FormData(event.currentTarget);
+    const formEl = event.currentTarget;
+    const form = new FormData(formEl);
     const currentPassword = String(form.get("current_password") || "");
     const password = String(form.get("password") || "");
     const confirmation = String(form.get("password_confirmation") || "");
@@ -101,7 +102,7 @@ export function AccountProfileManager({
           headers: { "Idempotency-Key": createIdempotencyKey("account-password") },
         });
       }
-      event.currentTarget.reset();
+      formEl.reset();
       setNotice({
         tone: "success",
         title: mockMode ? "Preview validated" : "Password updated",

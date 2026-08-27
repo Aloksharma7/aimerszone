@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, KeyRound, LoaderCircle, LockKeyhole, Save, ShieldCheck, UserCheck, UserX } from "lucide-react";
 import { AlertBox, Button, Panel, StatusBadge, fieldClass } from "@/components/ui";
 import { ConfirmAction } from "@/components/shared/confirm-action";
@@ -17,6 +18,7 @@ function Notice({ value }: { value: { tone: "success" | "danger"; title: string;
 }
 
 export function UserProfileEditor({ userId, user }: { userId: string; user: AdminUser & { studentCode?: string | null } }) {
+  const router = useRouter();
   const [values, setValues] = useState({ name: user.name, email: user.email === "Not provided" ? "" : user.email, phone: user.phone === "Not provided" ? "" : user.phone, role: user.role, language: "English" });
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ tone: "success" | "danger"; title: string; message: string } | null>(null);
@@ -27,6 +29,7 @@ export function UserProfileEditor({ userId, user }: { userId: string; user: Admi
       if (!mockMode) await browserRequest<ApiResponse<{ id: string }>>({ url: `/api/v1/admin/users/${encodeURIComponent(userId)}`, method: "PATCH", data: { name: values.name.trim(), email: values.email.trim() || null, mobile: values.phone.trim() || null, primary_role: values.role.toLowerCase().replace(/\s+/g, "_"), language: values.language.toLowerCase() }, headers: { "Idempotency-Key": createIdempotencyKey("admin-update-user") } });
       else await new Promise((resolve) => window.setTimeout(resolve, 300));
       setNotice({ tone: "success", title: mockMode ? "Preview validated" : "Profile saved", message: mockMode ? "The profile payload is ready for the Laravel endpoint." : "Verified profile information was updated and audited." });
+      if (!mockMode) router.refresh();
     } catch (caught) { const error = caught as Partial<NormalizedApiError>; setNotice({ tone: "danger", title: "Profile not saved", message: error.message || "The request could not be completed." }); }
     finally { setBusy(false); }
   }
@@ -34,6 +37,7 @@ export function UserProfileEditor({ userId, user }: { userId: string; user: Admi
 }
 
 export function AccountControlPanel({ userId, initialStatus }: { userId: string; initialStatus: string }) {
+  const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
@@ -47,6 +51,7 @@ export function AccountControlPanel({ userId, initialStatus }: { userId: string;
       if (action === "suspend") setStatus("Suspended"); if (action === "reactivate") setStatus("Active");
       setNotice({ tone: "success", title: mockMode ? "Preview validated" : "Account action completed", message: mockMode ? "The audited action payload is ready for Laravel." : "The server accepted the request and recorded the audit reason." });
       setReason("");
+      if (!mockMode) router.refresh();
     } catch (caught) { const error = caught as Partial<NormalizedApiError>; setNotice({ tone: "danger", title: "Account action failed", message: error.message || "The request could not be completed." }); }
     finally { setBusy(null); }
   }

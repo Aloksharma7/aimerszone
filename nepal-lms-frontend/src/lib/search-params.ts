@@ -14,6 +14,12 @@ export function searchTerm(raw: Record<string, string | string[] | undefined>): 
   return firstParam(raw.search) || firstParam(raw.q);
 }
 
+/** The current page number for a paginated list, defaulting to and floored at 1. */
+export function pageParam(raw: Record<string, string | string[] | undefined>): number {
+  const parsed = Number.parseInt(firstParam(raw.page), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+}
+
 export function matchesQuery(query: string, ...values: unknown[]): boolean {
   const normalized = query.trim().toLocaleLowerCase();
   if (!normalized) return true;

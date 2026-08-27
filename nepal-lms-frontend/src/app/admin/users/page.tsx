@@ -2,10 +2,11 @@ import Link from "next/link";
 import { KeyRound, Plus, ShieldCheck, UserCheck, Users } from "lucide-react";
 import { ApiExportLink } from "@/components/api-actions";
 import { ListFilters } from "@/components/list-filters";
+import { Pagination } from "@/components/pagination";
 import { DataTable } from "@/components/portal-components";
 import { ButtonLink, MetricCard, PageHeader, Panel, StatusBadge } from "@/components/ui";
-import { getAdminRoles, getAdminUsers } from "@/lib/data/admin";
-import { buildQueryString, firstParam, matchesQuery, searchTerm, type PageSearchParams } from "@/lib/search-params";
+import { getAdminRoles, getAdminUsers, getAdminUsersPage } from "@/lib/data/admin";
+import { buildQueryString, firstParam, pageParam, searchTerm, type PageSearchParams } from "@/lib/search-params";
 
 export default async function AdminUsersPage({ searchParams }: { searchParams: PageSearchParams }) {
   const raw = await searchParams;
@@ -13,8 +14,17 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
   const role = firstParam(raw.role);
   const status = firstParam(raw.status);
   const mfa = firstParam(raw.mfa);
-  const [users, roles] = await Promise.all([getAdminUsers(), getAdminRoles()]);
-  const filtered = users.filter((user) => matchesQuery(q, user.id, user.name, user.email, user.phone, user.role) && (!role || user.role === role) && (!status || user.status === status) && (!mfa || user.mfa === mfa));
+  const page = pageParam(raw);
+  const [users, roles, { items: pageUsers, meta }] = await Promise.all([
+    getAdminUsers(),
+    getAdminRoles(),
+    getAdminUsersPage({ page, q, status }),
+  ]);
+
+  // The role and mfa dropdowns have no backend equivalent for this endpoint
+  // (role here is a display name, not the role key the API filters by), so
+  // both are applied to whatever page of results is currently on screen.
+  const filtered = pageUsers.filter((user) => (!role || user.role === role) && (!mfa || user.mfa === mfa));
   const exportQuery = buildQueryString({ q, role, status, mfa });
 
   return (
@@ -38,6 +48,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: P
           ]}
         />
         <div className="mt-5"><DataTable rowKey="id" rows={filtered as unknown as Record<string, unknown>[]} columns={[{ key: "name", label: "User", render: (row) => <div><Link href={`/admin/users/${String(row.id)}`} className="font-bold text-brand-700 hover:text-brand-900">{String(row.name)}</Link><p className="mt-1 text-xs text-slate-500">{String(row.email)} · {String(row.id)}</p></div> }, { key: "phone", label: "Phone" }, { key: "role", label: "Role" }, { key: "status", label: "Status", render: (row) => <StatusBadge status={String(row.status)} /> }, { key: "mfa", label: "MFA", render: (row) => <StatusBadge status={String(row.mfa) === "Enabled" ? "Active" : "Not enabled"} /> }, { key: "lastSeen", label: "Last activity" }]} /></div>
+        <Pagination meta={meta} buildHref={(target) => `/admin/users${buildQueryString({ search: q, role, status, mfa, page: String(target) })}`} />
       </Panel>
     </>
   );

@@ -1,4 +1,4 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Info } from "lucide-react";
 import { ResourceLibrary } from "@/components/student/resource-library";
 import { SecureRecordingPlayer } from "@/components/student/secure-learning-actions";
@@ -9,7 +9,12 @@ export default async function GlobalRecordingPlayerPage({ params }: { params: Pr
   const { recordingId } = await params;
   const recording = await getStudentRecording(recordingId);
   if (!recording) notFound();
-  if (recording.enrollmentId) redirect(`/student/courses/${recording.enrollmentId}/recordings/${recording.id}`);
+  // Deliberately does not redirect into the course-scoped detail page even
+  // though this recording belongs to one — the global library is meant to
+  // play a video right where you clicked it, in whatever order you're
+  // browsing in, rather than dropping you into that course's structured
+  // (syllabus-ordered) view. That view is what /student/courses/*/recordings
+  // is for.
   const resources = await getStudentResources();
   return (
     <>

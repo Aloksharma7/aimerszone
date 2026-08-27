@@ -11,6 +11,8 @@ class SyllabusModuleResource extends JsonResource
     {
         /** @var array<string, bool> $completed */
         $completed = $this->additional['completed_lessons'] ?? [];
+        $recordingByLesson = $this->additional['recording_by_lesson'] ?? collect();
+        $resourceByLesson = $this->additional['resource_by_lesson'] ?? collect();
         $lessons = $this->whenLoaded('lessons', fn () => $this->lessons, collect());
         $done = $lessons->filter(fn ($lesson) => isset($completed[$lesson->id]))->count();
 
@@ -25,6 +27,8 @@ class SyllabusModuleResource extends JsonResource
                 'type' => $lesson->type,
                 'state' => isset($completed[$lesson->id]) ? 'Completed' : 'Available',
                 'order' => (int) $lesson->order,
+                'recording_id' => $recordingByLesson[$lesson->id]->id ?? null,
+                'resource_id' => $resourceByLesson[$lesson->id]->id ?? null,
             ])->values()->all(),
         ];
     }

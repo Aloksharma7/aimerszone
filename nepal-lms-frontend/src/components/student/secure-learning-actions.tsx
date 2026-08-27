@@ -1,11 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Download, LoaderCircle, MonitorPlay, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui";
 import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@/lib/api/browser-client";
 import type { ApiResponse } from "@/lib/api/contracts";
-import { trustedDestination } from "@/lib/security/trusted-destination";
+import { trustedDestination, trustedYoutubeVideoId } from "@/lib/security/trusted-destination";
+import { CustomYoutubePlayer } from "@/components/student/custom-youtube-player";
+import { DevToolsDeterrent } from "@/components/student/devtools-deterrent";
 import { VideoWatermark, type WatermarkPayload } from "@/components/student/video-watermark";
 import { cn } from "@/lib/utils";
 
@@ -116,14 +118,17 @@ export function SecureDownloadButton({ resourceId, label = "Download", className
 }
 
 export function SecureRecordingPlayer({ recordingId, title }: { recordingId: string; title: string }) {
-  const [busy, setBusy] = useState(false);
-  const [embedUrl, setEmbedUrl] = useState<string | null>(null);
+  // Starts true: the mount effect below fires the load immediately, and
+  // starting false would flash the manual "Load recording" button for one
+  // frame before that kicks in.
+  const [busy, setBusy] = useState(true);
+  const [videoId, setVideoId] = useState<string | null>(null);
   const [watermark, setWatermark] = useState<WatermarkPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
 
   async function load() {
-    if (busy || embedUrl) return;
+    if (videoId) return;
     setBusy(true);
     setError(null);
     try {
@@ -136,9 +141,9 @@ export function SecureRecordingPlayer({ recordingId, title }: { recordingId: str
         method: "POST",
         headers: { "Idempotency-Key": createIdempotencyKey("recording-playback") },
       });
-      const destination = trustedDestination(response.data.playback_url || response.data.url || "", { currentOrigin: window.location.origin, purpose: "youtube_embed" });
-      if (!destination) throw new Error("The playback link returned by the server is not trusted.");
-      setEmbedUrl(destination);
+      const id = trustedYoutubeVideoId(response.data.playback_url || response.data.url || "", { currentOrigin: window.location.origin });
+      if (!id) throw new Error("The playback link returned by the server is not trusted.");
+      setVideoId(id);
       setWatermark(response.data.watermark ?? null);
     } catch (caught) {
       setError(messageFrom(caught));
@@ -147,29 +152,37 @@ export function SecureRecordingPlayer({ recordingId, title }: { recordingId: str
     }
   }
 
+  useEffect(() => {
+    // This page exists only to show this one recording — landing on it is
+    // already the deliberate action a "Load recording" button used to make
+    // the student click again for. Re-runs only if the recording itself
+    // changes (e.g. the Previous/Next links), not on every render. The
+    // standard fetch-on-mount pattern: setBusy(true) runs synchronously at
+    // the top of load() before its first await, which is what both of the
+    // rules below are (over-)cautious about for a plain data fetch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordingId]);
+
   return (
     // `relative` anchors the watermark overlay to the player.
     <div className="relative aspect-video overflow-hidden rounded-2xl bg-slate-950 shadow-card">
-      {embedUrl ? <VideoWatermark watermark={watermark} /> : null}
-      {embedUrl ? (
-        <iframe
-          src={embedUrl}
-          title={title}
-          className="h-full w-full"
-          allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-          allowFullScreen
-          referrerPolicy="strict-origin-when-cross-origin"
-          sandbox="allow-scripts allow-same-origin allow-presentation"
-        />
+      <DevToolsDeterrent />
+      {videoId ? <VideoWatermark watermark={watermark} /> : null}
+      {videoId ? (
+        <CustomYoutubePlayer videoId={videoId} title={title} />
       ) : (
         <div className="flex h-full flex-col items-center justify-center px-6 text-center text-white">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10"><PlayCircle className="h-8 w-8" /></div>
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10">{busy ? <LoaderCircle className="h-8 w-8 animate-spin" /> : <PlayCircle className="h-8 w-8" />}</div>
           <h2 className="mt-5 text-xl font-bold">{title}</h2>
-          <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">The video is loaded only after the server confirms your active course access.</p>
-          <Button type="button" onClick={load} disabled={busy} className="mt-5">
-            {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <PlayCircle className="h-4 w-4" />}
-            {busy ? "Checking access…" : "Load recording"}
-          </Button>
+          <p className="mt-2 max-w-md text-sm leading-6 text-slate-400">{busy ? "Confirming your active course access…" : error ? "The recording could not be loaded." : "The video is loaded only after the server confirms your active course access."}</p>
+          {!busy ? (
+            <Button type="button" onClick={load} className="mt-5">
+              <PlayCircle className="h-4 w-4" />
+              {error ? "Try again" : "Load recording"}
+            </Button>
+          ) : null}
           {error ? <p role="status" className="mt-3 max-w-md text-xs leading-5 text-amber-200">{error}</p> : null}
         </div>
       )}

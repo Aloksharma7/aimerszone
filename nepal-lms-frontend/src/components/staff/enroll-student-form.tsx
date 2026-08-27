@@ -201,7 +201,7 @@ export function EnrollStudentForm({
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const [values, setValues] = useState({ courseId: "", batchId: "", method: "esewa", amount: "", payer: "", reference: "", date: "", note: "" });
+  const [values, setValues] = useState({ courseId: "", batchId: "", method: "esewa", amount: "", payer: "", reference: "", date: new Date().toISOString().slice(0, 10), note: "" });
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

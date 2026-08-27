@@ -14,7 +14,7 @@ class Resource extends Model
     use HasFactory, HasUlids, SoftDeletes;
 
     protected $fillable = [
-        'batch_id', 'course_id', 'title', 'module_title', 'file_type', 'mime_type',
+        'batch_id', 'course_id', 'title', 'module_title', 'syllabus_lesson_id', 'file_type', 'mime_type',
         'size_bytes', 'storage_path', 'storage_disk', 'checksum', 'released_at',
         'is_public', 'created_by',
     ];
@@ -39,6 +39,11 @@ class Resource extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function syllabusLesson(): BelongsTo
+    {
+        return $this->belongsTo(SyllabusLesson::class);
     }
 
     public function downloads(): HasMany

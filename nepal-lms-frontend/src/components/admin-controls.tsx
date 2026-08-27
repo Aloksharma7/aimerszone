@@ -71,7 +71,7 @@ export function BatchEditor({ mode = "new", courses, teachers, batch }: { mode?:
     courseId: batch?.courseId || "",
     teacherIds: batch?.teacherIds ?? [],
     schedule: batch?.schedule && !batch.schedule.includes("required") ? batch.schedule : "",
-    startDate: batch?.startAt || "",
+    startDate: batch?.startAt || (mode === "new" ? new Date().toISOString().slice(0, 10) : ""),
     endDate: batch?.endAt || "",
     accessUntil: batch?.accessUntil || "",
     priceNpr: batch?.priceNpr ?? 0,
@@ -218,6 +218,7 @@ export function RoleMatrix({ roles }: { roles: RoleDefinition[] }) {
 }
 
 export function AnnouncementComposer({ batches, roles }: { batches: AdminBatch[]; roles: RoleDefinition[] }) {
+  const router = useRouter();
   const [values, setValues] = useState({ title: "", body: "", audience: "all", targetId: "", channel: "in_app", schedule: "" });
   const [notice, setNotice] = useState<{ tone: "success" | "danger"; title: string; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -229,6 +230,7 @@ export function AnnouncementComposer({ batches, roles }: { batches: AdminBatch[]
       else await new Promise((resolve) => window.setTimeout(resolve, 300));
       setNotice({ tone: "success", title: mockMode ? "Preview validated" : status === "published" ? "Announcement published" : "Draft saved", message: mockMode ? "The announcement payload is ready for Laravel." : "The audience and delivery request were recorded." });
       if (status === "published") setValues({ title: "", body: "", audience: "all", targetId: "", channel: "in_app", schedule: "" });
+      if (!mockMode) router.refresh();
     } catch (caught) { const error = caught as Partial<NormalizedApiError>; setNotice({ tone: "danger", title: "Announcement not saved", message: error.message || "The request could not be completed." }); }
     finally { setBusy(false); }
   }
@@ -239,6 +241,7 @@ export function AnnouncementComposer({ batches, roles }: { batches: AdminBatch[]
 }
 
 export function SettingsManager({ initialData }: { initialData: AdminSettingsData }) {
+  const router = useRouter();
   const { toast } = useToast();
   const [values, setValues] = useState(initialData);
   const [notice, setNotice] = useState<{ tone: "success" | "danger"; title: string; message: string } | null>(null);
@@ -267,6 +270,7 @@ export function SettingsManager({ initialData }: { initialData: AdminSettingsDat
       const url = asset === "logo" ? response.data.logo_url : response.data.favicon_url;
       setValues((current) => ({ ...current, institution: { ...current.institution, [asset === "logo" ? "logoUrl" : "faviconUrl"]: url ?? null } }));
       toast({ tone: "success", title: asset === "logo" ? "Logo updated" : "Favicon updated" });
+      if (asset === "logo") router.refresh();
     } catch (caught) {
       const error = caught as Partial<NormalizedApiError>;
       toast({ tone: "danger", title: asset === "logo" ? "Logo not uploaded" : "Favicon not uploaded", message: error.message || "The request could not be completed." });
@@ -282,6 +286,7 @@ export function SettingsManager({ initialData }: { initialData: AdminSettingsDat
       else await new Promise((resolve) => window.setTimeout(resolve, 250));
       setValues((current) => ({ ...current, institution: { ...current.institution, [asset === "logo" ? "logoUrl" : "faviconUrl"]: null } }));
       toast({ tone: "success", title: asset === "logo" ? "Logo removed" : "Favicon removed" });
+      if (asset === "logo") router.refresh();
     } catch (caught) {
       const error = caught as Partial<NormalizedApiError>;
       toast({ tone: "danger", title: asset === "logo" ? "Logo not removed" : "Favicon not removed", message: error.message || "The request could not be completed." });
@@ -336,6 +341,7 @@ export function SettingsManager({ initialData }: { initialData: AdminSettingsDat
       if (esewaSecretKey) setValues((current) => ({ ...current, esewa: { ...current.esewa, secretKeyConfigured: true } }));
       setSmsToken(""); setEsewaSecretKey("");
       setNotice({ tone: "success", title: mockMode ? "Preview validated" : "Settings saved", message: mockMode ? "The settings payload is ready for the Laravel settings endpoint." : "Configuration was saved and the change should appear in the audit log." });
+      if (!mockMode) router.refresh();
     } catch (caught) { const error = caught as Partial<NormalizedApiError>; setNotice({ tone: "danger", title: "Settings not saved", message: error.message || "The request could not be completed." }); }
     finally { setBusy(false); }
   }

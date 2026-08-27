@@ -24,6 +24,7 @@ class ResourceFileResource extends JsonResource
             'size_bytes' => $this->size_bytes,
             'released_at' => $this->released_at?->toIso8601String(),
             'download_url' => null,
+            'syllabus_lesson_id' => $this->syllabus_lesson_id,
         ];
     }
 }

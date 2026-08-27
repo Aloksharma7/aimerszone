@@ -25,13 +25,13 @@ describe("trustedDestination", () => {
     ).toBe("https://files.storage.example.com/proof");
   });
 
-  it("normalizes YouTube watch links to privacy-enhanced embeds", () => {
+  it("normalizes YouTube watch links to privacy-enhanced, hardened embeds", () => {
     expect(
       trustedDestination("https://www.youtube.com/watch?v=dQw4w9WgXcQ", {
         currentOrigin: origin,
         purpose: "youtube_embed",
         allowedHosts: ["youtube.com", "youtube-nocookie.com"],
       }),
-    ).toBe("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ");
+    ).toBe("https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&playsinline=1");
   });
 });

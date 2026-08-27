@@ -113,6 +113,10 @@ export type ApiRecording = {
   sync_message?: string | null;
   thumbnail_url?: string | null;
   youtube_video_id?: string | null;
+
+  // Teacher-only: absent from the shared resource on student-facing endpoints.
+  is_public_warning?: boolean;
+  syllabus_lesson_id?: string | null;
 };
 
 export type ApiResource = {
@@ -126,6 +130,7 @@ export type ApiResource = {
   size_bytes?: number | null;
   released_at?: string | null;
   download_url?: string | null;
+  syllabus_lesson_id?: string | null;
 };
 
 export type ApiSyllabusLesson = {
@@ -134,6 +139,8 @@ export type ApiSyllabusLesson = {
   type?: string | null;
   state?: string | null;
   order: number;
+  recording_id?: string | null;
+  resource_id?: string | null;
 };
 
 export type ApiSyllabusModule = {

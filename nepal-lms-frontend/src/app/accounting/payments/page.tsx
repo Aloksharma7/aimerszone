@@ -1,11 +1,12 @@
 import { Filter, ImageIcon, WalletCards } from "lucide-react";
 import { ApiExportLink } from "@/components/api-actions";
 import { ListFilters } from "@/components/list-filters";
+import { Pagination } from "@/components/pagination";
 import { DataTable } from "@/components/portal-components";
 import { MetricCard, PageHeader, Panel, StatusBadge } from "@/components/ui";
-import { getAccountingPayments } from "@/lib/data/accounting";
+import { getAccountingPayments, getAccountingPaymentsPage } from "@/lib/data/accounting";
 import { portalPath } from "@/lib/portal-path";
-import { buildQueryString, firstParam, matchesQuery, searchTerm, type PageSearchParams } from "@/lib/search-params";
+import { buildQueryString, firstParam, pageParam, searchTerm, type PageSearchParams } from "@/lib/search-params";
 import { formatNpr } from "@/lib/utils";
 
 export default async function AccountingPaymentsPage({ searchParams }: { searchParams: PageSearchParams }) {
@@ -14,12 +15,20 @@ export default async function AccountingPaymentsPage({ searchParams }: { searchP
   const status = firstParam(raw.status);
   const method = firstParam(raw.method);
   const sort = firstParam(raw.sort) || "newest";
-  const items = await getAccountingPayments();
+  const page = pageParam(raw);
   const needsDecision = (value: string) => ["submitted", "under review"].includes(value.toLocaleLowerCase());
-  const matchesStatus = (value: string) => !status || (status.toLocaleLowerCase() === "pending" ? needsDecision(value) : value.toLocaleLowerCase() === status.toLocaleLowerCase());
-  const filtered = items
-    .filter((item) => matchesQuery(q, item.id, item.student, item.course, item.method, item.status, item.risk) && matchesStatus(item.status) && (!method || item.method.toLocaleLowerCase().includes(method.toLocaleLowerCase())))
-    .sort((a, b) => sort === "highest" ? b.amount - a.amount : sort === "oldest" ? items.indexOf(b) - items.indexOf(a) : items.indexOf(a) - items.indexOf(b));
+
+  // "Needs a decision" groups two real statuses that the backend cannot
+  // filter on in a single request, so that one option is applied to the
+  // fetched page client-side rather than sent through as a literal status.
+  const isPendingFilter = status.toLocaleLowerCase() === "pending";
+  const [items, { items: pageItems, meta }] = await Promise.all([
+    getAccountingPayments(),
+    getAccountingPaymentsPage({ page, q, status: isPendingFilter ? undefined : status }),
+  ]);
+  const filtered = pageItems
+    .filter((item) => (!isPendingFilter || needsDecision(item.status)) && (!method || item.method.toLocaleLowerCase().includes(method.toLocaleLowerCase())))
+    .sort((a, b) => sort === "highest" ? b.amount - a.amount : sort === "oldest" ? pageItems.indexOf(b) - pageItems.indexOf(a) : pageItems.indexOf(a) - pageItems.indexOf(b));
   const submitted = items.filter((item) => item.status === "Submitted").length;
   const review = items.filter((item) => item.status.toLocaleLowerCase() === "under review").length;
   const flagged = items.filter((item) => item.risk !== "Normal").length;
@@ -53,6 +62,7 @@ export default async function AccountingPaymentsPage({ searchParams }: { searchP
           ]}
         />
         <div className="mt-5"><DataTable actions rowKey="id" needsAttention={(row) => needsDecision(String(row.status))} rows={filtered.map((row) => ({ ...row, href: `${base}/${encodeURIComponent(row.id)}` })) as unknown as Record<string, unknown>[]} columns={[{ key: "id", label: "Payment" }, { key: "student", label: "Student" }, { key: "course", label: "Course / Batch" }, { key: "amount", label: "Amount", render: (row) => <span className="font-semibold text-slate-900">{formatNpr(Number(row.amount))}</span> }, { key: "method", label: "Method" }, { key: "proof", label: "Proof", render: (row) => (row.hasProof ? <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700"><ImageIcon className="h-3.5 w-3.5" />Attached</span> : <span className="text-xs text-slate-400">None</span>) }, { key: "submitted", label: "Submitted" }, { key: "risk", label: "Flag", render: (row) => <StatusBadge status={String(row.risk)} /> }, { key: "status", label: "Status", render: (row) => <StatusBadge status={String(row.status)} /> }]} /></div>
+        <Pagination meta={meta} buildHref={(target) => `${base}${buildQueryString({ search: q, status, method, sort, page: String(target) })}`} />
       </Panel>
     </>
   );

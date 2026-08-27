@@ -155,6 +155,8 @@ class CourseController extends Controller
             ->ordered()
             ->get();
 
+        $lessonIds = $modules->flatMap(fn (SyllabusModule $module) => $module->lessons)->pluck('id');
+
         $completed = LessonCompletion::query()
             ->where('user_id', $request->user()->getKey())
             ->whereNotNull('completed_at')
@@ -163,8 +165,30 @@ class CourseController extends Controller
             ->map(fn () => true)
             ->all();
 
+        // Scoped to this enrollment's own batch: the syllabus is shared
+        // across every batch of the course, but the actual recording a
+        // lesson plays is whatever that specific batch's teacher uploaded
+        // for it — a different batch of the same course may have its own.
+        $recordingByLesson = Recording::query()
+            ->where('batch_id', $enrollment->batch_id)
+            ->whereIn('syllabus_lesson_id', $lessonIds)
+            ->released()
+            ->get(['id', 'syllabus_lesson_id'])
+            ->keyBy('syllabus_lesson_id');
+
+        $resourceByLesson = Resource::query()
+            ->where('batch_id', $enrollment->batch_id)
+            ->whereIn('syllabus_lesson_id', $lessonIds)
+            ->released()
+            ->get(['id', 'syllabus_lesson_id'])
+            ->keyBy('syllabus_lesson_id');
+
         return ApiResponse::collection($modules->map(fn (SyllabusModule $module) => (new SyllabusModuleResource($module))
-            ->additional(['completed_lessons' => $completed])
+            ->additional([
+                'completed_lessons' => $completed,
+                'recording_by_lesson' => $recordingByLesson,
+                'resource_by_lesson' => $resourceByLesson,
+            ])
             ->toArray($request)));
     }
 

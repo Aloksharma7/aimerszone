@@ -74,12 +74,16 @@ export function RecordingList({ batchId, items }: { batchId: string; items: Reco
                 <p className="mt-1 text-xs text-amber-600">
                   {item.syncMessage || "Not verified yet."} Invisible to students until it checks in as ready — press &ldquo;Re-check&rdquo; once the video has finished processing on YouTube.
                 </p>
+              ) : item.isPublicWarning ? (
+                <p className="mt-1 text-xs font-semibold text-red-600">
+                  This video is public on YouTube — anyone with the link can watch it without enrolling. Set it to unlisted, then press &ldquo;Re-check&rdquo;.
+                </p>
               ) : (
                 <p className="mt-1 text-xs text-slate-400">Changes use a versioned recording update endpoint; published items remain auditable.</p>
               )}
             </div>
             <div className="flex shrink-0 gap-2 self-start sm:self-center">
-              {item.state === "Processing" ? (
+              {item.state === "Processing" || item.isPublicWarning ? (
                 <button
                   type="button"
                   onClick={() => recheck(item)}

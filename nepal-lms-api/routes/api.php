@@ -183,6 +183,7 @@ Route::prefix('v1')->group(function () {
         Route::post('batches/{batchId}/recordings/{recording}/resync', [Teacher\RecordingController::class, 'resync'])
             ->middleware(['permission:recordings.manage', 'idempotent']);
         Route::get('batches/{batchId}/tests', [Teacher\TestController::class, 'forBatch']);
+        Route::get('batches/{batchId}/syllabus-modules', [Teacher\SyllabusModuleController::class, 'index']);
 
         // Notes and PDFs. Students could always download; nothing could upload.
         Route::get('batches/{batchId}/resources', [Teacher\ResourceController::class, 'index'])

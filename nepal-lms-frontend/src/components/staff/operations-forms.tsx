@@ -6,6 +6,7 @@ import { AlertCircle, Copy, KeyRound, LoaderCircle, Save, Smartphone, UserPlus }
 import { AlertBox, Button, Panel, labelledFieldClass } from "@/components/ui";
 import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@/lib/api/browser-client";
 import type { ApiResponse } from "@/lib/api/contracts";
+import { usePortalPath } from "@/lib/use-portal-path";
 import type { StaffStudent } from "@/types/lms";
 
 const mockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
@@ -21,6 +22,7 @@ type CreatedStudent = { id: string; studentCode: string | null; temporaryPasswor
 
 export function CreateStudentForm() {
   const router = useRouter();
+  const portalPath = usePortalPath();
   const [values,setValues]=useState({name:"",mobile:"",email:"",language:"en",setupMethod:"link",interest:"",note:""});
   const [busy,setBusy]=useState(false); const [notice,setNotice]=useState<Notice>(null);
   const [created, setCreated] = useState<CreatedStudent | null>(null);
@@ -62,7 +64,7 @@ export function CreateStudentForm() {
         )}
         <div className="mt-5 flex gap-2">
           <button type="button" onClick={()=>{setCreated(null);setCopied(false);setValues({name:"",mobile:"",email:"",language:"en",setupMethod:"link",interest:"",note:""});}} className="h-11 rounded-lg bg-brand-700 px-4 text-sm font-semibold text-white hover:bg-brand-800">Create another</button>
-          {created.id !== "preview-student" ? <button type="button" onClick={()=>router.push(`/staff/students/${encodeURIComponent(created.id)}`)} className="h-11 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">View student</button> : null}
+          {created.id !== "preview-student" ? <button type="button" onClick={()=>router.push(portalPath(`/staff/students/${encodeURIComponent(created.id)}`))} className="h-11 rounded-lg border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-50">View student</button> : null}
         </div>
       </div>
     );

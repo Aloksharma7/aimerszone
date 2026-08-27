@@ -1,13 +1,17 @@
 import { MonitorPlay } from "lucide-react";
+import { Pagination } from "@/components/pagination";
 import { RecordingLibrary } from "@/components/student/recording-library";
 import { MetricCard, PageHeader } from "@/components/ui";
 import { getSessionUser, requirePermission } from "@/lib/auth/server";
-import { getStudentRecordings } from "@/lib/data/student";
+import { getStudentRecordings, getStudentRecordingsPage } from "@/lib/data/student";
+import { buildQueryString, pageParam, type PageSearchParams } from "@/lib/search-params";
 
-export default async function StudentRecordingsPage() {
+export default async function StudentRecordingsPage({ searchParams }: { searchParams: PageSearchParams }) {
   const user = await getSessionUser("student");
   if (user) await requirePermission(user, "recordings.view");
-  const recordings = await getStudentRecordings();
+  const raw = await searchParams;
+  const page = pageParam(raw);
+  const [recordings, { items, meta }] = await Promise.all([getStudentRecordings(), getStudentRecordingsPage({ page })]);
   const inProgress = recordings.filter((item) => item.progress > 0 && item.progress < 100).length;
   const completed = recordings.filter((item) => item.progress >= 100).length;
   return (
@@ -18,7 +22,8 @@ export default async function StudentRecordingsPage() {
         <MetricCard label="In progress" value={String(inProgress)} detail="Continue where you stopped" icon={MonitorPlay} tone="amber" />
         <MetricCard label="Completed" value={String(completed)} detail="Watched recordings" icon={MonitorPlay} tone="green" />
       </div>
-      <RecordingLibrary recordings={recordings} global />
+      <RecordingLibrary recordings={items} global />
+      <Pagination meta={meta} buildHref={(target) => `/student/recordings${buildQueryString({ page: String(target) })}`} />
     </>
   );
 }

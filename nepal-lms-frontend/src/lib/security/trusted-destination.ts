@@ -71,10 +71,43 @@ export function trustedDestination(
 
     if (options.purpose === "youtube_embed") {
       const videoId = youtubeVideoId(url);
-      return videoId ? `https://www.youtube-nocookie.com/embed/${videoId}` : null;
+      if (!videoId) return null;
+
+      // Deterrents only, not access control: hides suggested videos from
+      // other channels, YouTube's own branding/watermark link, and
+      // annotations, and disables the keyboard shortcuts the iframe would
+      // otherwise respond to. None of this stops the video id itself from
+      // being visible in the DOM to anyone who inspects it.
+      const params = new URLSearchParams({ modestbranding: "1", rel: "0", iv_load_policy: "3", disablekb: "1", playsinline: "1" });
+      return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
     }
 
     return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Same trust checks as trustedDestination's "youtube_embed" path, but
+ * returns the bare video id instead of an embed URL — for a custom player
+ * built on the YouTube IFrame API, which takes a videoId rather than a src.
+ * Does not change what is extractable from the page; see
+ * components/student/custom-youtube-player.tsx for why.
+ */
+export function trustedYoutubeVideoId(rawUrl: string, options: { currentOrigin: string; allowedHosts?: string[] }): string | null {
+  if (typeof rawUrl !== "string" || rawUrl.trim() === "") return null;
+
+  try {
+    const currentOrigin = new URL(options.currentOrigin).origin;
+    const url = new URL(rawUrl, currentOrigin);
+    if (url.username || url.password) return null;
+    if (url.origin === currentOrigin || url.protocol !== "https:") return null;
+
+    const allowedHosts = configuredHosts(options.allowedHosts);
+    if (!hostAllowed(url.hostname, allowedHosts)) return null;
+
+    return youtubeVideoId(url);
   } catch {
     return null;
   }
