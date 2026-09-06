@@ -41,3 +41,32 @@ export function ListSkeleton({ count = 4, withThumbnail = true }: { count?: numb
     </View>
   );
 }
+
+/**
+ * A pushed detail screen's first fetch used a bare centered spinner in most
+ * places while list screens got the shaped skeleton above — two different
+ * loading vocabularies for the same "waiting on the network" moment. This
+ * shapes itself like a typical detail screen (header card + a few rows)
+ * instead.
+ */
+export function DetailSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <View className="gap-4 px-5 py-6">
+      <View className="gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+        <Bone width="55%" height={16} />
+        <Bone width="35%" height={11} />
+      </View>
+      <View className="flex-row gap-3">
+        <Bone width="31%" height={64} radius={16} />
+        <Bone width="31%" height={64} radius={16} />
+        <Bone width="31%" height={64} radius={16} />
+      </View>
+      {Array.from({ length: rows }).map((_, index) => (
+        <View key={index} className="gap-2 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+          <Bone width="70%" height={13} />
+          <Bone width="90%" height={11} />
+        </View>
+      ))}
+    </View>
+  );
+}

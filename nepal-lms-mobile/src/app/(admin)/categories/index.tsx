@@ -2,8 +2,11 @@ import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, Switch, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { EmptyState } from "@/components/empty-state";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { createAdminCategory, deleteAdminCategory, fetchAdminCategories, updateAdminCategory } from "@/lib/data/admin";
 import type { AdminCategory } from "@/types/lms";
@@ -59,7 +62,7 @@ export default function AdminCategoriesScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["bottom"]}>
       <FlatList
         data={categories.data ?? []}
         keyExtractor={(item) => item.id}
@@ -79,7 +82,6 @@ export default function AdminCategoriesScreen() {
         onRefresh={() => categories.refetch()}
         ListHeaderComponent={
           <View className="gap-4 pb-4 pt-6">
-            <Text className="text-2xl font-bold text-slate-950">Course categories</Text>
             <Text className="text-sm text-slate-500">
               Categories group courses on the public catalogue. At least one is needed before a course can be created.
             </Text>
@@ -87,16 +89,7 @@ export default function AdminCategoriesScreen() {
             <View className="gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
               <Text className="text-base font-bold text-slate-950">{editing ? "Edit category" : "New category"}</Text>
 
-              <View className="gap-2">
-                <Text className="text-sm font-semibold text-slate-700">Name</Text>
-                <TextInput
-                  value={draft.name}
-                  onChangeText={(value) => setDraft((current) => ({ ...current, name: value }))}
-                  placeholder="Management"
-                  className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-                  placeholderTextColor="#94a3b8"
-                />
-              </View>
+              <TextField label="Name" value={draft.name} onChangeText={(value) => setDraft((current) => ({ ...current, name: value }))} placeholder="Management" />
 
               <View className="gap-2">
                 <Text className="text-sm font-semibold text-slate-700">Description</Text>
@@ -123,19 +116,14 @@ export default function AdminCategoriesScreen() {
               ) : null}
 
               <View className="flex-row gap-3">
-                <Pressable
+                <Button
+                  label={editing ? "Save changes" : "Create category"}
+                  loading={save.isPending}
+                  disabled={draft.name.trim().length < 2}
+                  icon={editing ? "save" : "plus"}
                   onPress={() => save.mutate()}
-                  disabled={save.isPending || draft.name.trim().length < 2}
-                  className="h-11 flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-brand-700 active:bg-brand-800 disabled:opacity-60"
-                >
-                  {save.isPending ? <ActivityIndicator color="#fff" /> : <Feather name={editing ? "save" : "plus"} size={16} color="#fff" />}
-                  <Text className="text-sm font-bold text-white">{editing ? "Save changes" : "Create category"}</Text>
-                </Pressable>
-                {editing ? (
-                  <Pressable onPress={reset} className="h-11 items-center justify-center rounded-xl border border-slate-300 px-4 active:bg-slate-100">
-                    <Text className="text-sm font-bold text-slate-700">Cancel</Text>
-                  </Pressable>
-                ) : null}
+                />
+                {editing ? <Button label="Cancel" variant="secondary" fullWidth={false} onPress={reset} /> : null}
               </View>
             </View>
 
@@ -147,13 +135,11 @@ export default function AdminCategoriesScreen() {
         }
         ListEmptyComponent={
           categories.isPending ? null : (
-            <View className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <Text className="text-sm text-slate-500">No categories yet. Create the first one to start building the catalogue.</Text>
-            </View>
+            <EmptyState icon="folder" title="No categories yet" description="Create the first one to start building the catalogue." />
           )
         }
       />
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

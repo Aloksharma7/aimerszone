@@ -3,7 +3,11 @@ import { useRouter } from "expo-router";
 import { FlatList, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/button";
 import { MetricTile } from "@/components/metric-tile";
+import { ScreenHeader } from "@/components/screen-header";
 import { StatusBadge } from "@/components/status-badge";
 import { ListSkeleton } from "@/components/skeleton";
 import { isNormalizedApiError } from "@/lib/api/contracts";
@@ -15,9 +19,9 @@ export default function TeacherAttendanceScreen() {
 
   if (overview.isPending) {
     return (
-      <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+      <AppScreen edges={["top"]}>
         <ListSkeleton withThumbnail={false} />
-      </SafeAreaView>
+      </AppScreen>
     );
   }
 
@@ -26,9 +30,7 @@ export default function TeacherAttendanceScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["top"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => overview.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => overview.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
@@ -36,7 +38,10 @@ export default function TeacherAttendanceScreen() {
   const data = overview.data;
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
+      <View className="px-5 pt-6">
+        <ScreenHeader title="Attendance" />
+      </View>
       <FlatList
         data={data.sessions}
         keyExtractor={(item) => item.id}
@@ -45,21 +50,16 @@ export default function TeacherAttendanceScreen() {
         refreshing={overview.isRefetching}
         onRefresh={() => overview.refetch()}
         ListHeaderComponent={
-          <View className="mb-4 gap-4">
-            <Text className="text-2xl font-bold text-slate-950">Attendance</Text>
-            <View className="flex-row gap-3">
-              <MetricTile label="Awaiting" value={data.metrics.awaiting} />
-              <MetricTile label="Finalized this week" value={data.metrics.finalizedThisWeek} />
-            </View>
+          <View className="mb-4 flex-row gap-3">
+            <MetricTile label="Awaiting" value={data.metrics.awaiting} />
+            <MetricTile label="Finalized this week" value={data.metrics.finalizedThisWeek} />
           </View>
         }
         ListEmptyComponent={
-          <View className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-            <Text className="text-sm text-slate-500">No past classes need a register yet.</Text>
-          </View>
+          <EmptyState icon="check-square" title="Nothing to mark yet" description="Classes that need an attendance register will appear here after they finish." />
         }
       />
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

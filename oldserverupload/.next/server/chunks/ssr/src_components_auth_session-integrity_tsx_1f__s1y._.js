@@ -1,0 +1,3 @@
+module.exports=[7051,a=>{"use strict";var b=a.i(72131),c=a.i(50944);a.s(["SessionIntegrity",0,function(){let a=(0,c.useRouter)();return(0,b.useEffect)(()=>{function b(a){a.persisted&&window.location.reload()}function c(){a.refresh()}return window.addEventListener("pageshow",b),window.addEventListener("popstate",c),()=>{window.removeEventListener("pageshow",b),window.removeEventListener("popstate",c)}},[a]),null}])}];
+
+//# sourceMappingURL=src_components_auth_session-integrity_tsx_1f__s1y._.js.map

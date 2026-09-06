@@ -9,7 +9,7 @@ import type { ApiResponse } from "@/lib/api/contracts";
 import { cn, formatNpr, kathmanduToday } from "@/lib/utils";
 import type { Course, Payment, PaymentOptions } from "@/types/lms";
 
-const steps = ["Batch", "Payment method", "Proof details", "Review"];
+const allSteps = ["Batch", "Payment method", "Proof details", "Review"];
 
 /*
  * Must stay in step with SubmitPaymentRequest: mimes jpg,jpeg,png,webp,pdf and
@@ -81,7 +81,16 @@ export function PaymentWizard({ courses, initialCourseSlug, initialBatchId }: { 
   const router = useRouter();
   const payableCourses = useMemo(() => courses.filter((course) => !course.isFree && course.batchId), [courses]);
   const initial = payableCourses.find((course) => course.slug === initialCourseSlug) || payableCourses[0] || null;
-  const [step, setStep] = useState(0);
+  /*
+   * A buyer who arrives here from a course/batch page already picked exactly
+   * what they are paying for — re-asking them to choose a batch was one more
+   * step between "I want this" and actually paying. Only /student/payments
+   * (no query string) still needs that step, because nothing is preselected.
+   */
+  const skipBatchStep = Boolean(initialCourseSlug && initialBatchId);
+  const firstStep = skipBatchStep ? 1 : 0;
+  const steps = skipBatchStep ? allSteps.slice(1) : allSteps;
+  const [step, setStep] = useState(firstStep);
   const [courseSlug, setCourseSlug] = useState(initial?.slug || "");
   /*
    * getPublicCourses() flattens each course to a single default batch, so
@@ -158,7 +167,7 @@ export function PaymentWizard({ courses, initialCourseSlug, initialBatchId }: { 
 
   function nextStep() {
     if (!validateCurrent()) return;
-    setStep((value) => Math.min(steps.length - 1, value + 1));
+    setStep((value) => Math.min(allSteps.length - 1, value + 1));
   }
 
   function chooseProof(file: File | null) {
@@ -217,7 +226,8 @@ export function PaymentWizard({ courses, initialCourseSlug, initialBatchId }: { 
 
   return (
     <div className="mx-auto max-w-4xl">
-      <ol className="mb-6 grid grid-cols-4 gap-2">{steps.map((label, index) => <li key={label} className="min-w-0"><div className={cn("h-1.5 rounded-full", index <= step ? "bg-brand-700" : "bg-slate-200")} /><p className={cn("mt-2 truncate text-xs font-semibold", index === step ? "text-brand-700" : "text-slate-400")}>{index + 1}. {label}</p></li>)}</ol>
+      <ol className={cn("mb-6 grid gap-2", skipBatchStep ? "grid-cols-3" : "grid-cols-4")}>{steps.map((label, index) => { const absoluteIndex = skipBatchStep ? index + 1 : index; return <li key={label} className="min-w-0"><div className={cn("h-1.5 rounded-full", absoluteIndex <= step ? "bg-brand-700" : "bg-slate-200")} /><p className={cn("mt-2 truncate text-xs font-semibold", absoluteIndex === step ? "text-brand-700" : "text-slate-400")}>{index + 1}. {label}</p></li>; })}</ol>
+      {skipBatchStep && options ? <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4"><div><p className="text-xs font-bold uppercase tracking-wider text-slate-400">Paying for</p><p className="mt-1 font-bold text-slate-900">{options.courseTitle} — {options.batchTitle}</p></div><p className="text-xl font-bold text-slate-950">{formatNpr(options.expectedAmountNpr)}</p></div> : null}
       {serverError ? <div className="mb-5"><AlertBox title="Payment action could not continue" tone="danger">{serverError}</AlertBox></div> : null}
       <Panel>
         {step === 0 ? <div><p className="text-sm font-bold uppercase tracking-wider text-brand-700">Select batch</p><h1 className="mt-2 text-2xl font-bold text-slate-950">Choose what you paid for</h1><label className="mt-6 block text-sm font-semibold text-slate-700">Course and batch<select value={courseSlug} onChange={(event) => { setCourseSlug(event.target.value); setBatchIdOverride(""); }} className="mt-2 h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100">{payableCourses.map((course) => <option key={course.slug} value={course.slug}>{course.title} — {course.batch}</option>)}</select></label>{optionsBusy ? <div className="mt-6 flex items-center gap-2 rounded-xl bg-slate-50 p-5 text-sm text-slate-600"><LoaderCircle className="h-5 w-5 animate-spin" />Loading server-resolved price and methods…</div> : options ? <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 p-5"><div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><p className="font-bold text-slate-900">{options.batchTitle}</p><p className="mt-2 text-sm text-slate-600">{selectedCourse?.schedule}</p><p className="mt-1 text-sm text-slate-600">Starts {selectedCourse?.startDate} · {selectedCourse?.access}</p></div><p className="text-2xl font-bold text-slate-950">{formatNpr(options.expectedAmountNpr)}</p></div></div> : null}{errors.course ? <p className="mt-2 text-sm text-red-700">{errors.course}</p> : null}<p className="mt-4 text-sm leading-6 text-slate-500">The expected amount and available payment methods are resolved by Laravel for the selected batch. The browser cannot set the authoritative fee.</p></div> : null}
@@ -233,7 +243,7 @@ export function PaymentWizard({ courses, initialCourseSlug, initialBatchId }: { 
 
         {step === 3 ? <div><p className="text-sm font-bold uppercase tracking-wider text-brand-700">Review</p><h1 className="mt-2 text-2xl font-bold text-slate-950">Confirm before submitting</h1><div className="mt-6 divide-y divide-slate-100 rounded-xl border border-slate-200">{[["Course", options?.courseTitle || "—"], ["Batch", options?.batchTitle || "—"], ["Expected amount", options ? formatNpr(options.expectedAmountNpr) : "—"], ["Amount paid", formatNpr(Number(amountPaid) || 0)], ["Method", selectedMethod?.name || "—"], ["Reference", reference || "Not provided"], ["Proof", proof?.name || "—"]].map(([label, value]) => <div key={label} className="flex justify-between gap-6 p-4 text-sm"><span className="text-slate-500">{label}</span><span className="text-right font-semibold text-slate-900">{value}</span></div>)}</div><div className="mt-5 flex gap-3 rounded-xl bg-blue-50 p-4 text-sm leading-6 text-blue-900"><ReceiptText className="mt-0.5 h-5 w-5 shrink-0" />Submitting proof does not grant access on its own — someone has to check it against the payment record first. Your submission is saved either way, and you can follow it under Payments.</div></div> : null}
 
-        <div className="mt-8 flex items-center justify-between border-t border-slate-100 pt-5"><Button variant="outline" disabled={step === 0 || submitting} onClick={() => setStep((value) => Math.max(0, value - 1))}><ChevronLeft className="h-4 w-4" />Back</Button>{step < steps.length - 1 ? <Button onClick={nextStep} disabled={optionsBusy}>Continue<ChevronRight className="h-4 w-4" /></Button> : <Button onClick={submit} disabled={submitting}>{submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}{submitting ? "Submitting…" : "Submit proof"}</Button>}</div>
+        <div className="mt-8 flex items-center justify-between border-t border-slate-100 pt-5"><Button variant="outline" disabled={step === firstStep || submitting} onClick={() => setStep((value) => Math.max(firstStep, value - 1))}><ChevronLeft className="h-4 w-4" />Back</Button>{step < allSteps.length - 1 ? <Button onClick={nextStep} disabled={optionsBusy}>Continue<ChevronRight className="h-4 w-4" /></Button> : <Button onClick={submit} disabled={submitting}>{submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}{submitting ? "Submitting…" : "Submit proof"}</Button>}</div>
       </Panel>
     </div>
   );

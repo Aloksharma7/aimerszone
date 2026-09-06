@@ -68,6 +68,14 @@
       "namedRegex": "^/admin/batches/(?<nxtPbatchId>[^/]+?)/recordings(?:/)?$"
     },
     {
+      "page": "/admin/batches/[batchId]/resources",
+      "regex": "^/admin/batches/([^/]+?)/resources(?:/)?$",
+      "routeKeys": {
+        "nxtPbatchId": "nxtPbatchId"
+      },
+      "namedRegex": "^/admin/batches/(?<nxtPbatchId>[^/]+?)/resources(?:/)?$"
+    },
+    {
       "page": "/admin/batches/[batchId]/tests",
       "regex": "^/admin/batches/([^/]+?)/tests(?:/)?$",
       "routeKeys": {
@@ -124,12 +132,36 @@
       "namedRegex": "^/admin/payments/(?<nxtPpaymentId>[^/]+?)(?:/)?$"
     },
     {
+      "page": "/admin/students/[studentId]",
+      "regex": "^/admin/students/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPstudentId": "nxtPstudentId"
+      },
+      "namedRegex": "^/admin/students/(?<nxtPstudentId>[^/]+?)(?:/)?$"
+    },
+    {
       "page": "/admin/support/[ticketId]",
       "regex": "^/admin/support/([^/]+?)(?:/)?$",
       "routeKeys": {
         "nxtPticketId": "nxtPticketId"
       },
       "namedRegex": "^/admin/support/(?<nxtPticketId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/admin/tests/[testId]",
+      "regex": "^/admin/tests/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPtestId": "nxtPtestId"
+      },
+      "namedRegex": "^/admin/tests/(?<nxtPtestId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/admin/tests/[testId]/results",
+      "regex": "^/admin/tests/([^/]+?)/results(?:/)?$",
+      "routeKeys": {
+        "nxtPtestId": "nxtPtestId"
+      },
+      "namedRegex": "^/admin/tests/(?<nxtPtestId>[^/]+?)/results(?:/)?$"
     },
     {
       "page": "/admin/users/[userId]",
@@ -593,6 +625,12 @@
       "namedRegex": "^/admin/finance(?:/)?$"
     },
     {
+      "page": "/admin/integrations",
+      "regex": "^/admin/integrations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/integrations(?:/)?$"
+    },
+    {
       "page": "/admin/integrations/youtube",
       "regex": "^/admin/integrations/youtube(?:/)?$",
       "routeKeys": {},
@@ -681,6 +719,18 @@
       "regex": "^/admin/support(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/admin/support(?:/)?$"
+    },
+    {
+      "page": "/admin/support-actions",
+      "regex": "^/admin/support\\-actions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/support\\-actions(?:/)?$"
+    },
+    {
+      "page": "/admin/tests/new",
+      "regex": "^/admin/tests/new(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/tests/new(?:/)?$"
     },
     {
       "page": "/admin/users",

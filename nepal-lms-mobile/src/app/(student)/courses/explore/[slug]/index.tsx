@@ -6,6 +6,9 @@ import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/button";
 import { IMAGE_PLACEHOLDER_BLURHASH } from "@/constants/config";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { enrollInFreeBatch, fetchCatalogueCourseDetail } from "@/lib/data/catalogue";
@@ -42,9 +45,7 @@ export default function CourseCatalogueDetailScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => course.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => course.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
@@ -64,7 +65,7 @@ export default function CourseCatalogueDetailScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <ScrollView contentContainerClassName="gap-4 px-5 py-6">
         {data.thumbnailUrl ? (
           <Image
@@ -101,9 +102,7 @@ export default function CourseCatalogueDetailScreen() {
             ))}
           </View>
         ) : (
-          <View className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-            <Text className="text-sm text-slate-500">No batches are open for enrollment right now.</Text>
-          </View>
+          <EmptyState icon="calendar" title="No open batches" description="Check back soon, or contact support to be notified when a new batch opens." />
         )}
 
         {enrollFree.isError ? (
@@ -131,7 +130,7 @@ export default function CourseCatalogueDetailScreen() {
           </Pressable>
         ) : null}
       </ScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

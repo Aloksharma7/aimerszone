@@ -5,9 +5,9 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
 
+import { AppScreen } from "@/components/app-screen";
 import { FormField } from "@/components/form-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { submitSupportTicket } from "@/lib/data/student";
@@ -50,7 +50,7 @@ export default function NewSupportRequestScreen() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAwareScrollView className="flex-1" contentContainerClassName="flex-grow gap-4 px-6 py-6" bottomOffset={24} keyboardShouldPersistTaps="handled">
         <View>
           <Text className="mb-1.5 text-sm font-semibold text-slate-700">Issue type</Text>
@@ -107,6 +107,6 @@ export default function NewSupportRequestScreen() {
           {submit.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-bold text-white">Submit request</Text>}
         </Pressable>
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

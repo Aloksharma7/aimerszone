@@ -4,8 +4,10 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
+import { ScreenHeader } from "@/components/screen-header";
 import { StaffStudentRow } from "@/components/staff-student-row";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchStaffStudentsPage } from "@/lib/data/staff";
@@ -30,17 +32,19 @@ export default function StaffStudentsScreen() {
   const items = students.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <View className="gap-3 px-5 pt-6">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-2xl font-bold text-slate-950">Students</Text>
-          <Pressable
-            onPress={() => router.push("/(staff)/students/new")}
-            className="h-11 w-11 items-center justify-center rounded-full bg-brand-700 active:bg-brand-800"
-          >
-            <Feather name="user-plus" size={18} color="#fff" />
-          </Pressable>
-        </View>
+        <ScreenHeader
+          title="Students"
+          right={
+            <Pressable
+              onPress={() => router.push("/(staff)/students/new")}
+              className="h-11 w-11 items-center justify-center rounded-full bg-brand-700 active:bg-brand-800"
+            >
+              <Feather name="user-plus" size={18} color="#fff" />
+            </Pressable>
+          }
+        />
         <View className="h-11 flex-row items-center gap-2 rounded-xl border border-slate-300 bg-white px-3">
           <Feather name="search" size={16} color="#94a3b8" />
           <TextInput
@@ -81,13 +85,13 @@ export default function StaffStudentsScreen() {
             if (students.hasNextPage && !students.isFetchingNextPage) students.fetchNextPage();
           }}
           ListEmptyComponent={
-            <View className="mx-5 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <Text className="text-sm text-slate-500">No students match this search.</Text>
+            <View className="mx-5">
+              <EmptyState icon="search" title="No matches" description="Try a different name or mobile number." />
             </View>
           }
           ListFooterComponent={students.isFetchingNextPage ? <ActivityIndicator className="py-4" color="#1d4ed8" /> : null}
         />
       )}
-    </SafeAreaView>
+    </AppScreen>
   );
 }

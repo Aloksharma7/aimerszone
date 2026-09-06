@@ -1,8 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
+import { Checkbox } from "@/components/checkbox";
+import { ChipGroup } from "@/components/chip-group";
 import { DateTimeField } from "@/components/date-time-field";
+import { TextField } from "@/components/text-field";
 import { fetchAdminCourseOptions, fetchAdminTeacherOptions, type AdminBatchInput } from "@/lib/data/admin";
 import type { AdminBatch } from "@/types/lms";
 
@@ -112,33 +115,11 @@ export function AdminBatchFormFields({
 
   return (
     <View className="gap-4">
-      <View className="gap-2">
-        <Text className="text-sm font-semibold text-slate-700">Batch title</Text>
-        <TextInput
-          value={values.title}
-          onChangeText={(value) => update("title", value)}
-          placeholder="Microeconomics · Evening Batch 2083"
-          className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-          placeholderTextColor="#94a3b8"
-        />
-      </View>
+      <TextField label="Batch title" value={values.title} onChangeText={(value) => update("title", value)} placeholder="Microeconomics · Evening Batch 2083" />
 
       <View className="gap-2">
         <Text className="text-sm font-semibold text-slate-700">Course</Text>
-        <View className="flex-row flex-wrap gap-2">
-          {(courses.data ?? []).map((course) => {
-            const selected = values.courseId === course.id;
-            return (
-              <Pressable
-                key={course.id}
-                onPress={() => update("courseId", course.id)}
-                className={`rounded-full border px-3.5 py-2 ${selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"}`}
-              >
-                <Text className={`text-sm font-medium ${selected ? "text-white" : "text-slate-700"}`}>{course.title}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <ChipGroup options={(courses.data ?? []).map((c) => ({ value: c.id, label: c.title }))} value={values.courseId} onChange={(value) => update("courseId", value)} />
       </View>
 
       <View className="gap-2">
@@ -151,31 +132,19 @@ export function AdminBatchFormFields({
             teachers.data!.map((teacher) => {
               const checked = values.teacherIds.includes(teacher.id);
               return (
-                <Pressable
+                <Checkbox
                   key={teacher.id}
-                  onPress={() => update("teacherIds", checked ? values.teacherIds.filter((item) => item !== teacher.id) : [...values.teacherIds, teacher.id])}
-                  className="flex-row items-center gap-3 rounded-lg px-2 py-2.5 active:bg-slate-50"
-                >
-                  <View className={`h-5 w-5 items-center justify-center rounded border ${checked ? "border-brand-700 bg-brand-700" : "border-slate-300"}`}>
-                    {checked ? <Text className="text-xs font-bold text-white">✓</Text> : null}
-                  </View>
-                  <Text className="flex-1 text-sm text-slate-800">{teacher.name}</Text>
-                </Pressable>
+                  checked={checked}
+                  onToggle={() => update("teacherIds", checked ? values.teacherIds.filter((item) => item !== teacher.id) : [...values.teacherIds, teacher.id])}
+                  label={teacher.name}
+                />
               );
             })
           )}
         </View>
       </View>
 
-      <View className="gap-2">
-        <Text className="text-sm font-semibold text-slate-700">Capacity</Text>
-        <TextInput
-          value={String(values.capacity)}
-          onChangeText={(value) => update("capacity", Number(value) || 0)}
-          keyboardType="number-pad"
-          className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-        />
-      </View>
+      <TextField label="Capacity" value={String(values.capacity)} onChangeText={(value) => update("capacity", Number(value) || 0)} keyboardType="number-pad" />
 
       <OptionalDateField label="Start date" value={values.startDate} onChange={(value) => update("startDate", value)} />
       <OptionalDateField label="End date" value={values.endDate} onChange={(value) => update("endDate", value)} />
@@ -187,44 +156,28 @@ export function AdminBatchFormFields({
       />
 
       <View className="gap-2">
-        <Text className="text-sm font-semibold text-slate-700">Price (NPR)</Text>
-        <Text className="text-xs text-slate-500">The fee students are asked for. 0 makes the batch free.</Text>
-        <TextInput
+        <TextField
+          label="Price (NPR)"
           value={String(values.priceNpr)}
           onChangeText={(value) => update("priceNpr", Number(value) || 0)}
           keyboardType="number-pad"
-          className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
         />
+        <Text className="text-xs text-slate-500">The fee students are asked for. 0 makes the batch free.</Text>
       </View>
 
       <View className="gap-2">
-        <Text className="text-sm font-semibold text-slate-700">Schedule summary</Text>
-        <Text className="text-xs text-slate-500">Use Nepal time and keep the public schedule concise.</Text>
-        <TextInput
+        <TextField
+          label="Schedule summary"
           value={values.scheduleSummary}
           onChangeText={(value) => update("scheduleSummary", value)}
           placeholder="Sun–Fri · 7:00–8:00 PM NPT"
-          className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-          placeholderTextColor="#94a3b8"
         />
+        <Text className="text-xs text-slate-500">Use Nepal time and keep the public schedule concise.</Text>
       </View>
 
       <View className="gap-2">
         <Text className="text-sm font-semibold text-slate-700">Operational status</Text>
-        <View className="flex-row flex-wrap gap-2">
-          {statusOptions.map((option) => {
-            const selected = values.status === option.value;
-            return (
-              <Pressable
-                key={option.value}
-                onPress={() => update("status", option.value)}
-                className={`rounded-full border px-3.5 py-2 ${selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"}`}
-              >
-                <Text className={`text-sm font-medium ${selected ? "text-white" : "text-slate-700"}`}>{option.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <ChipGroup options={statusOptions} value={values.status} onChange={(value) => update("status", value)} />
       </View>
     </View>
   );

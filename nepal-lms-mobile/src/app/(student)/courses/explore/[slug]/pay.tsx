@@ -1,12 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { ChipGroup } from "@/components/chip-group";
 import { DateTimeField } from "@/components/date-time-field";
 import { type CapturedProof, ProofCapture } from "@/components/proof-capture";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchPaymentOptions, submitStudentPayment } from "@/lib/data/catalogue";
 
@@ -69,9 +73,7 @@ export default function SubmitEnrollmentPaymentScreen() {
             ? "You're already enrolled in this batch."
             : "You already have a payment for this batch under review — check the Payments tab."}
         </Text>
-        <Pressable onPress={() => router.replace("/(student)/payments")} className="h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">View payments</Text>
-        </Pressable>
+        <Button label="View payments" fullWidth={false} onPress={() => router.replace("/(student)/payments")} />
       </SafeAreaView>
     );
   }
@@ -79,7 +81,7 @@ export default function SubmitEnrollmentPaymentScreen() {
   const canSubmit = Boolean(methodId && payerName.trim().length >= 2 && proof && !submit.isPending);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAwareScrollView className="flex-1" contentContainerClassName="flex-grow gap-4 px-6 py-6" bottomOffset={24} keyboardShouldPersistTaps="handled">
         <View className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
           <Text className="text-xs text-slate-500">
@@ -91,20 +93,7 @@ export default function SubmitEnrollmentPaymentScreen() {
         <View>
           <Text className="mb-1.5 text-sm font-semibold text-slate-700">Payment method</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View className="flex-row gap-2">
-              {data.methods.map((method) => {
-                const selected = methodId === method.id;
-                return (
-                  <Pressable
-                    key={method.id}
-                    onPress={() => setMethodId(method.id)}
-                    className={`rounded-full border px-3.5 py-2 ${selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"}`}
-                  >
-                    <Text className={`text-sm font-medium ${selected ? "text-white" : "text-slate-700"}`}>{method.name}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <ChipGroup options={data.methods.map((m) => ({ value: m.id, label: m.name }))} value={methodId} onChange={setMethodId} />
           </ScrollView>
           {methodId ? (
             <View className="mt-2 rounded-xl bg-slate-100 p-3">
@@ -114,25 +103,9 @@ export default function SubmitEnrollmentPaymentScreen() {
           ) : null}
         </View>
 
-        <View>
-          <Text className="mb-1.5 text-sm font-semibold text-slate-700">Payer name</Text>
-          <TextInput
-            className="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-            value={payerName}
-            onChangeText={setPayerName}
-            editable={!submit.isPending}
-          />
-        </View>
+        <TextField label="Payer name" value={payerName} onChangeText={setPayerName} editable={!submit.isPending} />
 
-        <View>
-          <Text className="mb-1.5 text-sm font-semibold text-slate-700">Transaction reference (optional)</Text>
-          <TextInput
-            className="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-            value={reference}
-            onChangeText={setReference}
-            editable={!submit.isPending}
-          />
-        </View>
+        <TextField label="Transaction reference (optional)" value={reference} onChangeText={setReference} editable={!submit.isPending} />
 
         <DateTimeField label="When did you pay?" mode="date" value={paidAt} onChange={setPaidAt} maximumDate={new Date()} />
 
@@ -144,17 +117,17 @@ export default function SubmitEnrollmentPaymentScreen() {
           </View>
         ) : null}
 
-        <Pressable
+        <Button
+          label="Submit payment"
+          loading={submit.isPending}
+          disabled={!canSubmit}
+          size="lg"
           onPress={() => {
             setError(null);
             submit.mutate();
           }}
-          disabled={!canSubmit}
-          className="mt-2 h-12 flex-row items-center justify-center rounded-xl bg-brand-700 active:bg-brand-800 disabled:opacity-60"
-        >
-          {submit.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-bold text-white">Submit payment</Text>}
-        </Pressable>
+        />
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

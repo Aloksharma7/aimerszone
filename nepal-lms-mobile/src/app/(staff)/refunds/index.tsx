@@ -3,8 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
 import { MetricTile } from "@/components/metric-tile";
 import { StatusBadge } from "@/components/status-badge";
 import { isNormalizedApiError } from "@/lib/api/contracts";
@@ -40,7 +41,7 @@ export default function StaffRefundsScreen() {
   const items = (refunds.data?.items ?? []).filter((item) => !status || item.status === status);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <View className="gap-3 px-5 pt-6">
         <View className="flex-row items-center justify-between">
           <Text className="text-2xl font-bold text-slate-950">Refunds</Text>
@@ -129,13 +130,11 @@ export default function StaffRefundsScreen() {
           refreshing={refunds.isRefetching}
           onRefresh={() => refunds.refetch()}
           ListEmptyComponent={
-            <View className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <Text className="text-sm text-slate-500">No refunds here.</Text>
-            </View>
+            <EmptyState icon="rotate-ccw" title="No refunds here" description="Refunds matching this filter will show up here." />
           }
         />
       )}
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

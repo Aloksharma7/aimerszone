@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ActivityIndicator, Linking, Pressable, Text, View } from "react-native";
 
+import { LiveBadge } from "@/components/live-badge";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { startClassSession } from "@/lib/data/teacher";
 import type { TeacherSession } from "@/types/lms";
@@ -17,7 +18,10 @@ export function TeacherSessionCard({ session, queryKeyToInvalidate }: { session:
 
   return (
     <View className="rounded-2xl bg-brand-900 p-5">
-      <Text className="text-xs font-bold uppercase tracking-wide text-brand-100">Next class</Text>
+      <View className="flex-row items-center justify-between">
+        <Text className="text-xs font-bold uppercase tracking-wide text-brand-100">Next class</Text>
+        {session.startAvailable ? <LiveBadge /> : null}
+      </View>
       <Text className="mt-1 text-lg font-bold text-white">{session.title}</Text>
       <Text className="mt-0.5 text-sm text-brand-100">
         {session.courseTitle} · {session.batchTitle}

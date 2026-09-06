@@ -1,13 +1,10 @@
 import { Stack } from "expo-router";
+import { STACK_HEADER_OPTIONS } from "@/constants/navigation";
 
 export default function StaffCoursesStackLayout() {
   return (
     <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: "#172554" },
-        headerTintColor: "#ffffff",
-        headerTitleStyle: { fontWeight: "700" },
-      }}
+      screenOptions={STACK_HEADER_OPTIONS}
     >
       <Stack.Screen name="new" options={{ title: "New course" }} />
     </Stack>

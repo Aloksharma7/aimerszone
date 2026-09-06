@@ -1,0 +1,3 @@
+{
+  "/(auth)/two-factor-challenge/page": "app/(auth)/two-factor-challenge/page.js"
+}

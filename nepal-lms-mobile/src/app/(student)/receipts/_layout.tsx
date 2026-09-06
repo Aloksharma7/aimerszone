@@ -1,15 +1,12 @@
 import { Stack } from "expo-router";
+import { STACK_HEADER_OPTIONS } from "@/constants/navigation";
 
 export default function ReceiptsStackLayout() {
   return (
     <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: "#172554" },
-        headerTintColor: "#ffffff",
-        headerTitleStyle: { fontWeight: "700" },
-      }}
+      screenOptions={STACK_HEADER_OPTIONS}
     >
-      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="index" options={{ title: "Receipts" }} />
       <Stack.Screen name="[receiptId]" options={{ title: "Receipt" }} />
     </Stack>
   );

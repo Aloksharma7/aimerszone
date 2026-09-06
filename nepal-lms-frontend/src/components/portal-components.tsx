@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Badge, ButtonLink, Panel, ProgressBar, StatusBadge } from "@/components/ui";
 import { JoinClassButton } from "@/components/student/secure-learning-actions";
+import { StartTeacherClassButton } from "@/components/teacher/teacher-actions";
 import type { Course } from "@/types/lms";
 import { cn } from "@/lib/utils";
 
@@ -27,6 +28,7 @@ export function LiveClassCard({
   teacherMode = false,
   sessionId,
   joinAvailable = false,
+  startAvailable = false,
 }: {
   title: string;
   course: string;
@@ -35,12 +37,14 @@ export function LiveClassCard({
   status?: string;
   href: string;
   teacherMode?: boolean;
-  /** When set alongside joinAvailable, the card joins directly instead of just linking to the live tab. */
+  /** When set alongside joinAvailable (student) or startAvailable (teacher), the card acts directly instead of just linking to the detail page. */
   sessionId?: string;
   joinAvailable?: boolean;
+  startAvailable?: boolean;
 }) {
   const live = status.toLowerCase().includes("live");
   const canJoinDirectly = !teacherMode && Boolean(sessionId) && joinAvailable;
+  const canStartDirectly = teacherMode && Boolean(sessionId) && startAvailable;
   return (
     <Panel className={cn("relative overflow-hidden border-0 text-white", live ? "bg-brand-900" : "bg-slate-900")}>
       <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-blue-500/20" />
@@ -64,6 +68,8 @@ export function LiveClassCard({
           </div>
           {canJoinDirectly ? (
             <JoinClassButton sessionId={sessionId as string} className="w-full lg:w-auto" />
+          ) : canStartDirectly ? (
+            <StartTeacherClassButton sessionId={sessionId as string} className="w-full lg:w-auto" />
           ) : (
             <ButtonLink href={href} size="lg" className="w-full border-white bg-white text-brand-900 hover:bg-blue-50 lg:w-auto">
               {teacherMode ? <Radio className="h-5 w-5" /> : <MonitorPlay className="h-5 w-5" />}

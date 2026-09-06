@@ -5,8 +5,15 @@ import { useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { ChipGroup } from "@/components/chip-group";
+import { DangerZone } from "@/components/danger-zone";
+import { EmptyState } from "@/components/empty-state";
 import { MetricTile } from "@/components/metric-tile";
+import { DetailSkeleton } from "@/components/skeleton";
 import { StatusBadge } from "@/components/status-badge";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import {
   archiveAdminUser,
@@ -16,6 +23,7 @@ import {
   type AdminUserAction,
   type UpdateAdminUserInput,
 } from "@/lib/data/admin";
+import { confirmDestructive } from "@/lib/ui/confirm";
 
 const roleOptions: { value: UpdateAdminUserInput["primaryRole"]; label: string }[] = [
   { value: "student", label: "Student" },
@@ -42,7 +50,6 @@ export default function AdminUserDetailScreen() {
   const [reason, setReason] = useState("");
   const [actionNotice, setActionNotice] = useState<{ tone: "success" | "danger"; message: string } | null>(null);
   const [busyAction, setBusyAction] = useState<AdminUserAction | null>(null);
-  const [confirmingArchive, setConfirmingArchive] = useState(false);
 
   if (detail.data && initializedFor !== detail.data.user.id) {
     setName(detail.data.user.name);
@@ -85,7 +92,6 @@ export default function AdminUserDetailScreen() {
       router.back();
     },
     onError: (err) => {
-      setConfirmingArchive(false);
       Alert.alert("Account not archived", isNormalizedApiError(err) ? err.message : "The account could not be archived.");
     },
   });
@@ -100,17 +106,14 @@ export default function AdminUserDetailScreen() {
   }
 
   function confirmAction(action: AdminUserAction, title: string, requiresReason: boolean) {
-    Alert.alert(title, "This is an audited action, recorded with the reason above.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Confirm", style: action === "suspend" ? "destructive" : "default", onPress: () => runAction(action, requiresReason) },
-    ]);
+    confirmDestructive(title, "This is an audited action, recorded with the reason above.", "Confirm", () => runAction(action, requiresReason));
   }
 
   if (detail.isPending) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-canvas" edges={["bottom"]}>
-        <ActivityIndicator color="#1d4ed8" />
-      </SafeAreaView>
+      <AppScreen edges={["bottom"]}>
+        <DetailSkeleton />
+      </AppScreen>
     );
   }
 
@@ -119,9 +122,9 @@ export default function AdminUserDetailScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => detail.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <View className="mt-4">
+          <Button label="Try again" onPress={() => detail.refetch()} fullWidth={false} />
+        </View>
       </SafeAreaView>
     );
   }
@@ -130,7 +133,7 @@ export default function AdminUserDetailScreen() {
   const isSuspended = data.user.status.toLowerCase().includes("suspend");
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <FlatList
         data={data.enrollments}
         keyExtractor={(item) => item.id}
@@ -180,38 +183,25 @@ export default function AdminUserDetailScreen() {
                 </View>
               ) : null}
 
-              <Field label="Full name" value={name} onChangeText={setName} />
-              <Field label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-              <Field label="Mobile" value={mobile} onChangeText={setMobile} keyboardType="phone-pad" />
+              <TextField label="Full name" value={name} onChangeText={setName} />
+              <TextField label="Email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+              <TextField label="Mobile" value={mobile} onChangeText={setMobile} keyboardType="phone-pad" />
 
               <View className="gap-2">
                 <Text className="text-sm font-semibold text-slate-700">Primary role</Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {roleOptions.map((option) => {
-                    const selected = role === option.value;
-                    return (
-                      <Pressable
-                        key={option.value}
-                        onPress={() => setRole(option.value)}
-                        className={`rounded-full border px-3.5 py-2 ${selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"}`}
-                      >
-                        <Text className={`text-sm font-medium ${selected ? "text-white" : "text-slate-700"}`}>{option.label}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                <ChipGroup options={roleOptions} value={role} onChange={setRole} />
               </View>
 
-              <Pressable
+              <Button
+                label="Save profile"
+                loadingLabel="Saving…"
+                loading={saveProfile.isPending}
+                disabled={name.trim().length < 3}
                 onPress={() => {
                   setProfileNotice(null);
                   saveProfile.mutate();
                 }}
-                disabled={saveProfile.isPending || name.trim().length < 3}
-                className="h-11 flex-row items-center justify-center gap-2 rounded-xl bg-brand-700 active:bg-brand-800 disabled:opacity-60"
-              >
-                {saveProfile.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-sm font-bold text-white">Save profile</Text>}
-              </Pressable>
+              />
             </View>
 
             <View className="gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
@@ -310,77 +300,33 @@ export default function AdminUserDetailScreen() {
               </View>
             ) : null}
 
-            <View className="gap-3 rounded-2xl border border-danger-200 bg-white p-4 shadow-sm">
-              <Text className="text-base font-bold text-slate-950">Archive this account</Text>
-              <Text className="text-sm text-slate-600">
-                The account is suspended and hidden from every list. Payment history, receipts and audit entries are kept
-                intact.
-              </Text>
-              {confirmingArchive ? (
-                <View className="flex-row gap-3">
-                  <Pressable
-                    onPress={() => archive.mutate()}
-                    disabled={archive.isPending}
-                    className="h-11 flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-danger-700 active:opacity-90 disabled:opacity-60"
-                  >
-                    {archive.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-sm font-bold text-white">Yes, archive it</Text>}
-                  </Pressable>
-                  <Pressable
-                    onPress={() => setConfirmingArchive(false)}
-                    disabled={archive.isPending}
-                    className="h-11 flex-1 items-center justify-center rounded-xl border border-slate-300 active:bg-slate-100"
-                  >
-                    <Text className="text-sm font-bold text-slate-700">Cancel</Text>
-                  </Pressable>
-                </View>
-              ) : (
-                <Pressable
-                  onPress={() => setConfirmingArchive(true)}
-                  className="h-11 flex-row items-center justify-center gap-2 rounded-xl border border-danger-300 active:bg-danger-100"
-                >
-                  <Feather name="archive" size={16} color="#b91c1c" />
-                  <Text className="text-sm font-bold text-danger-700">Archive account</Text>
-                </Pressable>
-              )}
-            </View>
+            <DangerZone
+              title="Archive this account"
+              description="The account is suspended and hidden from every list. Payment history, receipts and audit entries are kept intact."
+            >
+              <Button
+                label="Archive account"
+                loadingLabel="Archiving…"
+                loading={archive.isPending}
+                variant="danger"
+                icon="archive"
+                onPress={() =>
+                  confirmDestructive(
+                    "Archive this account?",
+                    "The account is suspended and hidden from every list, but its history is kept intact.",
+                    "Yes, archive it",
+                    () => archive.mutate(),
+                  )
+                }
+              />
+            </DangerZone>
 
             {data.enrollments.length > 0 ? <Text className="text-sm font-bold text-slate-900">Enrollments</Text> : null}
           </View>
         }
-        ListEmptyComponent={
-          <View className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-            <Text className="text-sm text-slate-500">No enrollments on record.</Text>
-          </View>
-        }
+        ListEmptyComponent={<EmptyState icon="book-open" title="No enrollments on record" description="This account hasn't joined any course batch yet." />}
       />
-    </SafeAreaView>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChangeText,
-  keyboardType,
-  autoCapitalize,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  keyboardType?: "email-address" | "phone-pad";
-  autoCapitalize?: "none";
-}) {
-  return (
-    <View className="gap-2">
-      <Text className="text-sm font-semibold text-slate-700">{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-      />
-    </View>
+    </AppScreen>
   );
 }
 

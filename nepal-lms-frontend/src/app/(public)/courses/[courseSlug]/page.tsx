@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, CalendarDays, CheckCircle2, Clock3, FileText, MonitorPlay, PlayCircle, ShieldCheck, UserRound } from "lucide-react";
 import { CourseCard } from "@/components/course-card";
+import { FreeEnrollButton } from "@/components/student/enrollment-actions";
 import { Badge, ButtonLink, Panel, SectionHeading, StatusBadge } from "@/components/ui";
 import { getSessionUser } from "@/lib/auth/server";
 import { getPublicCourse, getPublicCourses } from "@/lib/data/public";
@@ -73,16 +74,24 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ c
                         <p className="mt-2 text-slate-600">{option.schedule}</p>
                         <p className="mt-1 text-slate-600">Starts {option.startDate}</p>
                         {option.teacherNames.length ? <p className="mt-1 text-slate-500">Taught by {option.teacherNames.join(", ")}</p> : null}
-                        <ButtonLink
-                          href={
-                            course.isFree && !isStudent
-                              ? `/register?returnTo=${encodeURIComponent(`/batches/${option.id}`)}`
-                              : `/batches/${option.id}`
-                          }
-                          className="mt-4 w-full"
-                        >
-                          {course.isFree ? "Enroll free" : "Choose this batch"}
-                        </ButtonLink>
+                        {isStudent && course.isFree ? (
+                          <div className="mt-4">
+                            <FreeEnrollButton batchId={option.id} courseTitle={course.title} />
+                          </div>
+                        ) : (
+                          <ButtonLink
+                            href={
+                              isStudent
+                                ? `/student/payments/new?course=${encodeURIComponent(course.slug)}&batch=${encodeURIComponent(option.id)}`
+                                : course.isFree
+                                  ? `/register?returnTo=${encodeURIComponent(`/batches/${option.id}`)}`
+                                  : `/batches/${option.id}`
+                            }
+                            className="mt-4 w-full"
+                          >
+                            {isStudent ? "Continue to payment" : course.isFree ? "Enroll free" : "Choose this batch"}
+                          </ButtonLink>
+                        )}
                       </div>
                     ))}
                   </div>

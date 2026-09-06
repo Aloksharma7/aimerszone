@@ -8,6 +8,7 @@ import type { SyllabusOutlineModule, TeacherAttendanceDetail, TeacherSessionOpti
 import { trustedDestination } from "@/lib/security/trusted-destination";
 import type { TeacherBatch } from "@/types/lms";
 import { Button, StatusBadge } from "@/components/ui";
+import { cn } from "@/lib/utils";
 
 const mockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
 
@@ -37,7 +38,15 @@ function WarningNotice({ message }: { message: string | null }) {
   return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800">{message}</div>;
 }
 
-export function StartTeacherClassButton({ sessionId, enabled = true }: { sessionId: string; enabled?: boolean }) {
+export function StartTeacherClassButton({
+  sessionId,
+  enabled = true,
+  className,
+}: {
+  sessionId: string;
+  enabled?: boolean;
+  className?: string;
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<NormalizedApiError | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -68,7 +77,7 @@ export function StartTeacherClassButton({ sessionId, enabled = true }: { session
   }
 
   return (
-    <div className="space-y-3">
+    <div className={cn("space-y-3", className)}>
       <Button size="lg" className="w-full sm:w-auto" onClick={startClass} disabled={!enabled || loading}>
         <MonitorPlay className="h-5 w-5" />{loading ? "Authorizing…" : "Start class"}
       </Button>

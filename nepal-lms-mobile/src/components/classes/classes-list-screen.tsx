@@ -5,6 +5,10 @@ import { useRouter } from "expo-router";
 import { ActivityIndicator, Linking, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/button";
+import { ScreenHeader } from "@/components/screen-header";
 import { StatusBadge } from "@/components/status-badge";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchTeacherClassesPage, startClassSession } from "@/lib/data/teacher";
@@ -42,9 +46,7 @@ export function ClassesListScreen({ newHref, recurringHref }: { newHref: Classes
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["top"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => classes.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => classes.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
@@ -52,9 +54,9 @@ export function ClassesListScreen({ newHref, recurringHref }: { newHref: Classes
   const items = classes.data.pages.flatMap((page) => page.items);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <View className="gap-3 px-5 pt-6">
-        <Text className="text-2xl font-bold text-slate-950">Classes</Text>
+        <ScreenHeader title="Classes" />
         <View className="flex-row gap-3">
           <Pressable
             onPress={() => router.push(newHref)}
@@ -88,13 +90,13 @@ export function ClassesListScreen({ newHref, recurringHref }: { newHref: Classes
           if (classes.hasNextPage && !classes.isFetchingNextPage) classes.fetchNextPage();
         }}
         ListEmptyComponent={
-          <View className="mx-5 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-            <Text className="text-sm text-slate-500">No classes have been scheduled yet.</Text>
+          <View className="mx-5">
+            <EmptyState icon="video" title="No classes scheduled" description="Classes you schedule will appear here." />
           </View>
         }
         ListFooterComponent={classes.isFetchingNextPage ? <ActivityIndicator className="py-4" color="#1d4ed8" /> : null}
       />
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

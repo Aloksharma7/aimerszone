@@ -6,6 +6,9 @@ import { useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Linking, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/button";
 import { ProgressBar } from "@/components/progress-bar";
 import { IMAGE_PLACEHOLDER_BLURHASH } from "@/constants/config";
 import { isNormalizedApiError } from "@/lib/api/contracts";
@@ -32,15 +35,13 @@ export default function CourseRecordingsScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => recordings.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => recordings.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <FlashList
         data={recordings.data}
         keyExtractor={(item) => item.id}
@@ -53,12 +54,12 @@ export default function CourseRecordingsScreen() {
         refreshing={recordings.isRefetching}
         onRefresh={() => recordings.refetch()}
         ListEmptyComponent={
-          <View className="mx-5 rounded-2xl border border-slate-100 bg-white shadow-sm p-5">
-            <Text className="text-sm text-slate-500">No recordings have been released for this batch yet.</Text>
+          <View className="mx-5">
+            <EmptyState icon="play-circle" title="No recordings yet" description="Class recordings for this batch will appear here once released." />
           </View>
         }
       />
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

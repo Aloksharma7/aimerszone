@@ -3,8 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
 import { MetricTile } from "@/components/metric-tile";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchAdjustments } from "@/lib/data/staff";
@@ -19,7 +20,7 @@ export default function StaffAdjustmentsScreen() {
   const items = (adjustments.data?.items ?? []).filter((item) => !type || item.type === type);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <View className="gap-3 px-5 pt-6">
         <View className="flex-row items-center justify-between">
           <Text className="text-2xl font-bold text-slate-950">Adjustments</Text>
@@ -82,13 +83,11 @@ export default function StaffAdjustmentsScreen() {
           refreshing={adjustments.isRefetching}
           onRefresh={() => adjustments.refetch()}
           ListEmptyComponent={
-            <View className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <Text className="text-sm text-slate-500">No adjustments recorded yet.</Text>
-            </View>
+            <EmptyState icon="repeat" title="No adjustments yet" description="Credits, debits, and corrections you record will appear here." />
           }
         />
       )}
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

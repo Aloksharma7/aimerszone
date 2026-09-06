@@ -5,7 +5,11 @@ import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { ChipGroup } from "@/components/chip-group";
 import { DateTimeField } from "@/components/date-time-field";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { createRecurringTeacherClasses, fetchTeacherBatches, type RecurringClassResult } from "@/lib/data/teacher";
 
@@ -60,16 +64,14 @@ export default function RecurringClassScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{isNormalizedApiError(batches.error) ? batches.error.message : "Something went wrong."}</Text>
-        <Pressable onPress={() => batches.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => batches.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
 
   if (result) {
     return (
-      <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+      <AppScreen edges={["bottom"]}>
         <View className="flex-1 gap-4 px-6 py-6">
           <View className="items-center rounded-2xl bg-brand-900 p-6">
             <Text className="text-lg font-bold text-white">
@@ -81,11 +83,9 @@ export default function RecurringClassScreen() {
               </Text>
             ) : null}
           </View>
-          <Pressable onPress={() => router.back()} className="h-12 flex-row items-center justify-center rounded-xl bg-brand-700 active:bg-brand-800">
-            <Text className="text-base font-bold text-white">Done</Text>
-          </Pressable>
+          <Button label="Done" size="lg" onPress={() => router.back()} />
         </View>
-      </SafeAreaView>
+      </AppScreen>
     );
   }
 
@@ -94,38 +94,17 @@ export default function RecurringClassScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAwareScrollView className="flex-1" contentContainerClassName="flex-grow gap-4 px-6 py-6" bottomOffset={24} keyboardShouldPersistTaps="handled">
         <View>
           <Text className="mb-1.5 text-sm font-semibold text-slate-700">Batch</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View className="flex-row gap-2">
-              {batches.data.map((batch) => {
-                const selected = batchId === batch.id;
-                return (
-                  <Pressable
-                    key={batch.id}
-                    onPress={() => setBatchId(batch.id)}
-                    className={`rounded-full border px-3.5 py-2 ${selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"}`}
-                  >
-                    <Text className={`text-sm font-medium ${selected ? "text-white" : "text-slate-700"}`}>
-                      {batch.courseTitle} · {batch.batchTitle}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <ChipGroup options={batches.data.map((b) => ({ value: b.id, label: `${b.courseTitle} · ${b.batchTitle}` }))} value={batchId} onChange={setBatchId} />
           </ScrollView>
         </View>
 
         <View>
-          <Text className="mb-1.5 text-sm font-semibold text-slate-700">Topic</Text>
-          <TextInput
-            className="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-            value={title}
-            onChangeText={setTitle}
-            editable={!create.isPending}
-          />
+          <TextField label="Topic" value={title} onChangeText={setTitle} editable={!create.isPending} />
           <Text className="mt-1 text-xs text-slate-400">Each class is numbered automatically, e.g. &quot;{title || "Topic"} — 1&quot;.</Text>
         </View>
 
@@ -133,38 +112,18 @@ export default function RecurringClassScreen() {
         <DateTimeField label="Until" mode="date" value={endDate} onChange={setEndDate} minimumDate={startDate} />
         <DateTimeField label="Start time" mode="time" value={startTime} onChange={setStartTime} />
 
-        <View>
-          <Text className="mb-1.5 text-sm font-semibold text-slate-700">Duration (minutes)</Text>
-          <TextInput
-            className="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-            value={duration}
-            onChangeText={setDuration}
-            keyboardType="number-pad"
-            editable={!create.isPending}
-          />
-        </View>
+        <TextField label="Duration (minutes)" value={duration} onChangeText={setDuration} keyboardType="number-pad" editable={!create.isPending} />
 
         <View>
           <Text className="mb-1.5 text-sm font-semibold text-slate-700">Frequency</Text>
-          <View className="flex-row gap-2">
-            {(
-              [
-                { value: "weekly" as const, label: "Weekly" },
-                { value: "daily" as const, label: "Daily" },
-              ]
-            ).map((option) => {
-              const selected = frequency === option.value;
-              return (
-                <Pressable
-                  key={option.value}
-                  onPress={() => setFrequency(option.value)}
-                  className={`flex-1 rounded-xl border px-3 py-3 ${selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"}`}
-                >
-                  <Text className={`text-center text-sm font-medium ${selected ? "text-white" : "text-slate-700"}`}>{option.label}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <ChipGroup
+            options={[
+              { value: "weekly" as const, label: "Weekly" },
+              { value: "daily" as const, label: "Daily" },
+            ]}
+            value={frequency}
+            onChange={setFrequency}
+          />
         </View>
 
         {frequency === "weekly" ? (
@@ -205,17 +164,17 @@ export default function RecurringClassScreen() {
           </View>
         ) : null}
 
-        <Pressable
+        <Button
+          label="Create schedule"
+          loading={create.isPending}
+          disabled={!canSubmit}
+          size="lg"
           onPress={() => {
             setError(null);
             create.mutate();
           }}
-          disabled={!canSubmit}
-          className="mt-2 h-12 flex-row items-center justify-center rounded-xl bg-brand-700 active:bg-brand-800 disabled:opacity-60"
-        >
-          {create.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-bold text-white">Create schedule</Text>}
-        </Pressable>
+        />
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

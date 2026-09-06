@@ -6,6 +6,8 @@ import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollVie
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
 import { AdminCourseFormFields, useAdminCourseForm } from "@/components/admin/admin-course-form";
 import { ProofCapture, type CapturedProof } from "@/components/proof-capture";
 import { StatusBadge } from "@/components/status-badge";
@@ -106,15 +108,13 @@ export default function AdminCourseDetailScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => detail.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => detail.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={90}>
         <ScrollView contentContainerClassName="gap-4 px-5 py-6">
           <View className="flex-row items-center justify-between">
@@ -217,6 +217,6 @@ export default function AdminCourseDetailScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

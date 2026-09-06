@@ -2,8 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
 import { AdminRoleFormFields, useAdminRoleForm } from "@/components/admin/admin-role-form";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { createAdminRole } from "@/lib/data/admin";
@@ -34,7 +34,7 @@ export default function NewAdminRoleScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={90}>
         <ScrollView contentContainerClassName="gap-4 px-5 py-6">
           <AdminRoleFormFields values={form.values} update={form.update} togglePermission={form.togglePermission} />
@@ -54,6 +54,6 @@ export default function NewAdminRoleScreen() {
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

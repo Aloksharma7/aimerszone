@@ -2,8 +2,11 @@ import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ActivityIndicator, Alert, FlatList, Pressable, Switch, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { EmptyState } from "@/components/empty-state";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { createAdminFaq, deleteAdminFaq, fetchAdminFaqs, updateAdminFaq } from "@/lib/data/admin";
 import type { AdminFaq } from "@/types/lms";
@@ -61,7 +64,7 @@ export default function AdminFaqsScreen() {
   const valid = draft.question.trim().length >= 5 && draft.answer.trim().length >= 5;
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["bottom"]}>
       <FlatList
         data={faqs.data ?? []}
         keyExtractor={(item) => item.id}
@@ -81,20 +84,12 @@ export default function AdminFaqsScreen() {
         onRefresh={() => faqs.refetch()}
         ListHeaderComponent={
           <View className="gap-4 pb-4 pt-6">
-            <Text className="text-2xl font-bold text-slate-950">FAQs</Text>
             <Text className="text-sm text-slate-500">Shown on the public site and the student support page.</Text>
 
             <View className="gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
               <Text className="text-base font-bold text-slate-950">{editing ? "Edit FAQ" : "New FAQ"}</Text>
 
-              <View className="gap-2">
-                <Text className="text-sm font-semibold text-slate-700">Question</Text>
-                <TextInput
-                  value={draft.question}
-                  onChangeText={(value) => setDraft((current) => ({ ...current, question: value }))}
-                  className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-                />
-              </View>
+              <TextField label="Question" value={draft.question} onChangeText={(value) => setDraft((current) => ({ ...current, question: value }))} />
 
               <View className="gap-2">
                 <Text className="text-sm font-semibold text-slate-700">Answer</Text>
@@ -107,16 +102,12 @@ export default function AdminFaqsScreen() {
                 />
               </View>
 
-              <View className="gap-2">
-                <Text className="text-sm font-semibold text-slate-700">Category</Text>
-                <TextInput
-                  value={draft.category}
-                  onChangeText={(value) => setDraft((current) => ({ ...current, category: value }))}
-                  placeholder="general"
-                  className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-                  placeholderTextColor="#94a3b8"
-                />
-              </View>
+              <TextField
+                label="Category"
+                value={draft.category}
+                onChangeText={(value) => setDraft((current) => ({ ...current, category: value }))}
+                placeholder="general"
+              />
 
               <View className="flex-row items-center justify-between">
                 <Text className="text-sm text-slate-700">Published</Text>
@@ -130,19 +121,14 @@ export default function AdminFaqsScreen() {
               ) : null}
 
               <View className="flex-row gap-3">
-                <Pressable
+                <Button
+                  label={editing ? "Save changes" : "Create FAQ"}
+                  loading={save.isPending}
+                  disabled={!valid}
+                  icon={editing ? "save" : "plus"}
                   onPress={() => save.mutate()}
-                  disabled={save.isPending || !valid}
-                  className="h-11 flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-brand-700 active:bg-brand-800 disabled:opacity-60"
-                >
-                  {save.isPending ? <ActivityIndicator color="#fff" /> : <Feather name={editing ? "save" : "plus"} size={16} color="#fff" />}
-                  <Text className="text-sm font-bold text-white">{editing ? "Save changes" : "Create FAQ"}</Text>
-                </Pressable>
-                {editing ? (
-                  <Pressable onPress={reset} className="h-11 items-center justify-center rounded-xl border border-slate-300 px-4 active:bg-slate-100">
-                    <Text className="text-sm font-bold text-slate-700">Cancel</Text>
-                  </Pressable>
-                ) : null}
+                />
+                {editing ? <Button label="Cancel" variant="secondary" fullWidth={false} onPress={reset} /> : null}
               </View>
             </View>
 
@@ -151,13 +137,11 @@ export default function AdminFaqsScreen() {
         }
         ListEmptyComponent={
           faqs.isPending ? null : (
-            <View className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <Text className="text-sm text-slate-500">No FAQs yet.</Text>
-            </View>
+            <EmptyState icon="help-circle" title="No FAQs yet" description="Questions you add will show up here and on the public site." />
           )
         }
       />
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

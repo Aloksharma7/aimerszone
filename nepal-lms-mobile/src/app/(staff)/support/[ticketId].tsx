@@ -4,6 +4,8 @@ import { useState } from "react";
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
 import { StatusBadge } from "@/components/status-badge";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchSupportAssignees, fetchSupportTicketDetail, replySupportTicket, updateSupportTicket } from "@/lib/data/staff";
@@ -69,9 +71,7 @@ export default function StaffSupportTicketScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => ticket.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => ticket.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
@@ -79,7 +79,7 @@ export default function StaffSupportTicketScreen() {
   const data = ticket.data;
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={90}>
         <ScrollView contentContainerClassName="gap-4 px-5 py-6">
           <View className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
@@ -204,7 +204,7 @@ export default function StaffSupportTicketScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

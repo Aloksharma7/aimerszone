@@ -1,11 +1,15 @@
-import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, Switch, Text, View } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { ChipGroup } from "@/components/chip-group";
 import { ProofCapture, type CapturedProof } from "@/components/proof-capture";
+import { DetailSkeleton } from "@/components/skeleton";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import {
   deleteInstitutionFavicon,
@@ -19,7 +23,14 @@ import {
 } from "@/lib/data/admin";
 import type { AdminPaymentMethod, AdminSettings, FeatureStatus } from "@/types/lms";
 
-function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+/**
+ * Named distinctly from the shared @/components/section.tsx (a bare title
+ * with no card) — this is a genuinely different pattern: a titled, card-
+ * wrapped group used to structure a very long settings form. Same name,
+ * different component was the actual bug; different names for different
+ * components is the fix.
+ */
+function SettingsSection({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
   return (
     <View className="gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
       <View>
@@ -27,38 +38,6 @@ function Section({ title, description, children }: { title: string; description?
         {description ? <Text className="mt-0.5 text-xs text-slate-500">{description}</Text> : null}
       </View>
       {children}
-    </View>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChangeText,
-  placeholder,
-  keyboardType,
-  secure,
-}: {
-  label: string;
-  value: string;
-  onChangeText: (value: string) => void;
-  placeholder?: string;
-  keyboardType?: "email-address" | "phone-pad" | "url" | "number-pad";
-  secure?: boolean;
-}) {
-  return (
-    <View className="gap-2">
-      <Text className="text-sm font-semibold text-slate-700">{label}</Text>
-      <TextInput
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        keyboardType={keyboardType === "url" ? "default" : keyboardType}
-        autoCapitalize="none"
-        secureTextEntry={secure}
-        className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-        placeholderTextColor="#94a3b8"
-      />
     </View>
   );
 }
@@ -220,19 +199,19 @@ export default function AdminSettingsScreen() {
 
   if (settings.isPending || !values) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-canvas" edges={["top"]}>
-        <ActivityIndicator color="#1d4ed8" />
-      </SafeAreaView>
+      <AppScreen edges={["bottom"]}>
+        <DetailSkeleton rows={4} />
+      </AppScreen>
     );
   }
 
   if (settings.isError) {
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["top"]}>
+      <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{isNormalizedApiError(settings.error) ? settings.error.message : "Something went wrong."}</Text>
-        <Pressable onPress={() => settings.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <View className="mt-4">
+          <Button label="Try again" onPress={() => settings.refetch()} fullWidth={false} />
+        </View>
       </SafeAreaView>
     );
   }
@@ -257,44 +236,35 @@ export default function AdminSettingsScreen() {
   ];
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={90}>
         <ScrollView contentContainerClassName="gap-4 px-5 py-6">
-          <Text className="text-2xl font-bold text-slate-950">Platform settings</Text>
-
           {notice ? (
             <View className={`rounded-xl p-3 ${notice.tone === "success" ? "bg-success-100" : "bg-danger-100"}`}>
               <Text className={`text-sm ${notice.tone === "success" ? "text-success-700" : "text-danger-700"}`}>{notice.message}</Text>
             </View>
           ) : null}
 
-          <Section title="Institution branding">
-            <Field label="Name" value={values.institution.name} onChangeText={(v) => update("institution", { name: v })} />
-            <Field label="Short name" value={values.institution.shortName} onChangeText={(v) => update("institution", { shortName: v })} />
-            <Field label="Tagline" value={values.institution.tagline} onChangeText={(v) => update("institution", { tagline: v })} />
-            <Field label="Primary phone" value={values.institution.primaryPhone} onChangeText={(v) => update("institution", { primaryPhone: v })} keyboardType="phone-pad" />
-            <Field label="Support email" value={values.institution.supportEmail} onChangeText={(v) => update("institution", { supportEmail: v })} keyboardType="email-address" />
-            <Field label="WhatsApp" value={values.institution.whatsapp} onChangeText={(v) => update("institution", { whatsapp: v })} keyboardType="phone-pad" />
-            <Field label="Website" value={values.institution.website} onChangeText={(v) => update("institution", { website: v })} keyboardType="url" />
-            <Field label="Address" value={values.institution.address} onChangeText={(v) => update("institution", { address: v })} />
+          <SettingsSection title="Institution branding">
+            <TextField label="Name" value={values.institution.name} onChangeText={(v) => update("institution", { name: v })} />
+            <TextField label="Short name" value={values.institution.shortName} onChangeText={(v) => update("institution", { shortName: v })} />
+            <TextField label="Tagline" value={values.institution.tagline} onChangeText={(v) => update("institution", { tagline: v })} />
+            <TextField label="Primary phone" value={values.institution.primaryPhone} onChangeText={(v) => update("institution", { primaryPhone: v })} keyboardType="phone-pad" />
+            <TextField label="Support email" value={values.institution.supportEmail} onChangeText={(v) => update("institution", { supportEmail: v })} keyboardType="email-address" />
+            <TextField label="WhatsApp" value={values.institution.whatsapp} onChangeText={(v) => update("institution", { whatsapp: v })} keyboardType="phone-pad" />
+            <TextField label="Website" value={values.institution.website} onChangeText={(v) => update("institution", { website: v })} keyboardType="url" />
+            <TextField label="Address" value={values.institution.address} onChangeText={(v) => update("institution", { address: v })} />
 
             <View className="gap-2">
               <Text className="text-sm font-semibold text-slate-700">Logo</Text>
               {values.institution.logoUrl ? (
                 <View className="gap-2">
                   <Image source={{ uri: values.institution.logoUrl }} style={{ width: 120, height: 60, borderRadius: 8 }} contentFit="contain" />
-                  <Pressable onPress={() => removeLogo.mutate()} className="h-9 w-32 flex-row items-center justify-center gap-1.5 rounded-lg border border-slate-300 active:bg-slate-100">
-                    {removeLogo.isPending ? <ActivityIndicator size="small" color="#64748b" /> : <Feather name="trash-2" size={14} color="#64748b" />}
-                    <Text className="text-xs font-semibold text-slate-700">Remove</Text>
-                  </Pressable>
+                  <Button label="Remove" onPress={() => removeLogo.mutate()} loading={removeLogo.isPending} variant="secondary" size="md" icon="trash-2" fullWidth={false} />
                 </View>
               ) : null}
               <ProofCapture value={logoDraft} onChange={setLogoDraft} label={values.institution.logoUrl ? "Replace logo" : "Upload logo"} />
-              {logoDraft ? (
-                <Pressable onPress={() => uploadLogo.mutate()} disabled={uploadLogo.isPending} className="h-10 flex-row items-center justify-center rounded-xl bg-brand-700 active:bg-brand-800">
-                  {uploadLogo.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-sm font-bold text-white">Upload logo</Text>}
-                </Pressable>
-              ) : null}
+              {logoDraft ? <Button label="Upload logo" onPress={() => uploadLogo.mutate()} loading={uploadLogo.isPending} /> : null}
             </View>
 
             <View className="gap-2">
@@ -302,29 +272,22 @@ export default function AdminSettingsScreen() {
               {values.institution.faviconUrl ? (
                 <View className="gap-2">
                   <Image source={{ uri: values.institution.faviconUrl }} style={{ width: 40, height: 40, borderRadius: 8 }} contentFit="contain" />
-                  <Pressable onPress={() => removeFavicon.mutate()} className="h-9 w-32 flex-row items-center justify-center gap-1.5 rounded-lg border border-slate-300 active:bg-slate-100">
-                    {removeFavicon.isPending ? <ActivityIndicator size="small" color="#64748b" /> : <Feather name="trash-2" size={14} color="#64748b" />}
-                    <Text className="text-xs font-semibold text-slate-700">Remove</Text>
-                  </Pressable>
+                  <Button label="Remove" onPress={() => removeFavicon.mutate()} loading={removeFavicon.isPending} variant="secondary" size="md" icon="trash-2" fullWidth={false} />
                 </View>
               ) : null}
               <ProofCapture value={faviconDraft} onChange={setFaviconDraft} label={values.institution.faviconUrl ? "Replace favicon" : "Upload favicon"} />
-              {faviconDraft ? (
-                <Pressable onPress={() => uploadFavicon.mutate()} disabled={uploadFavicon.isPending} className="h-10 flex-row items-center justify-center rounded-xl bg-brand-700 active:bg-brand-800">
-                  {uploadFavicon.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-sm font-bold text-white">Upload favicon</Text>}
-                </Pressable>
-              ) : null}
+              {faviconDraft ? <Button label="Upload favicon" onPress={() => uploadFavicon.mutate()} loading={uploadFavicon.isPending} /> : null}
             </View>
-          </Section>
+          </SettingsSection>
 
-          <Section title="Payment methods">
+          <SettingsSection title="Payment methods">
             {values.paymentMethods.map((method) => (
               <View key={method.id} className="gap-2 rounded-xl border border-slate-200 p-3">
-                <Field label="Name" value={method.name} onChangeText={(v) => updateMethod(method.id, { name: v })} />
-                <Field label="Account name" value={method.accountName ?? ""} onChangeText={(v) => updateMethod(method.id, { accountName: v })} />
-                <Field label="Account reference" value={method.accountReference ?? ""} onChangeText={(v) => updateMethod(method.id, { accountReference: v })} />
-                <Field label="Bank name" value={method.bankName ?? ""} onChangeText={(v) => updateMethod(method.id, { bankName: v })} />
-                <Field label="Branch" value={method.branch ?? ""} onChangeText={(v) => updateMethod(method.id, { branch: v })} />
+                <TextField label="Name" value={method.name} onChangeText={(v) => updateMethod(method.id, { name: v })} />
+                <TextField label="Account name" value={method.accountName ?? ""} onChangeText={(v) => updateMethod(method.id, { accountName: v })} />
+                <TextField label="Account reference" value={method.accountReference ?? ""} onChangeText={(v) => updateMethod(method.id, { accountReference: v })} />
+                <TextField label="Bank name" value={method.bankName ?? ""} onChangeText={(v) => updateMethod(method.id, { bankName: v })} />
+                <TextField label="Branch" value={method.branch ?? ""} onChangeText={(v) => updateMethod(method.id, { branch: v })} />
                 <ToggleRow
                   label="Active"
                   value={method.status === "active"}
@@ -333,14 +296,14 @@ export default function AdminSettingsScreen() {
                 {method.qrImageUrl ? (
                   <View className="gap-2">
                     <Image source={{ uri: method.qrImageUrl }} style={{ width: 100, height: 100, borderRadius: 8 }} contentFit="contain" />
-                    <Pressable onPress={() => removeQr.mutate(method.id)} className="h-9 w-32 flex-row items-center justify-center gap-1.5 rounded-lg border border-slate-300 active:bg-slate-100">
-                      {removeQr.isPending && removeQr.variables === method.id ? (
-                        <ActivityIndicator size="small" color="#64748b" />
-                      ) : (
-                        <Feather name="trash-2" size={14} color="#64748b" />
-                      )}
-                      <Text className="text-xs font-semibold text-slate-700">Remove QR</Text>
-                    </Pressable>
+                    <Button
+                      label="Remove QR"
+                      onPress={() => removeQr.mutate(method.id)}
+                      loading={removeQr.isPending && removeQr.variables === method.id}
+                      variant="secondary"
+                      icon="trash-2"
+                      fullWidth={false}
+                    />
                   </View>
                 ) : null}
                 <ProofCapture
@@ -349,23 +312,18 @@ export default function AdminSettingsScreen() {
                   label={method.qrImageUrl ? "Replace QR image" : "Upload QR image"}
                 />
                 {qrDraftByMethod[method.id] ? (
-                  <Pressable
+                  <Button
+                    label="Upload QR"
                     onPress={() => uploadQr.mutate(method.id)}
-                    disabled={uploadQr.isPending}
-                    className="h-9 flex-row items-center justify-center rounded-xl bg-brand-700 active:bg-brand-800"
-                  >
-                    {uploadQr.isPending && uploadQr.variables === method.id ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <Text className="text-xs font-bold text-white">Upload QR</Text>
-                    )}
-                  </Pressable>
+                    loading={uploadQr.isPending && uploadQr.variables === method.id}
+                    fullWidth={false}
+                  />
                 ) : null}
               </View>
             ))}
-          </Section>
+          </SettingsSection>
 
-          <Section title="Security policy">
+          <SettingsSection title="Security policy">
             <ToggleRow label="Public registration" value={values.security.publicRegistration} onValueChange={(v) => update("security", { publicRegistration: v })} />
             <ToggleRow label="Email verification" value={values.security.emailVerification} onValueChange={(v) => update("security", { emailVerification: v })} />
             <ToggleRow
@@ -375,27 +333,27 @@ export default function AdminSettingsScreen() {
               onValueChange={(v) => update("security", { privilegedMfa: v })}
             />
             <ToggleRow label="Force password change" value={values.security.forcePasswordChange} onValueChange={(v) => update("security", { forcePasswordChange: v })} />
-            <Field
+            <TextField
               label="Session timeout (hours, 1–24)"
               value={String(values.security.sessionTimeoutHours)}
               onChangeText={(v) => update("security", { sessionTimeoutHours: Number(v) || 0 })}
               keyboardType="number-pad"
             />
-            <Field
+            <TextField
               label="Failed login attempts (3–20)"
               value={String(values.security.failedLoginAttempts)}
               onChangeText={(v) => update("security", { failedLoginAttempts: Number(v) || 0 })}
               keyboardType="number-pad"
             />
-            <Field
+            <TextField
               label="Lockout minutes (5–1440)"
               value={String(values.security.lockoutMinutes)}
               onChangeText={(v) => update("security", { lockoutMinutes: Number(v) || 0 })}
               keyboardType="number-pad"
             />
-          </Section>
+          </SettingsSection>
 
-          <Section title="Operations">
+          <SettingsSection title="Operations">
             <ToggleRow label="Maintenance notice" value={values.operations.maintenanceNotice} onValueChange={(v) => update("operations", { maintenanceNotice: v })} />
             <ToggleRow label="Automatic receipts" value={values.operations.automaticReceipts} onValueChange={(v) => update("operations", { automaticReceipts: v })} />
             <ToggleRow
@@ -403,9 +361,9 @@ export default function AdminSettingsScreen() {
               value={values.operations.dailyIntegrationHealthCheck}
               onValueChange={(v) => update("operations", { dailyIntegrationHealthCheck: v })}
             />
-          </Section>
+          </SettingsSection>
 
-          <Section title="Feature flags" description="Each flag also reports whether it can actually run, not just whether it is switched on.">
+          <SettingsSection title="Feature flags" description="Each flag also reports whether it can actually run, not just whether it is switched on.">
             {featureRows.map((row) => (
               <View key={row.key} className="gap-1">
                 <ToggleRow label={row.label} value={values.featureFlags[row.key]} onValueChange={(v) => update("featureFlags", { [row.key]: v } as Partial<Values["featureFlags"]>)} />
@@ -414,87 +372,75 @@ export default function AdminSettingsScreen() {
                 ) : null}
               </View>
             ))}
-          </Section>
+          </SettingsSection>
 
-          <Section title="SMS provider">
-            <View className="flex-row gap-2">
-              {(["sparrow", "generic"] as const).map((option) => {
-                const selected = values.sms.provider === option;
-                return (
-                  <Pressable
-                    key={option}
-                    onPress={() => update("sms", { provider: option })}
-                    className={`rounded-full border px-3.5 py-2 ${selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"}`}
-                  >
-                    <Text className={`text-sm font-medium capitalize ${selected ? "text-white" : "text-slate-700"}`}>{option}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Field label="Endpoint" value={values.sms.endpoint} onChangeText={(v) => update("sms", { endpoint: v })} keyboardType="url" />
-            <Field label="Sender ID" value={values.sms.senderId} onChangeText={(v) => update("sms", { senderId: v })} />
-            <Field
+          <SettingsSection title="SMS provider">
+            <ChipGroup
+              options={[
+                { value: "sparrow" as const, label: "Sparrow" },
+                { value: "generic" as const, label: "Generic" },
+              ]}
+              value={values.sms.provider}
+              onChange={(provider) => update("sms", { provider })}
+            />
+            <TextField label="Endpoint" value={values.sms.endpoint} onChangeText={(v) => update("sms", { endpoint: v })} keyboardType="url" />
+            <TextField label="Sender ID" value={values.sms.senderId} onChangeText={(v) => update("sms", { senderId: v })} />
+            <TextField
               label={values.sms.tokenConfigured ? "Provider token (leave blank to keep the stored one)" : "Provider token"}
               value={values.sms.token}
               onChangeText={(v) => update("sms", { token: v })}
-              secure
+              secureTextEntry
             />
             <ToggleRow label="Notify on class starting" value={values.sms.notifyClassStarting} onValueChange={(v) => update("sms", { notifyClassStarting: v })} />
             <ToggleRow label="Notify on payment decision" value={values.sms.notifyPaymentDecision} onValueChange={(v) => update("sms", { notifyPaymentDecision: v })} />
             <ToggleRow label="Notify on enrollment activated" value={values.sms.notifyEnrollmentActivated} onValueChange={(v) => update("sms", { notifyEnrollmentActivated: v })} />
-          </Section>
+          </SettingsSection>
 
-          <Section title="eSewa">
-            <View className="flex-row gap-2">
-              {(["sandbox", "live"] as const).map((option) => {
-                const selected = values.esewa.environment === option;
-                return (
-                  <Pressable
-                    key={option}
-                    onPress={() => update("esewa", { environment: option })}
-                    className={`rounded-full border px-3.5 py-2 ${selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"}`}
-                  >
-                    <Text className={`text-sm font-medium capitalize ${selected ? "text-white" : "text-slate-700"}`}>{option}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Field label="Merchant code" value={values.esewa.merchantCode} onChangeText={(v) => update("esewa", { merchantCode: v })} />
-            <Field
+          <SettingsSection title="eSewa">
+            <ChipGroup
+              options={[
+                { value: "sandbox" as const, label: "Sandbox" },
+                { value: "live" as const, label: "Live" },
+              ]}
+              value={values.esewa.environment}
+              onChange={(environment) => update("esewa", { environment })}
+            />
+            <TextField label="Merchant code" value={values.esewa.merchantCode} onChangeText={(v) => update("esewa", { merchantCode: v })} />
+            <TextField
               label={values.esewa.secretKeyConfigured ? "Secret key (leave blank to keep the stored one)" : "Secret key"}
               value={values.esewa.secretKey}
               onChangeText={(v) => update("esewa", { secretKey: v })}
-              secure
+              secureTextEntry
             />
-          </Section>
+          </SettingsSection>
 
-          <Section title="Content protection" description="Applies to recorded lecture playback.">
-            <Field
+          <SettingsSection title="Content protection" description="Applies to recorded lecture playback.">
+            <TextField
               label="Watermark opacity (5–60)"
               value={String(values.content.watermarkOpacity)}
               onChangeText={(v) => update("content", { watermarkOpacity: Number(v) || 0 })}
               keyboardType="number-pad"
             />
-            <Field
+            <TextField
               label="Watermark interval seconds (4–120)"
               value={String(values.content.watermarkIntervalSeconds)}
               onChangeText={(v) => update("content", { watermarkIntervalSeconds: Number(v) || 0 })}
               keyboardType="number-pad"
             />
-          </Section>
+          </SettingsSection>
 
-          <Pressable
+          <Button
+            label="Save settings"
+            loadingLabel="Saving…"
+            loading={save.isPending}
+            size="lg"
             onPress={() => {
               setNotice(null);
               save.mutate();
             }}
-            disabled={save.isPending}
-            className="h-12 flex-row items-center justify-center gap-2 rounded-xl bg-brand-700 active:bg-brand-800 disabled:opacity-60"
-          >
-            {save.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-bold text-white">Save settings</Text>}
-          </Pressable>
+          />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

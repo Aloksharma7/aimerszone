@@ -1,10 +1,12 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from "react-native";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
 import { PaymentPicker, SelectedPaymentCard } from "@/components/payment-picker";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { createRefund } from "@/lib/data/staff";
 import type { PaymentQueueItem } from "@/types/lms";
@@ -41,7 +43,7 @@ export default function NewRefundScreen() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={90}>
         <ScrollView contentContainerClassName="gap-4 px-5 py-6">
           <View className="rounded-xl bg-warning-100 p-3">
@@ -50,37 +52,11 @@ export default function NewRefundScreen() {
 
           {payment ? <SelectedPaymentCard payment={payment} onChange={() => setPayment(null)} /> : <PaymentPicker onSelect={setPayment} />}
 
-          <View className="gap-2">
-            <Text className="text-sm font-semibold text-slate-700">Refund amount (NPR)</Text>
-            <TextInput
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="number-pad"
-              className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-            />
-          </View>
+          <TextField label="Refund amount (NPR)" value={amount} onChangeText={setAmount} keyboardType="number-pad" />
 
-          <View className="gap-2">
-            <Text className="text-sm font-semibold text-slate-700">Method (optional)</Text>
-            <TextInput
-              value={method}
-              onChangeText={setMethod}
-              placeholder="Bank transfer, eSewa, cash"
-              className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-              placeholderTextColor="#94a3b8"
-            />
-          </View>
+          <TextField label="Method (optional)" value={method} onChangeText={setMethod} placeholder="Bank transfer, eSewa, cash" />
 
-          <View className="gap-2">
-            <Text className="text-sm font-semibold text-slate-700">Reference (optional)</Text>
-            <TextInput
-              value={reference}
-              onChangeText={setReference}
-              placeholder="Bank or wallet transaction reference"
-              className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-              placeholderTextColor="#94a3b8"
-            />
-          </View>
+          <TextField label="Reference (optional)" value={reference} onChangeText={setReference} placeholder="Bank or wallet transaction reference" />
 
           <View className="gap-2">
             <Text className="text-sm font-semibold text-slate-700">Reason</Text>
@@ -101,18 +77,18 @@ export default function NewRefundScreen() {
             </View>
           ) : null}
 
-          <Pressable
+          <Button
+            label="Submit refund request"
+            loading={submit.isPending}
+            disabled={!valid}
+            size="lg"
             onPress={() => {
               setError(null);
               submit.mutate();
             }}
-            disabled={!valid || submit.isPending}
-            className="h-12 flex-row items-center justify-center rounded-xl bg-brand-700 active:bg-brand-800 disabled:opacity-60"
-          >
-            {submit.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-bold text-white">Submit refund request</Text>}
-          </Pressable>
+          />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

@@ -2,9 +2,11 @@ import { Feather } from "@expo/vector-icons";
 import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { createAdminUser, type NewAdminUserInput } from "@/lib/data/admin";
 
@@ -44,7 +46,7 @@ export default function NewAdminUserScreen() {
 
   if (created) {
     return (
-      <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+      <AppScreen edges={["bottom"]}>
         <ScrollView contentContainerClassName="gap-4 px-5 py-6">
           <View className="rounded-2xl border border-success-200 bg-success-100 p-5">
             <Text className="text-lg font-bold text-success-700">Account created</Text>
@@ -72,7 +74,8 @@ export default function NewAdminUserScreen() {
           </View>
 
           <View className="flex-row gap-3">
-            <Pressable
+            <Button
+              label="Create another"
               onPress={() => {
                 setCreated(null);
                 setName("");
@@ -81,60 +84,25 @@ export default function NewAdminUserScreen() {
                 setPrimaryRole("teacher");
                 setPasswordSetupMethod("link");
               }}
-              className="h-11 flex-1 items-center justify-center rounded-xl bg-brand-700 active:bg-brand-800"
-            >
-              <Text className="text-sm font-bold text-white">Create another</Text>
-            </Pressable>
-            <Pressable onPress={() => router.back()} className="h-11 flex-1 items-center justify-center rounded-xl border border-slate-300 active:bg-slate-100">
-              <Text className="text-sm font-bold text-slate-700">Back to users</Text>
-            </Pressable>
+            />
+            <Button label="Back to users" variant="secondary" onPress={() => router.back()} />
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </AppScreen>
     );
   }
 
   const selectedRole = roles.find((role) => role.value === primaryRole);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={90}>
         <ScrollView contentContainerClassName="gap-4 px-5 py-6">
-          <View className="gap-2">
-            <Text className="text-sm font-semibold text-slate-700">Full name</Text>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Sita Sharma"
-              className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-              placeholderTextColor="#94a3b8"
-            />
-          </View>
+          <TextField label="Full name" value={name} onChangeText={setName} placeholder="Sita Sharma" />
 
-          <View className="gap-2">
-            <Text className="text-sm font-semibold text-slate-700">Email</Text>
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="sita@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-              placeholderTextColor="#94a3b8"
-            />
-          </View>
+          <TextField label="Email" value={email} onChangeText={setEmail} placeholder="sita@example.com" keyboardType="email-address" autoCapitalize="none" />
 
-          <View className="gap-2">
-            <Text className="text-sm font-semibold text-slate-700">Mobile (optional)</Text>
-            <TextInput
-              value={mobile}
-              onChangeText={setMobile}
-              placeholder="98XXXXXXXX"
-              keyboardType="phone-pad"
-              className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-              placeholderTextColor="#94a3b8"
-            />
-          </View>
+          <TextField label="Mobile (optional)" value={mobile} onChangeText={setMobile} placeholder="98XXXXXXXX" keyboardType="phone-pad" />
 
           <View className="gap-2">
             <Text className="text-sm font-semibold text-slate-700">Role</Text>
@@ -189,25 +157,19 @@ export default function NewAdminUserScreen() {
             </View>
           ) : null}
 
-          <Pressable
+          <Button
+            label="Create account"
+            loading={submit.isPending}
+            disabled={!valid}
+            icon="user-plus"
+            size="lg"
             onPress={() => {
               setError(null);
               submit.mutate();
             }}
-            disabled={!valid || submit.isPending}
-            className="h-12 flex-row items-center justify-center gap-2 rounded-xl bg-brand-700 active:bg-brand-800 disabled:opacity-60"
-          >
-            {submit.isPending ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Feather name="user-plus" size={16} color="#fff" />
-                <Text className="text-base font-bold text-white">Create account</Text>
-              </>
-            )}
-          </Pressable>
+          />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

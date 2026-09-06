@@ -43,7 +43,7 @@ import type {
 } from "@/types/lms";
 import type { CapturedProof } from "@/components/proof-capture";
 
-export type StudentsPage = { items: StaffStudent[]; nextPage: number | null };
+export type StudentsPage = { items: StaffStudent[]; nextPage: number | null; total: number };
 
 export async function fetchStaffStudentsPage(page: number, query?: string): Promise<StudentsPage> {
   const q = query ? `&q=${encodeURIComponent(query)}` : "";
@@ -51,6 +51,7 @@ export async function fetchStaffStudentsPage(page: number, query?: string): Prom
   return {
     items: response.data.map(mapStaffStudent),
     nextPage: response.meta.current_page < response.meta.last_page ? response.meta.current_page + 1 : null,
+    total: response.meta.total,
   };
 }
 

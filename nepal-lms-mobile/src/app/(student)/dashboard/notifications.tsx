@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/button";
 import { AnnouncementCard } from "@/components/announcement-card";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchNotifications, markAnnouncementRead } from "@/lib/data/student";
@@ -30,15 +33,13 @@ export default function StudentNotificationsScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => notifications.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => notifications.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <FlatList
         data={notifications.data}
         keyExtractor={(item) => item.id}
@@ -49,11 +50,9 @@ export default function StudentNotificationsScreen() {
         refreshing={notifications.isRefetching}
         onRefresh={() => notifications.refetch()}
         ListEmptyComponent={
-          <View className="rounded-2xl border border-slate-100 bg-white shadow-sm p-5">
-            <Text className="text-sm text-slate-500">Nothing here yet.</Text>
-          </View>
+          <EmptyState icon="bell" title="Nothing here yet" description="Announcements and updates for your courses will appear here." />
         }
       />
-    </SafeAreaView>
+    </AppScreen>
   );
 }

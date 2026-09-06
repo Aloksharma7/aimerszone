@@ -1,8 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
-import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/button";
 import { MetricTile } from "@/components/metric-tile";
 import { StatusBadge } from "@/components/status-badge";
 import { isNormalizedApiError } from "@/lib/api/contracts";
@@ -26,9 +29,7 @@ export default function TeacherTestResultsScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => results.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => results.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
@@ -36,7 +37,7 @@ export default function TeacherTestResultsScreen() {
   const data = results.data;
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <FlatList
         data={data.attempts}
         keyExtractor={(item) => item.id}
@@ -56,12 +57,10 @@ export default function TeacherTestResultsScreen() {
           </View>
         }
         ListEmptyComponent={
-          <View className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-            <Text className="text-sm text-slate-500">No students have submitted this test yet.</Text>
-          </View>
+          <EmptyState icon="users" title="No submissions yet" description="Results will appear here once students start taking this test." />
         }
       />
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

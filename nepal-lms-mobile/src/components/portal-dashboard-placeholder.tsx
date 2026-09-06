@@ -1,5 +1,5 @@
 import { Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { AppScreen } from "@/components/app-screen";
 import { useSessionStore } from "@/lib/auth/session-store";
 import { SignOutButton } from "@/components/sign-out-button";
 
@@ -11,7 +11,7 @@ export function PortalDashboardPlaceholder({ roleLabel }: { roleLabel: string })
   const user = useSessionStore((state) => state.user);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <View className="flex-1 px-6 py-8">
         <Text className="text-xs font-bold uppercase tracking-wide text-brand-700">{roleLabel} portal</Text>
         <Text className="mt-2 text-2xl font-bold text-slate-950">{user ? `Hi, ${user.name}` : "Signed in"}</Text>
@@ -20,6 +20,6 @@ export function PortalDashboardPlaceholder({ roleLabel }: { roleLabel: string })
           <SignOutButton />
         </View>
       </View>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

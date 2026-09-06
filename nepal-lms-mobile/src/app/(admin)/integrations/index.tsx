@@ -2,8 +2,9 @@ import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import {
@@ -55,10 +56,8 @@ export default function AdminIntegrationsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["bottom"]}>
       <ScrollView contentContainerClassName="gap-4 px-5 py-6">
-        <Text className="text-2xl font-bold text-slate-950">Integrations</Text>
-
         <View className="flex-row gap-2">
           {providers.map((option) => {
             const selected = provider === option.value;
@@ -135,9 +134,7 @@ export default function AdminIntegrationsScreen() {
         {records.isPending ? (
           <ActivityIndicator color="#1d4ed8" />
         ) : (records.data ?? []).length === 0 ? (
-          <View className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-            <Text className="text-sm text-slate-500">No records yet.</Text>
-          </View>
+          <EmptyState icon="link" title="No records yet" description="Records synced from this provider will appear here." />
         ) : (
           <View className="gap-3">
             {records.data!.slice(0, 20).map((record, index) => (
@@ -161,9 +158,7 @@ export default function AdminIntegrationsScreen() {
         {events.isPending ? (
           <ActivityIndicator color="#1d4ed8" />
         ) : (events.data ?? []).length === 0 ? (
-          <View className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-            <Text className="text-sm text-slate-500">No events recorded yet.</Text>
-          </View>
+          <EmptyState icon="activity" title="No events yet" description="Integration activity will be logged here as it happens." />
         ) : (
           <View className="gap-3">
             {events.data!.map((eventItem) => (
@@ -179,6 +174,6 @@ export default function AdminIntegrationsScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

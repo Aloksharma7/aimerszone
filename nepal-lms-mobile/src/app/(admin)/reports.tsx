@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState as SharedEmptyState } from "@/components/empty-state";
+import { ScreenHeader } from "@/components/screen-header";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchAcademicReport, fetchEnrollmentReport, fetchFinanceReport } from "@/lib/data/admin";
 
@@ -22,9 +24,9 @@ export default function AdminReportsScreen() {
   const [tab, setTab] = useState<Tab>("academic");
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <View className="gap-3 px-5 pt-6">
-        <Text className="text-2xl font-bold text-slate-950">Reports</Text>
+        <ScreenHeader title="Reports" />
         <View className="flex-row gap-2">
           {tabs.map((option) => {
             const selected = tab === option.value;
@@ -42,7 +44,7 @@ export default function AdminReportsScreen() {
       </View>
 
       {tab === "academic" ? <AcademicReport /> : tab === "enrollments" ? <EnrollmentReport /> : <FinanceReport />}
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 
@@ -162,9 +164,5 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
 }
 
 function EmptyState() {
-  return (
-    <View className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-      <Text className="text-sm text-slate-500">No data for this window yet.</Text>
-    </View>
-  );
+  return <SharedEmptyState icon="bar-chart-2" title="No data for this window" description="Figures for this reporting period aren't available yet." />;
 }

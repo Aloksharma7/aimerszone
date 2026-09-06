@@ -2,10 +2,12 @@ import { Feather } from "@expo/vector-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { createTeacherRecording } from "@/lib/data/teacher";
 
@@ -38,7 +40,7 @@ export default function NewRecordingScreen() {
   const canSubmit = Boolean(title.trim().length >= 3 && /^[A-Za-z0-9_-]{11}$/.test(videoId.trim()) && !create.isPending);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAwareScrollView className="flex-1" contentContainerClassName="flex-grow gap-4 px-6 py-6" bottomOffset={24} keyboardShouldPersistTaps="handled">
         <View className="rounded-2xl bg-info-100 p-3">
           <Text className="text-xs text-info-700">
@@ -46,37 +48,18 @@ export default function NewRecordingScreen() {
           </Text>
         </View>
 
-        <View>
-          <Text className="mb-1.5 text-sm font-semibold text-slate-700">Title</Text>
-          <TextInput
-            className="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-            value={title}
-            onChangeText={setTitle}
-            editable={!create.isPending}
-          />
-        </View>
+        <TextField label="Title" value={title} onChangeText={setTitle} editable={!create.isPending} />
 
-        <View>
-          <Text className="mb-1.5 text-sm font-semibold text-slate-700">YouTube video ID</Text>
-          <TextInput
-            className="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-            value={videoId}
-            onChangeText={setVideoId}
-            autoCapitalize="none"
-            placeholder="e.g. dQw4w9WgXcQ"
-            editable={!create.isPending}
-          />
-        </View>
+        <TextField
+          label="YouTube video ID"
+          value={videoId}
+          onChangeText={setVideoId}
+          autoCapitalize="none"
+          placeholder="e.g. dQw4w9WgXcQ"
+          editable={!create.isPending}
+        />
 
-        <View>
-          <Text className="mb-1.5 text-sm font-semibold text-slate-700">Module (optional)</Text>
-          <TextInput
-            className="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-            value={moduleTitle}
-            onChangeText={setModuleTitle}
-            editable={!create.isPending}
-          />
-        </View>
+        <TextField label="Module (optional)" value={moduleTitle} onChangeText={setModuleTitle} editable={!create.isPending} />
 
         <Pressable onPress={() => setReleaseNow((value) => !value)} className="flex-row items-center gap-3">
           <Feather name={releaseNow ? "check-square" : "square"} size={20} color={releaseNow ? "#1d4ed8" : "#94a3b8"} />
@@ -94,22 +77,18 @@ export default function NewRecordingScreen() {
           </View>
         ) : null}
 
-        <Pressable
+        <Button
+          label="Add recording"
+          loading={create.isPending}
+          disabled={!canSubmit}
+          size="lg"
           onPress={() => {
             setError(null);
             create.mutate();
           }}
-          disabled={!canSubmit}
-          className="mt-2 h-12 flex-row items-center justify-center rounded-xl bg-brand-700 active:bg-brand-800 disabled:opacity-60"
-        >
-          {create.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-bold text-white">Add recording</Text>}
-        </Pressable>
-        {warning ? (
-          <Pressable onPress={() => router.back()} className="h-12 flex-row items-center justify-center rounded-xl border border-slate-300 active:bg-slate-100">
-            <Text className="text-base font-bold text-slate-700">Done</Text>
-          </Pressable>
-        ) : null}
+        />
+        {warning ? <Button label="Done" variant="secondary" size="lg" onPress={() => router.back()} /> : null}
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

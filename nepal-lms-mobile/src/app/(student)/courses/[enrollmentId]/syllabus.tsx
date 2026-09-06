@@ -4,6 +4,9 @@ import { useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/button";
 import { ProgressBar } from "@/components/progress-bar";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchCourseSyllabus, setLessonComplete } from "@/lib/data/course";
@@ -36,20 +39,16 @@ export default function CourseSyllabusScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => syllabus.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => syllabus.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <ScrollView contentContainerClassName="gap-4 px-5 py-6">
         {syllabus.data.length === 0 ? (
-          <View className="rounded-2xl border border-slate-100 bg-white shadow-sm p-5">
-            <Text className="text-sm text-slate-500">The syllabus for this course hasn&apos;t been published yet.</Text>
-          </View>
+          <EmptyState icon="list" title="Syllabus not published" description="Your teacher hasn't published a syllabus for this course yet." />
         ) : (
           syllabus.data.map((module) => (
             <ModuleCard
@@ -61,7 +60,7 @@ export default function CourseSyllabusScreen() {
           ))
         )}
       </ScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

@@ -4,8 +4,9 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
 import { StatusBadge } from "@/components/status-badge";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchAdminCoursesPage } from "@/lib/data/admin";
@@ -38,7 +39,7 @@ export default function AdminCoursesScreen() {
   const items = courses.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <View className="gap-3 px-5 pt-6">
         <View className="flex-row items-center justify-between">
           <Text className="text-2xl font-bold text-slate-950">Courses</Text>
@@ -102,14 +103,14 @@ export default function AdminCoursesScreen() {
             if (courses.hasNextPage && !courses.isFetchingNextPage) courses.fetchNextPage();
           }}
           ListEmptyComponent={
-            <View className="mx-5 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <Text className="text-sm text-slate-500">No courses match this search.</Text>
+            <View className="mx-5">
+              <EmptyState icon="search" title="No matches" description="Try a different search term." />
             </View>
           }
           ListFooterComponent={courses.isFetchingNextPage ? <ActivityIndicator className="py-4" color="#1d4ed8" /> : null}
         />
       )}
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

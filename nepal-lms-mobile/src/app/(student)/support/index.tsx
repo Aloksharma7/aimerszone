@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
 import { Section } from "@/components/section";
 import { ListSkeleton } from "@/components/skeleton";
 import { StatusBadge } from "@/components/status-badge";
@@ -25,9 +26,9 @@ export default function SupportOverviewScreen() {
 
   if (support.isPending) {
     return (
-      <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+      <AppScreen edges={["bottom"]}>
         <ListSkeleton withThumbnail={false} />
-      </SafeAreaView>
+      </AppScreen>
     );
   }
 
@@ -46,7 +47,7 @@ export default function SupportOverviewScreen() {
   const data = support.data;
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
     <ScrollView className="flex-1" contentContainerClassName="gap-6 px-5 py-6">
       <Pressable
         onPress={() => router.push("/(student)/support/new")}
@@ -101,7 +102,7 @@ export default function SupportOverviewScreen() {
         </Section>
       ) : null}
     </ScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

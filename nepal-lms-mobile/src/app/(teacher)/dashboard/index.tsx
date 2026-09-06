@@ -2,17 +2,21 @@ import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
 import { BatchCard } from "@/components/batch-card";
 import { MetricTile } from "@/components/metric-tile";
+import { ScreenHeader } from "@/components/screen-header";
 import { Section } from "@/components/section";
 import { ListSkeleton } from "@/components/skeleton";
-import { DrawerMenuButton } from "@/components/side-drawer";
 import { TeacherSessionCard } from "@/components/teacher-session-card";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { useSessionStore } from "@/lib/auth/session-store";
 import { fetchTeacherDashboard } from "@/lib/data/teacher";
+import { timeOfDayGreeting } from "@/lib/greeting";
 import type { FollowUp } from "@/types/lms";
 
 const followUpIcon: Record<string, keyof typeof Feather.glyphMap> = {
@@ -21,6 +25,10 @@ const followUpIcon: Record<string, keyof typeof Feather.glyphMap> = {
   test: "edit-3",
 };
 
+function reveal(index: number) {
+  return FadeInDown.duration(320).delay(index * 60);
+}
+
 export default function TeacherDashboard() {
   const user = useSessionStore((state) => state.user);
   const router = useRouter();
@@ -28,9 +36,9 @@ export default function TeacherDashboard() {
 
   if (dashboard.isPending) {
     return (
-      <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+      <AppScreen edges={["top"]}>
         <ListSkeleton count={3} />
-      </SafeAreaView>
+      </AppScreen>
     );
   }
 
@@ -39,9 +47,7 @@ export default function TeacherDashboard() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["top"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => dashboard.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => dashboard.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
@@ -49,72 +55,106 @@ export default function TeacherDashboard() {
   const data = dashboard.data;
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <ScrollView
         className="flex-1"
         contentContainerClassName="px-5 py-6 gap-6"
         refreshControl={<RefreshControl refreshing={dashboard.isRefetching} onRefresh={() => dashboard.refetch()} />}
       >
-        <View className="flex-row items-start justify-between">
-          <View className="flex-row items-start gap-2">
-            <DrawerMenuButton />
-            <View>
-              <Text className="text-xs font-bold uppercase tracking-wide text-brand-700">Teacher portal</Text>
-              <Text className="mt-1 text-2xl font-bold text-slate-950">{user ? `Hi, ${user.name.split(" ")[0]}` : "Welcome back"}</Text>
-            </View>
+        <ScreenHeader
+          eyebrow="Teacher portal"
+          title={user ? timeOfDayGreeting(user.name.split(" ")[0]) : "Welcome back"}
+          right={
+            <Pressable
+              onPress={() => router.push("/(teacher)/dashboard/announcements")}
+              className="h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm active:bg-slate-100"
+            >
+              <Feather name="volume-2" size={18} color="#1d4ed8" />
+            </Pressable>
+          }
+        />
+
+        <Animated.View entering={reveal(0)} className="flex-row flex-wrap gap-3">
+          <View className="min-w-[47%] flex-1">
+            <MetricTile
+              label="Classes today"
+              value={data.metrics.classesToday}
+              icon="video"
+              tone="brand"
+              onPress={() => router.push("/(teacher)/classes")}
+            />
           </View>
-          <Pressable
-            onPress={() => router.push("/(teacher)/dashboard/announcements")}
-            className="h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm active:bg-slate-100"
-          >
-            <Feather name="volume-2" size={18} color="#1d4ed8" />
-          </Pressable>
-        </View>
+          <View className="min-w-[47%] flex-1">
+            <MetricTile
+              label="Attendance to do"
+              value={data.metrics.attendanceActions}
+              icon="check-square"
+              tone={data.metrics.attendanceActions > 0 ? "warning" : "success"}
+              onPress={() => router.push("/(teacher)/attendance")}
+            />
+          </View>
+          <View className="min-w-[47%] flex-1">
+            <MetricTile label="Students" value={data.metrics.activeStudents} icon="users" tone="info" />
+          </View>
+          <View className="min-w-[47%] flex-1">
+            <MetricTile
+              label="Ongoing batches"
+              value={data.metrics.ongoingBatches}
+              icon="play-circle"
+              tone="brand"
+              onPress={() => router.push("/(teacher)/batches")}
+            />
+          </View>
+        </Animated.View>
 
-        <View className="flex-row gap-3">
-          <MetricTile label="Classes today" value={data.metrics.classesToday} />
-          <MetricTile label="Attendance to do" value={data.metrics.attendanceActions} />
-          <MetricTile label="Students" value={data.metrics.activeStudents} />
-        </View>
-
-        {data.nextSession ? <TeacherSessionCard session={data.nextSession} queryKeyToInvalidate={["teacher", "dashboard"]} /> : null}
+        {data.nextSession ? (
+          <Animated.View entering={reveal(1)}>
+            <TeacherSessionCard session={data.nextSession} queryKeyToInvalidate={["teacher", "dashboard"]} />
+          </Animated.View>
+        ) : null}
 
         {data.followUps.length > 0 ? (
-          <Section title="Needs your attention">
-            <View className="gap-2">
-              {data.followUps.map((item) => (
-                <FollowUpRow key={item.id} item={item} />
-              ))}
-            </View>
-          </Section>
+          <Animated.View entering={reveal(2)}>
+            <Section title="Needs your attention">
+              <View className="gap-2">
+                {data.followUps.map((item) => (
+                  <FollowUpRow key={item.id} item={item} />
+                ))}
+              </View>
+            </Section>
+          </Animated.View>
         ) : null}
 
         {data.todaySessions.length > 1 ? (
-          <Section title="Today's classes">
-            <View className="gap-2">
-              {data.todaySessions.map((session) => (
-                <View key={session.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                  <Text className="text-sm font-semibold text-slate-900">{session.title}</Text>
-                  <Text className="mt-0.5 text-xs text-slate-500">
-                    {session.batchTitle} · {session.timeRange}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </Section>
+          <Animated.View entering={reveal(3)}>
+            <Section title="Today's classes">
+              <View className="gap-2">
+                {data.todaySessions.map((session) => (
+                  <View key={session.id} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+                    <Text className="text-sm font-semibold text-slate-900">{session.title}</Text>
+                    <Text className="mt-0.5 text-xs text-slate-500">
+                      {session.batchTitle} · {session.timeRange}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </Section>
+          </Animated.View>
         ) : null}
 
         {data.batches.length > 0 ? (
-          <Section title="My batches">
-            <View className="gap-3">
-              {data.batches.map((batch) => (
-                <BatchCard key={batch.id} batch={batch} />
-              ))}
-            </View>
-          </Section>
+          <Animated.View entering={reveal(4)}>
+            <Section title={`My batches · ${data.metrics.assignedBatches} assigned, ${data.metrics.upcomingBatches} upcoming`}>
+              <View className="gap-3">
+                {data.batches.map((batch) => (
+                  <BatchCard key={batch.id} batch={batch} />
+                ))}
+              </View>
+            </Section>
+          </Animated.View>
         ) : null}
       </ScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

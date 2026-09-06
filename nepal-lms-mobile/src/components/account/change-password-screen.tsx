@@ -5,9 +5,9 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
 
+import { AppScreen } from "@/components/app-screen";
 import { FormField } from "@/components/form-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { changeAccountPassword } from "@/lib/data/account";
@@ -46,7 +46,7 @@ export default function ChangePasswordScreen() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAwareScrollView className="flex-1" contentContainerClassName="flex-grow gap-4 px-6 py-6" bottomOffset={24} keyboardShouldPersistTaps="handled">
         <Text className="text-sm text-slate-500">Changing your password signs out every other device where you&apos;re logged in.</Text>
 
@@ -85,6 +85,6 @@ export default function ChangePasswordScreen() {
           {save.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-bold text-white">Update password</Text>}
         </Pressable>
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

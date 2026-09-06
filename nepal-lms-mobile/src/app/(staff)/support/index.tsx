@@ -2,8 +2,9 @@ import { FlashList } from "@shopify/flash-list";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
 import { MetricTile } from "@/components/metric-tile";
 import { SupportTicketCard } from "@/components/support-ticket-card";
 import { isNormalizedApiError } from "@/lib/api/contracts";
@@ -35,7 +36,7 @@ export default function StaffSupportScreen() {
   const items = tickets.data?.items ?? [];
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <View className="gap-3 px-5 pt-6">
         <Text className="text-2xl font-bold text-slate-950">Support tickets</Text>
 
@@ -100,12 +101,12 @@ export default function StaffSupportScreen() {
           refreshing={tickets.isRefetching}
           onRefresh={() => tickets.refetch()}
           ListEmptyComponent={
-            <View className="mx-5 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <Text className="text-sm text-slate-500">No tickets here.</Text>
+            <View className="mx-5">
+              <EmptyState icon="life-buoy" title="No tickets here" description="Support requests matching this filter will show up here." />
             </View>
           }
         />
       )}
-    </SafeAreaView>
+    </AppScreen>
   );
 }

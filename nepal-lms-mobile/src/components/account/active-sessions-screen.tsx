@@ -1,10 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchAccountProfile, revokeOtherSessions } from "@/lib/data/account";
 import type { AccountSession } from "@/types/lms";
@@ -49,7 +52,7 @@ export default function ActiveSessionsScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAwareScrollView className="flex-1" contentContainerClassName="flex-grow gap-4 px-5 py-6" bottomOffset={24}>
         <View className="gap-3">
           {profile.data.sessions.map((session) => (
@@ -73,40 +76,32 @@ export default function ActiveSessionsScreen() {
             <Text className="text-sm text-slate-700">
               Enter your password to sign every other device out — this app included, if you&apos;re logged in elsewhere.
             </Text>
-            <TextInput
-              className="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-              editable={!revoke.isPending}
-              autoFocus
-            />
+            <TextField label="Password" secureTextEntry value={password} onChangeText={setPassword} editable={!revoke.isPending} autoFocus />
             {error ? <Text className="text-sm text-danger-700">{error}</Text> : null}
-            <Pressable
+            <Button
+              label="Confirm sign-out"
+              loading={revoke.isPending}
+              disabled={password.length === 0}
+              variant="danger"
               onPress={() => {
                 setError(null);
                 revoke.mutate();
               }}
-              disabled={revoke.isPending || password.length === 0}
-              className="h-11 flex-row items-center justify-center rounded-xl bg-danger-700 active:opacity-90 disabled:opacity-60"
-            >
-              {revoke.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-sm font-bold text-white">Confirm sign-out</Text>}
-            </Pressable>
+            />
           </View>
         ) : (
-          <Pressable
+          <Button
+            label="Sign out other devices"
+            variant="danger-outline"
+            icon="log-out"
             onPress={() => {
               setDone(null);
               setConfirming(true);
             }}
-            className="h-12 flex-row items-center justify-center gap-2 rounded-xl border border-danger-700 active:bg-danger-100"
-          >
-            <Feather name="log-out" size={16} color="#b91c1c" />
-            <Text className="text-sm font-bold text-danger-700">Sign out other devices</Text>
-          </Pressable>
+          />
         )}
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

@@ -1,19 +1,29 @@
 import { useQueries } from "@tanstack/react-query";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
 import { ListSkeleton } from "@/components/skeleton";
 import { MetricTile } from "@/components/metric-tile";
 import { PaymentQueueCard } from "@/components/payment-queue-card";
+import { ScreenHeader } from "@/components/screen-header";
 import { Section } from "@/components/section";
-import { DrawerMenuButton } from "@/components/side-drawer";
 import { StaffStudentRow } from "@/components/staff-student-row";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { useSessionStore } from "@/lib/auth/session-store";
 import { fetchPaymentQueuePage, fetchStaffStudentsPage } from "@/lib/data/staff";
+import { timeOfDayGreeting } from "@/lib/greeting";
+
+function reveal(index: number) {
+  return FadeInDown.duration(320).delay(index * 60);
+}
 
 export default function StaffDashboard() {
   const user = useSessionStore((state) => state.user);
+  const router = useRouter();
 
   const [studentsQuery, pendingPaymentsQuery] = useQueries({
     queries: [
@@ -27,9 +37,9 @@ export default function StaffDashboard() {
 
   if (isPending) {
     return (
-      <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+      <AppScreen edges={["top"]}>
         <ListSkeleton count={3} />
-      </SafeAreaView>
+      </AppScreen>
     );
   }
 
@@ -39,15 +49,14 @@ export default function StaffDashboard() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["top"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable
+        <Button
+          label="Try again"
+          fullWidth={false}
           onPress={() => {
             studentsQuery.refetch();
             pendingPaymentsQuery.refetch();
           }}
-          className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800"
-        >
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        />
       </SafeAreaView>
     );
   }
@@ -56,7 +65,7 @@ export default function StaffDashboard() {
   const pendingPayments = pendingPaymentsQuery.data!.items.slice(0, 3);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <ScrollView
         className="flex-1"
         contentContainerClassName="px-5 py-6 gap-6"
@@ -70,38 +79,49 @@ export default function StaffDashboard() {
           />
         }
       >
-        <View className="flex-row items-start gap-2">
-          <DrawerMenuButton />
-          <View>
-            <Text className="text-xs font-bold uppercase tracking-wide text-brand-700">Staff portal</Text>
-            <Text className="mt-1 text-2xl font-bold text-slate-950">{user ? `Hi, ${user.name.split(" ")[0]}` : "Welcome back"}</Text>
-          </View>
-        </View>
+        <ScreenHeader eyebrow="Staff portal" title={user ? timeOfDayGreeting(user.name.split(" ")[0]) : "Welcome back"} />
 
-        <View className="flex-row gap-3">
-          <MetricTile label="Payments to review" value={pendingPaymentsQuery.data!.total} />
-        </View>
+        <Animated.View entering={reveal(0)} className="flex-row gap-3">
+          <MetricTile
+            label="Payments to review"
+            value={pendingPaymentsQuery.data!.total}
+            icon="credit-card"
+            tone={pendingPaymentsQuery.data!.total > 0 ? "warning" : "success"}
+            onPress={() => router.push("/(staff)/payments")}
+          />
+          <MetricTile
+            label="Total students"
+            value={studentsQuery.data!.total}
+            icon="users"
+            tone="brand"
+            onPress={() => router.push("/(staff)/students")}
+          />
+        </Animated.View>
 
         {pendingPayments.length > 0 ? (
-          <Section title="Awaiting review">
-            <View className="gap-3">
-              {pendingPayments.map((payment) => (
-                <PaymentQueueCard key={payment.id} payment={payment} />
-              ))}
-            </View>
-          </Section>
+          <Animated.View entering={reveal(1)}>
+            <Section title="Awaiting review">
+              <View className="gap-3">
+                {pendingPayments.map((payment) => (
+                  <PaymentQueueCard key={payment.id} payment={payment} />
+                ))}
+              </View>
+            </Section>
+          </Animated.View>
         ) : null}
 
         {recentStudents.length > 0 ? (
-          <Section title="Recent students">
-            <View className="gap-3">
-              {recentStudents.map((student) => (
-                <StaffStudentRow key={student.id} student={student} />
-              ))}
-            </View>
-          </Section>
+          <Animated.View entering={reveal(2)}>
+            <Section title="Recent students">
+              <View className="gap-3">
+                {recentStudents.map((student) => (
+                  <StaffStudentRow key={student.id} student={student} />
+                ))}
+              </View>
+            </Section>
+          </Animated.View>
         ) : null}
       </ScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

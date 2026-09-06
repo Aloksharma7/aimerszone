@@ -1,14 +1,11 @@
 import { Stack } from "expo-router";
+import { STACK_HEADER_OPTIONS } from "@/constants/navigation";
 
 /** Native-stack push/back from the course list into a course's workspace — see docs/CODING-STANDARDS.md on navigation. */
 export default function CoursesStackLayout() {
   return (
     <Stack
-      screenOptions={{
-        headerStyle: { backgroundColor: "#172554" },
-        headerTintColor: "#ffffff",
-        headerTitleStyle: { fontWeight: "700" },
-      }}
+      screenOptions={STACK_HEADER_OPTIONS}
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="[enrollmentId]/index" options={{ title: "Course" }} />

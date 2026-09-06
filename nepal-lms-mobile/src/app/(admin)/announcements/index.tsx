@@ -1,12 +1,15 @@
-import { Feather } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ActivityIndicator, FlatList, Pressable, ScrollView, Switch, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { ActivityIndicator, FlatList, ScrollView, Switch, Text, TextInput, View } from "react-native";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { ChipGroup } from "@/components/chip-group";
+import { EmptyState } from "@/components/empty-state";
 import { DateTimeField } from "@/components/date-time-field";
 import { MetricTile } from "@/components/metric-tile";
 import { StatusBadge } from "@/components/status-badge";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import {
   createAdminAnnouncement,
@@ -105,7 +108,7 @@ export default function AdminAnnouncementsScreen() {
   const targets = audience === "course" ? (courses.data ?? []).map((c) => ({ id: c.id, label: c.title })) : audience === "batch" ? (batches.data?.items ?? []).map((b) => ({ id: b.id, label: b.title })) : audience === "role" ? roleOptions.map((r) => ({ id: r.value, label: r.label })) : [];
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["bottom"]}>
       <FlatList
         data={announcements.data?.items ?? []}
         keyExtractor={(item) => item.id}
@@ -115,8 +118,6 @@ export default function AdminAnnouncementsScreen() {
         onRefresh={() => announcements.refetch()}
         ListHeaderComponent={
           <View className="gap-4 pb-4 pt-6">
-            <Text className="text-2xl font-bold text-slate-950">Announcements</Text>
-
             {announcements.data ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View className="flex-row gap-3">
@@ -131,25 +132,9 @@ export default function AdminAnnouncementsScreen() {
               <Text className="text-base font-bold text-slate-950">Create announcement</Text>
               <Text className="text-xs text-slate-500">Private meeting and file links must never be pasted into the message.</Text>
 
-              <View className="gap-2">
-                <Text className="text-sm font-semibold text-slate-700">Title</Text>
-                <TextInput
-                  value={title}
-                  onChangeText={setTitle}
-                  maxLength={180}
-                  className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-                />
-              </View>
+              <TextField label="Title" value={title} onChangeText={setTitle} maxLength={180} />
 
-              <View className="gap-2">
-                <Text className="text-sm font-semibold text-slate-700">Summary (optional)</Text>
-                <TextInput
-                  value={summary}
-                  onChangeText={setSummary}
-                  maxLength={500}
-                  className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-                />
-              </View>
+              <TextField label="Summary (optional)" value={summary} onChangeText={setSummary} maxLength={500} />
 
               <View className="gap-2">
                 <Text className="text-sm font-semibold text-slate-700">Message</Text>
@@ -165,61 +150,26 @@ export default function AdminAnnouncementsScreen() {
 
               <View className="gap-2">
                 <Text className="text-sm font-semibold text-slate-700">Audience</Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {audienceOptions.map((option) => {
-                    const selected = audience === option.value;
-                    return (
-                      <Pressable
-                        key={option.value}
-                        onPress={() => {
-                          setAudience(option.value);
-                          setTargetId(null);
-                        }}
-                        className={`rounded-full border px-3.5 py-2 ${selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"}`}
-                      >
-                        <Text className={`text-sm font-medium ${selected ? "text-white" : "text-slate-700"}`}>{option.label}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                <ChipGroup
+                  options={audienceOptions}
+                  value={audience}
+                  onChange={(value) => {
+                    setAudience(value);
+                    setTargetId(null);
+                  }}
+                />
               </View>
 
               {targets.length > 0 ? (
                 <View className="gap-2">
                   <Text className="text-sm font-semibold text-slate-700">Target</Text>
-                  <View className="flex-row flex-wrap gap-2">
-                    {targets.map((target) => {
-                      const selected = targetId === target.id;
-                      return (
-                        <Pressable
-                          key={target.id}
-                          onPress={() => setTargetId(target.id)}
-                          className={`rounded-full border px-3.5 py-2 ${selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"}`}
-                        >
-                          <Text className={`text-sm font-medium ${selected ? "text-white" : "text-slate-700"}`}>{target.label}</Text>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
+                  <ChipGroup options={targets.map((t) => ({ value: t.id, label: t.label }))} value={targetId} onChange={setTargetId} />
                 </View>
               ) : null}
 
               <View className="gap-2">
                 <Text className="text-sm font-semibold text-slate-700">Channel</Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {channelOptions.map((option) => {
-                    const selected = channel === option.value;
-                    return (
-                      <Pressable
-                        key={option.value}
-                        onPress={() => setChannel(option.value)}
-                        className={`rounded-full border px-3.5 py-2 ${selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"}`}
-                      >
-                        <Text className={`text-sm font-medium ${selected ? "text-white" : "text-slate-700"}`}>{option.label}</Text>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                <ChipGroup options={channelOptions} value={channel} onChange={setChannel} />
               </View>
 
               <View className="gap-2">
@@ -241,17 +191,7 @@ export default function AdminAnnouncementsScreen() {
                 )}
               </View>
 
-              <View className="gap-2">
-                <Text className="text-sm font-semibold text-slate-700">Link (optional)</Text>
-                <TextInput
-                  value={link}
-                  onChangeText={setLink}
-                  autoCapitalize="none"
-                  placeholder="https://…"
-                  className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-                  placeholderTextColor="#94a3b8"
-                />
-              </View>
+              <TextField label="Link (optional)" value={link} onChangeText={setLink} autoCapitalize="none" placeholder="https://…" />
 
               <View className="flex-row items-center justify-between">
                 <Text className="text-sm font-semibold text-slate-700">Pin to top</Text>
@@ -264,17 +204,17 @@ export default function AdminAnnouncementsScreen() {
                 </View>
               ) : null}
 
-              <Pressable
+              <Button
+                label={scheduled ? "Schedule announcement" : "Publish now"}
+                loading={submit.isPending}
+                disabled={!valid}
+                icon="send"
+                size="lg"
                 onPress={() => {
                   setError(null);
                   submit.mutate();
                 }}
-                disabled={!valid || submit.isPending}
-                className="h-12 flex-row items-center justify-center gap-2 rounded-xl bg-brand-700 active:bg-brand-800 disabled:opacity-60"
-              >
-                {submit.isPending ? <ActivityIndicator color="#fff" /> : <Feather name="send" size={16} color="#fff" />}
-                <Text className="text-sm font-bold text-white">{scheduled ? "Schedule announcement" : "Publish now"}</Text>
-              </Pressable>
+              />
             </View>
 
             <Text className="text-sm font-bold text-slate-900">History</Text>
@@ -283,13 +223,11 @@ export default function AdminAnnouncementsScreen() {
         }
         ListEmptyComponent={
           announcements.isPending ? null : (
-            <View className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <Text className="text-sm text-slate-500">No announcements yet.</Text>
-            </View>
+            <EmptyState icon="volume-2" title="No announcements yet" description="Announcements you publish will appear here." />
           )
         }
       />
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

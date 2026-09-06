@@ -5,6 +5,7 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, Text, TextInput, Vie
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { confirmTwoFactorSetup, fetchAccountProfile, startTwoFactorSetup, type TwoFactorSetupStart } from "@/lib/data/account";
 
@@ -54,7 +55,7 @@ export default function TwoFactorScreen() {
 
   if (recoveryCodes) {
     return (
-      <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+      <AppScreen edges={["bottom"]}>
         <ScrollView className="flex-1" contentContainerClassName="gap-4 px-6 py-6">
           <View className="items-center rounded-2xl bg-brand-900 p-6">
             <Feather name="check-circle" size={32} color="#ffffff" />
@@ -72,7 +73,7 @@ export default function TwoFactorScreen() {
             ))}
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </AppScreen>
     );
   }
 
@@ -89,7 +90,7 @@ export default function TwoFactorScreen() {
 
   if (setupState) {
     return (
-      <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+      <AppScreen edges={["bottom"]}>
         <KeyboardAwareScrollView className="flex-1" contentContainerClassName="flex-grow gap-4 px-6 py-6" bottomOffset={24} keyboardShouldPersistTaps="handled">
           <Text className="text-sm text-slate-700">
             Add this key to your authenticator app (Google Authenticator, Authy, etc.), or tap below to open it directly if the app is installed.
@@ -136,7 +137,7 @@ export default function TwoFactorScreen() {
             {confirm.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-bold text-white">Confirm and enable</Text>}
           </Pressable>
         </KeyboardAwareScrollView>
-      </SafeAreaView>
+      </AppScreen>
     );
   }
 

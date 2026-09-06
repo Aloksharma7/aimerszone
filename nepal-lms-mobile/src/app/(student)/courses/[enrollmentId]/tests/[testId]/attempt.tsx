@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { Button } from "@/components/button";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { saveAttemptResponses, startAttempt, submitAttempt } from "@/lib/data/attempts";
 import type { Attempt, AttemptQuestion } from "@/types/lms";
@@ -100,9 +101,7 @@ export default function TestAttemptScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6">
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => router.back()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Go back</Text>
-        </Pressable>
+        <Button label="Go back" onPress={() => router.back()} fullWidth={false} />
       </SafeAreaView>
     );
   }

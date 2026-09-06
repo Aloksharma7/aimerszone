@@ -3,8 +3,9 @@ import { FlashList } from "@shopify/flash-list";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchAuditLogPage } from "@/lib/data/admin";
 import type { AuditLogEntry } from "@/types/lms";
@@ -37,10 +38,8 @@ export default function AdminAuditLogScreen() {
   const items = entries.data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["bottom"]}>
       <View className="gap-3 px-5 pt-6">
-        <Text className="text-2xl font-bold text-slate-950">Audit log</Text>
-
         <View className="h-11 flex-row items-center gap-2 rounded-xl border border-slate-300 bg-white px-3">
           <Feather name="search" size={16} color="#94a3b8" />
           <TextInput
@@ -98,14 +97,14 @@ export default function AdminAuditLogScreen() {
             if (entries.hasNextPage && !entries.isFetchingNextPage) entries.fetchNextPage();
           }}
           ListEmptyComponent={
-            <View className="mx-5 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <Text className="text-sm text-slate-500">No matching audit entries.</Text>
+            <View className="mx-5">
+              <EmptyState icon="search" title="No matching entries" description="Try a different search term or filter." />
             </View>
           }
           ListFooterComponent={entries.isFetchingNextPage ? <ActivityIndicator className="py-4" color="#1d4ed8" /> : null}
         />
       )}
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

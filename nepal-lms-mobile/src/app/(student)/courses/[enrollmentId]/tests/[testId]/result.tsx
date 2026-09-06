@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchAttemptResult } from "@/lib/data/attempts";
 
@@ -34,7 +35,7 @@ export default function TestResultScreen() {
   const reattemptTestId = data.reattemptTestId;
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <View className="flex-1 gap-4 px-6 py-6">
         <View className={`items-center rounded-2xl p-6 ${data.releaseState === "released" ? (passed ? "bg-success-100" : "bg-danger-100") : "bg-slate-100"}`}>
           <Feather
@@ -79,7 +80,7 @@ export default function TestResultScreen() {
           </Pressable>
         </View>
       </View>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

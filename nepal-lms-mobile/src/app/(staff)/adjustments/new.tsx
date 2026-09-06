@@ -1,10 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View } from "react-native";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { ChipGroup } from "@/components/chip-group";
 import { PaymentPicker, SelectedPaymentCard } from "@/components/payment-picker";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { createAdjustment, type NewAdjustmentInput } from "@/lib/data/staff";
 import type { PaymentQueueItem } from "@/types/lms";
@@ -46,49 +49,24 @@ export default function NewAdjustmentScreen() {
   });
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={90}>
         <ScrollView contentContainerClassName="gap-4 px-5 py-6">
           {payment ? <SelectedPaymentCard payment={payment} onChange={() => setPayment(null)} /> : <PaymentPicker onSelect={setPayment} />}
 
           <View className="gap-2">
             <Text className="text-sm font-semibold text-slate-700">Adjustment type</Text>
-            <View className="flex-row flex-wrap gap-2">
-              {typeOptions.map((option) => {
-                const selected = type === option.value;
-                return (
-                  <Pressable
-                    key={option.value}
-                    onPress={() => setType(option.value)}
-                    className={`rounded-full border px-3.5 py-2 ${selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"}`}
-                  >
-                    <Text className={`text-sm font-medium ${selected ? "text-white" : "text-slate-700"}`}>{option.label}</Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+            <ChipGroup options={typeOptions} value={type} onChange={setType} />
           </View>
 
-          <View className="gap-2">
-            <Text className="text-sm font-semibold text-slate-700">Amount (NPR)</Text>
-            <TextInput
-              value={amount}
-              onChangeText={setAmount}
-              keyboardType="number-pad"
-              className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-            />
-          </View>
+          <TextField label="Amount (NPR)" value={amount} onChangeText={setAmount} keyboardType="number-pad" />
 
-          <View className="gap-2">
-            <Text className="text-sm font-semibold text-slate-700">Authorization reference</Text>
-            <TextInput
-              value={authorizationReference}
-              onChangeText={setAuthorizationReference}
-              placeholder="Approval ticket, policy reference or manager authorization"
-              className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-              placeholderTextColor="#94a3b8"
-            />
-          </View>
+          <TextField
+            label="Authorization reference"
+            value={authorizationReference}
+            onChangeText={setAuthorizationReference}
+            placeholder="Approval ticket, policy reference or manager authorization"
+          />
 
           <View className="gap-2">
             <Text className="text-sm font-semibold text-slate-700">Permanent reason</Text>
@@ -107,18 +85,18 @@ export default function NewAdjustmentScreen() {
             </View>
           ) : null}
 
-          <Pressable
+          <Button
+            label="Submit adjustment"
+            loading={submit.isPending}
+            disabled={!valid}
+            size="lg"
             onPress={() => {
               setError(null);
               submit.mutate();
             }}
-            disabled={!valid || submit.isPending}
-            className="h-12 flex-row items-center justify-center rounded-xl bg-brand-700 active:bg-brand-800 disabled:opacity-60"
-          >
-            {submit.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-bold text-white">Submit adjustment</Text>}
-          </Pressable>
+          />
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

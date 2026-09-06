@@ -12,29 +12,55 @@ import { useDrawerStore } from "@/lib/ui/drawer-store";
 const appIcon = require("@/assets/images/icon.png");
 
 type DrawerItem = { icon: keyof typeof Feather.glyphMap; label: string; href: string };
+type DrawerSection = { label?: string; items: DrawerItem[] };
 
-const itemsByRole: Record<PortalRole, DrawerItem[]> = {
-  student: [{ icon: "help-circle", label: "Support", href: "/(student)/support" }],
-  teacher: [{ icon: "volume-2", label: "Announcements", href: "/(teacher)/dashboard/announcements" }],
+/**
+ * Admin's 10 destinations used to be one flat, ungrouped list — Audit Log
+ * sitting next to FAQs reflects build order, not how an admin thinks about
+ * their job. Grouped by what they're actually for; every other role's list
+ * is short enough that grouping wouldn't add anything.
+ */
+const sectionsByRole: Record<PortalRole, DrawerSection[]> = {
+  student: [{ items: [{ icon: "help-circle", label: "Support", href: "/(student)/support" }] }],
+  teacher: [{ items: [{ icon: "volume-2", label: "Announcements", href: "/(teacher)/dashboard/announcements" }] }],
   staff: [
-    { icon: "book-open", label: "New course", href: "/(staff)/courses/new" },
-    { icon: "life-buoy", label: "Support tickets", href: "/(staff)/support" },
-    { icon: "repeat", label: "Adjustments", href: "/(staff)/adjustments" },
-    { icon: "rotate-ccw", label: "Refunds", href: "/(staff)/refunds" },
-    { icon: "upload-cloud", label: "My submissions", href: "/(staff)/submissions" },
-    { icon: "file-text", label: "Receipts", href: "/(staff)/receipts" },
+    {
+      items: [
+        { icon: "book-open", label: "New course", href: "/(staff)/courses/new" },
+        { icon: "life-buoy", label: "Support tickets", href: "/(staff)/support" },
+        { icon: "repeat", label: "Adjustments", href: "/(staff)/adjustments" },
+        { icon: "rotate-ccw", label: "Refunds", href: "/(staff)/refunds" },
+        { icon: "upload-cloud", label: "My submissions", href: "/(staff)/submissions" },
+        { icon: "file-text", label: "Receipts", href: "/(staff)/receipts" },
+      ],
+    },
   ],
   admin: [
-    { icon: "book-open", label: "Courses", href: "/(admin)/courses" },
-    { icon: "calendar", label: "Batches", href: "/(admin)/batches" },
-    { icon: "video", label: "Classes", href: "/(admin)/classes" },
-    { icon: "folder", label: "Categories", href: "/(admin)/categories" },
-    { icon: "volume-2", label: "Announcements", href: "/(admin)/announcements" },
-    { icon: "list", label: "Audit log", href: "/(admin)/audit-log" },
-    { icon: "help-circle", label: "FAQs", href: "/(admin)/faqs" },
-    { icon: "link", label: "Integrations", href: "/(admin)/integrations" },
-    { icon: "shield", label: "Roles", href: "/(admin)/roles" },
-    { icon: "settings", label: "Platform settings", href: "/(admin)/settings" },
+    {
+      label: "Content",
+      items: [
+        { icon: "book-open", label: "Courses", href: "/(admin)/courses" },
+        { icon: "calendar", label: "Batches", href: "/(admin)/batches" },
+        { icon: "video", label: "Classes", href: "/(admin)/classes" },
+        { icon: "folder", label: "Categories", href: "/(admin)/categories" },
+      ],
+    },
+    {
+      label: "Communication",
+      items: [
+        { icon: "volume-2", label: "Announcements", href: "/(admin)/announcements" },
+        { icon: "help-circle", label: "FAQs", href: "/(admin)/faqs" },
+      ],
+    },
+    {
+      label: "System",
+      items: [
+        { icon: "link", label: "Integrations", href: "/(admin)/integrations" },
+        { icon: "shield", label: "Roles", href: "/(admin)/roles" },
+        { icon: "settings", label: "Platform settings", href: "/(admin)/settings" },
+        { icon: "list", label: "Audit log", href: "/(admin)/audit-log" },
+      ],
+    },
   ],
 };
 
@@ -56,7 +82,7 @@ export function SideDrawer() {
 
   if (!user) return null;
   const role = preferredPortalRole(user);
-  const items = itemsByRole[role];
+  const sections = sectionsByRole[role];
 
   function go(href: string) {
     close();
@@ -82,16 +108,23 @@ export function SideDrawer() {
             </Pressable>
           </View>
 
-          <View className="flex-1 gap-1 px-3 py-3">
-            {items.map((item) => (
-              <Pressable
-                key={item.href}
-                onPress={() => go(item.href)}
-                className="flex-row items-center gap-3 rounded-xl px-3 py-3 active:bg-slate-100"
-              >
-                <Feather name={item.icon} size={18} color="#1d4ed8" />
-                <Text className="text-sm font-semibold text-slate-800">{item.label}</Text>
-              </Pressable>
+          <View className="flex-1 gap-4 px-3 py-3">
+            {sections.map((section, index) => (
+              <View key={section.label ?? index} className="gap-1">
+                {section.label ? (
+                  <Text className="px-3 pb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">{section.label}</Text>
+                ) : null}
+                {section.items.map((item) => (
+                  <Pressable
+                    key={item.href}
+                    onPress={() => go(item.href)}
+                    className="flex-row items-center gap-3 rounded-xl px-3 py-3 active:bg-slate-100"
+                  >
+                    <Feather name={item.icon} size={18} color="#1d4ed8" />
+                    <Text className="text-sm font-semibold text-slate-800">{item.label}</Text>
+                  </Pressable>
+                ))}
+              </View>
             ))}
           </View>
 

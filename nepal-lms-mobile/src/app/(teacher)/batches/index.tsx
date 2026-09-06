@@ -1,8 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { FlatList, Pressable, Text, View } from "react-native";
+import { FlatList, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
 import { BatchCard } from "@/components/batch-card";
+import { ScreenHeader } from "@/components/screen-header";
 import { ListSkeleton } from "@/components/skeleton";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchTeacherBatches } from "@/lib/data/teacher";
@@ -12,9 +15,9 @@ export default function TeacherBatchesScreen() {
 
   if (batches.isPending) {
     return (
-      <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+      <AppScreen edges={["top"]}>
         <ListSkeleton />
-      </SafeAreaView>
+      </AppScreen>
     );
   }
 
@@ -23,17 +26,15 @@ export default function TeacherBatchesScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["top"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => batches.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => batches.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <View className="px-5 pt-6">
-        <Text className="text-2xl font-bold text-slate-950">My batches</Text>
+        <ScreenHeader title="My batches" />
       </View>
       <FlatList
         data={batches.data}
@@ -48,6 +49,6 @@ export default function TeacherBatchesScreen() {
           </View>
         }
       />
-    </SafeAreaView>
+    </AppScreen>
   );
 }

@@ -4,6 +4,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
 import { ProgressBar } from "@/components/progress-bar";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchCourseDetail } from "@/lib/data/course";
@@ -38,9 +40,7 @@ export default function CourseOverviewScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => course.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => course.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
@@ -48,7 +48,7 @@ export default function CourseOverviewScreen() {
   const data = course.data;
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <ScrollView contentContainerClassName="gap-6 px-5 py-6">
         <View>
           <Text className="text-xl font-bold text-slate-950">{data.courseTitle}</Text>
@@ -91,7 +91,7 @@ export default function CourseOverviewScreen() {
           ))}
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

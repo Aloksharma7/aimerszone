@@ -1,8 +1,11 @@
 import { FlashList } from "@shopify/flash-list";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/button";
 import { ReceiptCard } from "@/components/receipt-card";
 import { ListSkeleton } from "@/components/skeleton";
 import { isNormalizedApiError } from "@/lib/api/contracts";
@@ -18,20 +21,18 @@ export default function StudentReceipts() {
 
   if (receipts.isPending) {
     return (
-      <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+      <AppScreen edges={["bottom"]}>
         <ListSkeleton withThumbnail={false} />
-      </SafeAreaView>
+      </AppScreen>
     );
   }
 
   if (receipts.isError) {
     const message = isNormalizedApiError(receipts.error) ? receipts.error.message : "Something went wrong.";
     return (
-      <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["top"]}>
+      <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => receipts.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => receipts.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
@@ -39,10 +40,7 @@ export default function StudentReceipts() {
   const items = receipts.data.pages.flatMap((page) => page.items);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
-      <View className="px-5 pt-6">
-        <Text className="text-2xl font-bold text-slate-950">Receipts</Text>
-      </View>
+    <AppScreen edges={["bottom"]}>
       <FlashList
         data={items}
         keyExtractor={(item) => item.id}
@@ -59,12 +57,12 @@ export default function StudentReceipts() {
           if (receipts.hasNextPage && !receipts.isFetchingNextPage) receipts.fetchNextPage();
         }}
         ListEmptyComponent={
-          <View className="mx-5 rounded-2xl border border-slate-100 bg-white shadow-sm p-5">
-            <Text className="text-sm text-slate-500">No receipts have been issued yet.</Text>
+          <View className="mx-5">
+            <EmptyState icon="file" title="No receipts yet" description="A receipt appears here once one of your payments is approved." />
           </View>
         }
         ListFooterComponent={receipts.isFetchingNextPage ? <ActivityIndicator className="py-4" color="#1d4ed8" /> : null}
       />
-    </SafeAreaView>
+    </AppScreen>
   );
 }

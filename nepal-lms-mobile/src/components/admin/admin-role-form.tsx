@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Pressable, Text, TextInput, View } from "react-native";
+import { Text, TextInput, View } from "react-native";
 
+import { Checkbox } from "@/components/checkbox";
+import { TextField } from "@/components/text-field";
 import { fetchAdminPermissions, type AdminRoleInput } from "@/lib/data/admin";
 import type { AdminPermission, AdminRole } from "@/types/lms";
 
@@ -59,14 +61,7 @@ export function AdminRoleFormFields({
 
   return (
     <View className="gap-4">
-      <View className="gap-2">
-        <Text className="text-sm font-semibold text-slate-700">Role name</Text>
-        <TextInput
-          value={values.name}
-          onChangeText={(value) => update("name", value)}
-          className="h-11 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-        />
-      </View>
+      <TextField label="Role name" value={values.name} onChangeText={(value) => update("name", value)} />
 
       <View className="gap-2">
         <Text className="text-sm font-semibold text-slate-700">Description (optional)</Text>
@@ -84,24 +79,15 @@ export function AdminRoleFormFields({
         {[...groups.entries()].map(([group, items]) => (
           <View key={group} className="gap-1 rounded-xl border border-slate-200 bg-white p-2">
             <Text className="px-2 pt-1 text-xs font-bold uppercase tracking-wide text-slate-500">{group}</Text>
-            {items.map((permission) => {
-              const checked = values.permissions.includes(permission.key);
-              return (
-                <Pressable
-                  key={permission.id}
-                  onPress={() => togglePermission(permission.key)}
-                  className="flex-row items-center gap-3 rounded-lg px-2 py-2 active:bg-slate-50"
-                >
-                  <View className={`h-5 w-5 items-center justify-center rounded border ${checked ? "border-brand-700 bg-brand-700" : "border-slate-300"}`}>
-                    {checked ? <Text className="text-xs font-bold text-white">✓</Text> : null}
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-sm text-slate-800">{permission.key}</Text>
-                    {permission.description ? <Text className="text-xs text-slate-500">{permission.description}</Text> : null}
-                  </View>
-                </Pressable>
-              );
-            })}
+            {items.map((permission) => (
+              <Checkbox
+                key={permission.id}
+                checked={values.permissions.includes(permission.key)}
+                onToggle={() => togglePermission(permission.key)}
+                label={permission.key}
+                description={permission.description ?? undefined}
+              />
+            ))}
           </View>
         ))}
       </View>

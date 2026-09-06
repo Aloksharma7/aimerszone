@@ -4,6 +4,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchTestLaunch, startAttempt } from "@/lib/data/attempts";
 
@@ -35,9 +37,7 @@ export default function TestLaunchScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => launch.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => launch.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
@@ -46,7 +46,7 @@ export default function TestLaunchScreen() {
   const minutes = Math.round(data.durationSeconds / 60);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <View className="flex-1 gap-4 px-6 py-6">
         <View>
           <Text className="text-xl font-bold text-slate-950">{data.title}</Text>
@@ -84,7 +84,7 @@ export default function TestLaunchScreen() {
           {start.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-bold text-white">Start test</Text>}
         </Pressable>
       </View>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

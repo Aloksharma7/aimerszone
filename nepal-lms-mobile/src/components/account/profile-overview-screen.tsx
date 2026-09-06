@@ -1,9 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { ScreenHeader } from "@/components/screen-header";
 import { SettingsRow } from "@/components/settings-row";
 import { ListSkeleton } from "@/components/skeleton";
 import { SignOutButton } from "@/components/sign-out-button";
@@ -12,15 +15,23 @@ import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchAccountProfile } from "@/lib/data/account";
 
 /** Reused by every portal's Profile tab — Account endpoints are role-agnostic (see app/Http/Controllers/Api/V1/Account/*.php). */
-export function ProfileOverviewScreen({ basePath, supportPath }: { basePath: string; supportPath?: string }) {
+export function ProfileOverviewScreen({
+  basePath,
+  supportPath,
+  receiptsPath,
+}: {
+  basePath: string;
+  supportPath?: string;
+  receiptsPath?: string;
+}) {
   const router = useRouter();
   const profile = useQuery({ queryKey: ["account", "profile"], queryFn: fetchAccountProfile });
 
   if (profile.isPending) {
     return (
-      <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+      <AppScreen edges={["top"]}>
         <ListSkeleton count={5} withThumbnail={false} />
-      </SafeAreaView>
+      </AppScreen>
     );
   }
 
@@ -29,9 +40,7 @@ export function ProfileOverviewScreen({ basePath, supportPath }: { basePath: str
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["top"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => profile.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => profile.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
@@ -45,8 +54,10 @@ export function ProfileOverviewScreen({ basePath, supportPath }: { basePath: str
     .join("");
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <ScrollView contentContainerClassName="gap-6 px-5 py-6">
+        <ScreenHeader title="Profile" />
+
         <View className="items-center gap-3 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm">
           {data.avatarUrl ? (
             <Image
@@ -82,6 +93,7 @@ export function ProfileOverviewScreen({ basePath, supportPath }: { basePath: str
             detail={`${data.sessions.length} device${data.sessions.length === 1 ? "" : "s"} signed in`}
             onPress={() => router.push(`${basePath}/sessions` as never)}
           />
+          {receiptsPath ? <SettingsRow icon="file" label="Receipts" onPress={() => router.push(receiptsPath as never)} /> : null}
           {supportPath ? <SettingsRow icon="help-circle" label="Help & support" onPress={() => router.push(supportPath as never)} /> : null}
         </View>
 
@@ -89,6 +101,6 @@ export function ProfileOverviewScreen({ basePath, supportPath }: { basePath: str
           <SignOutButton />
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

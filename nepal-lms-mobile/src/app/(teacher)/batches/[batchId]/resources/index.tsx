@@ -4,6 +4,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { EmptyState } from "@/components/empty-state";
+import { Button } from "@/components/button";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchTeacherResources } from "@/lib/data/teacher";
 import type { TeacherResource } from "@/types/lms";
@@ -26,15 +29,13 @@ export default function TeacherResourcesScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => resources.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => resources.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <FlatList
         data={resources.data}
         keyExtractor={(item) => item.id}
@@ -50,12 +51,10 @@ export default function TeacherResourcesScreen() {
           </Pressable>
         }
         ListEmptyComponent={
-          <View className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-            <Text className="text-sm text-slate-500">No resources have been uploaded yet.</Text>
-          </View>
+          <EmptyState icon="download" title="No resources yet" description="Upload a resource to make it available to students in this batch." />
         }
       />
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

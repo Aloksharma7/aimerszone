@@ -5,9 +5,9 @@ import { useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { SafeAreaView } from "react-native-safe-area-context";
 import { z } from "zod";
 
+import { AppScreen } from "@/components/app-screen";
 import { FormField } from "@/components/form-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { createStaffStudent } from "@/lib/data/staff";
@@ -48,7 +48,7 @@ export default function NewStudentScreen() {
 
   if (created) {
     return (
-      <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+      <AppScreen edges={["bottom"]}>
         <View className="flex-1 gap-4 px-6 py-6">
           <View className="items-center rounded-2xl bg-brand-900 p-6">
             <Text className="text-lg font-bold text-white">Student created</Text>
@@ -74,12 +74,12 @@ export default function NewStudentScreen() {
             <Text className="text-base font-bold text-slate-700">Done</Text>
           </Pressable>
         </View>
-      </SafeAreaView>
+      </AppScreen>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAwareScrollView className="flex-1" contentContainerClassName="flex-grow gap-4 px-6 py-6" bottomOffset={24} keyboardShouldPersistTaps="handled">
         <FormField control={control} name="name" label="Full name" error={errors.name?.message} editable={!create.isPending} />
         <FormField control={control} name="mobile" label="Mobile number" error={errors.mobile?.message} keyboardType="phone-pad" editable={!create.isPending} />
@@ -139,6 +139,6 @@ export default function NewStudentScreen() {
           {create.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-bold text-white">Create student</Text>}
         </Pressable>
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }

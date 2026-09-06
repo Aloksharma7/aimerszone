@@ -4,6 +4,8 @@ import { useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Linking, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { downloadReceipt, fetchReceipt } from "@/lib/data/student";
 
@@ -28,9 +30,7 @@ export default function ReceiptDetailScreen() {
     return (
       <SafeAreaView className="flex-1 items-center justify-center bg-canvas px-6" edges={["bottom"]}>
         <Text className="text-center text-sm text-slate-600">{message}</Text>
-        <Pressable onPress={() => receipt.refetch()} className="mt-4 h-11 items-center justify-center rounded-xl bg-brand-700 px-5 active:bg-brand-800">
-          <Text className="text-sm font-semibold text-white">Try again</Text>
-        </Pressable>
+        <Button label="Try again" onPress={() => receipt.refetch()} fullWidth={false} />
       </SafeAreaView>
     );
   }
@@ -38,7 +38,7 @@ export default function ReceiptDetailScreen() {
   const data = receipt.data;
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <ScrollView contentContainerClassName="gap-6 px-5 py-6">
         <View className="items-center rounded-2xl bg-brand-900 p-6">
           <Feather name="check-circle" size={32} color="#ffffff" />
@@ -75,7 +75,7 @@ export default function ReceiptDetailScreen() {
           </Text>
         ) : null}
       </ScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

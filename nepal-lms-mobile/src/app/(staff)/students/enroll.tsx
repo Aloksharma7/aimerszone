@@ -1,11 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, ScrollView, Text, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { ChipGroup } from "@/components/chip-group";
 import { type CapturedProof, ProofCapture } from "@/components/proof-capture";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchPaymentMethodOptions, fetchStaffCourseOptions, fetchStaffStudentDetail, submitStaffEnrollment } from "@/lib/data/staff";
 import type { BatchOption, CourseOption, PaymentMethodOption } from "@/types/lms";
@@ -71,14 +75,14 @@ export default function EnrollStudentScreen() {
   const canSubmit = Boolean(courseId && methodId && amount.trim() !== "" && payerName.trim().length >= 2 && !submit.isPending);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAwareScrollView className="flex-1" contentContainerClassName="flex-grow gap-4 px-6 py-6" bottomOffset={24} keyboardShouldPersistTaps="handled">
         <View className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
           <Text className="text-xs text-slate-500">Enrolling</Text>
           <Text className="mt-0.5 text-base font-bold text-slate-950">{student.data.name}</Text>
         </View>
 
-        <ChipPicker
+        <LabeledChipGroup
           label="Course"
           options={courses.data.map((course: CourseOption) => ({ value: course.id, label: course.title }))}
           value={courseId}
@@ -89,7 +93,7 @@ export default function EnrollStudentScreen() {
         />
 
         {selectedCourse && selectedCourse.batches.length > 0 ? (
-          <ChipPicker
+          <LabeledChipGroup
             label="Batch"
             options={selectedCourse.batches.map((batch: BatchOption) => ({ value: batch.id, label: batch.title }))}
             value={batchId}
@@ -101,7 +105,7 @@ export default function EnrollStudentScreen() {
           />
         ) : null}
 
-        <ChipPicker
+        <LabeledChipGroup
           label="Payment method"
           options={methods.data.map((method: PaymentMethodOption) => ({ value: method.id, label: method.name }))}
           value={methodId}
@@ -109,36 +113,13 @@ export default function EnrollStudentScreen() {
         />
 
         <View>
-          <Text className="mb-1.5 text-sm font-semibold text-slate-700">Amount paid (Rs.)</Text>
-          <TextInput
-            className="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-            value={amount}
-            onChangeText={setAmount}
-            keyboardType="number-pad"
-            editable={!submit.isPending}
-          />
+          <TextField label="Amount paid (Rs.)" value={amount} onChangeText={setAmount} keyboardType="number-pad" editable={!submit.isPending} />
           <Text className="mt-1 text-xs text-slate-400">0 records a full scholarship or fee waiver.</Text>
         </View>
 
-        <View>
-          <Text className="mb-1.5 text-sm font-semibold text-slate-700">Payer name</Text>
-          <TextInput
-            className="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-            value={payerName}
-            onChangeText={setPayerName}
-            editable={!submit.isPending}
-          />
-        </View>
+        <TextField label="Payer name" value={payerName} onChangeText={setPayerName} editable={!submit.isPending} />
 
-        <View>
-          <Text className="mb-1.5 text-sm font-semibold text-slate-700">Transaction reference (optional)</Text>
-          <TextInput
-            className="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-            value={reference}
-            onChangeText={setReference}
-            editable={!submit.isPending}
-          />
-        </View>
+        <TextField label="Transaction reference (optional)" value={reference} onChangeText={setReference} editable={!submit.isPending} />
 
         <ProofCapture value={proof} onChange={setProof} />
 
@@ -160,22 +141,22 @@ export default function EnrollStudentScreen() {
           </View>
         ) : null}
 
-        <Pressable
+        <Button
+          label="Submit enrollment"
+          loading={submit.isPending}
+          disabled={!canSubmit}
+          size="lg"
           onPress={() => {
             setError(null);
             submit.mutate();
           }}
-          disabled={!canSubmit}
-          className="mt-2 h-12 flex-row items-center justify-center rounded-xl bg-brand-700 active:bg-brand-800 disabled:opacity-60"
-        >
-          {submit.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-bold text-white">Submit enrollment</Text>}
-        </Pressable>
+        />
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 
-function ChipPicker({
+function LabeledChipGroup({
   label,
   options,
   value,
@@ -190,20 +171,7 @@ function ChipPicker({
     <View>
       <Text className="mb-1.5 text-sm font-semibold text-slate-700">{label}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View className="flex-row gap-2">
-          {options.map((option) => {
-            const selected = value === option.value;
-            return (
-              <Pressable
-                key={option.value}
-                onPress={() => onChange(option.value)}
-                className={`rounded-full border px-3.5 py-2 ${selected ? "border-brand-700 bg-brand-700" : "border-slate-300 bg-white"}`}
-              >
-                <Text className={`text-sm font-medium ${selected ? "text-white" : "text-slate-700"}`}>{option.label}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
+        <ChipGroup<string | null> options={options} value={value} onChange={(next) => next && onChange(next)} />
       </ScrollView>
     </View>
   );

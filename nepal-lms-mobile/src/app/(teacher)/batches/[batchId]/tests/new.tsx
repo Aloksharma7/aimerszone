@@ -2,10 +2,12 @@ import { Feather } from "@expo/vector-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
+import { Button } from "@/components/button";
+import { TextField } from "@/components/text-field";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { createTeacherTest } from "@/lib/data/teacher";
 
@@ -165,17 +167,9 @@ export default function NewTestScreen() {
   const canSubmit = Boolean(title.trim().length >= 3 && questions.length > 0 && !submit.isPending);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["bottom"]}>
+    <AppScreen edges={["bottom"]}>
       <KeyboardAwareScrollView className="flex-1" contentContainerClassName="flex-grow gap-4 px-6 py-6" bottomOffset={24} keyboardShouldPersistTaps="handled">
-        <View>
-          <Text className="mb-1.5 text-sm font-semibold text-slate-700">Title</Text>
-          <TextInput
-            className="h-12 rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-900"
-            value={title}
-            onChangeText={setTitle}
-            editable={!submit.isPending}
-          />
-        </View>
+        <TextField label="Title" value={title} onChangeText={setTitle} editable={!submit.isPending} />
 
         <View className="flex-row gap-3">
           <NumberField label="Duration (min)" value={duration} onChange={setDuration} />
@@ -217,22 +211,10 @@ export default function NewTestScreen() {
           </View>
         ) : null}
 
-        <Pressable
-          onPress={() => create(true)}
-          disabled={!canSubmit}
-          className="mt-2 h-12 flex-row items-center justify-center rounded-xl bg-brand-700 active:bg-brand-800 disabled:opacity-60"
-        >
-          {submit.isPending ? <ActivityIndicator color="#fff" /> : <Text className="text-base font-bold text-white">Create and publish</Text>}
-        </Pressable>
-        <Pressable
-          onPress={() => create(false)}
-          disabled={!canSubmit}
-          className="h-12 flex-row items-center justify-center rounded-xl border border-slate-300 active:bg-slate-100 disabled:opacity-60"
-        >
-          <Text className="text-base font-bold text-slate-700">Save as draft</Text>
-        </Pressable>
+        <Button label="Create and publish" loading={submit.isPending} disabled={!canSubmit} size="lg" onPress={() => create(true)} />
+        <Button label="Save as draft" variant="secondary" disabled={!canSubmit} size="lg" onPress={() => create(false)} />
       </KeyboardAwareScrollView>
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 

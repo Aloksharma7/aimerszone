@@ -1,8 +1,8 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
 import { MetricTile } from "@/components/metric-tile";
 import { PaymentQueueCard } from "@/components/payment-queue-card";
 import { isNormalizedApiError } from "@/lib/api/contracts";
@@ -31,7 +31,7 @@ export default function StaffSubmissionsScreen() {
   const total = submissions.data?.pages[0]?.total ?? 0;
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <View className="gap-3 px-5 pt-6">
         <Text className="text-2xl font-bold text-slate-950">My submissions</Text>
 
@@ -96,6 +96,6 @@ export default function StaffSubmissionsScreen() {
           ListFooterComponent={submissions.isFetchingNextPage ? <ActivityIndicator className="py-4" color="#1d4ed8" /> : null}
         />
       )}
-    </SafeAreaView>
+    </AppScreen>
   );
 }

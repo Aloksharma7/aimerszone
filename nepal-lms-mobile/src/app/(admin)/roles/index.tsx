@@ -2,8 +2,8 @@ import { Feather } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
+import { AppScreen } from "@/components/app-screen";
 import { isNormalizedApiError } from "@/lib/api/contracts";
 import { fetchAdminRoles } from "@/lib/data/admin";
 import type { AdminRole } from "@/types/lms";
@@ -13,7 +13,7 @@ export default function AdminRolesScreen() {
   const roles = useQuery({ queryKey: ["admin", "roles"], queryFn: fetchAdminRoles });
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={["top"]}>
+    <AppScreen edges={["top"]}>
       <View className="flex-row items-center justify-between px-5 pb-3 pt-6">
         <Text className="text-2xl font-bold text-slate-950">Roles</Text>
         <Pressable
@@ -46,7 +46,7 @@ export default function AdminRolesScreen() {
           onRefresh={() => roles.refetch()}
         />
       )}
-    </SafeAreaView>
+    </AppScreen>
   );
 }
 
