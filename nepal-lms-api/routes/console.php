@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Schedule;
 Schedule::command(FinalizeExpiredAttempts::class)->everyMinute()->withoutOverlapping();
 
 // Gives a failed meeting another chance well before students try to join.
+// Requires the system cron entry `* * * * * php artisan schedule:run` on the
+// VPS — see deploy/README.md — or this (and everyMinute() above) never fires.
 Schedule::command(SyncZoomSessions::class)->everyFifteenMinutes()->withoutOverlapping();
 
 // Warns before ExpireEnrollments runs, not after — a student whose access

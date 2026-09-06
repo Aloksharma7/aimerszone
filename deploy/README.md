@@ -51,7 +51,19 @@ needs a real system cron entry — neither PM2 nor systemd replaces that.
 Everything below reflects what's *actually* on this VPS, confirmed while
 fixing the first deploy — not the generic assumption this file started with.
 
-### 1. Let the deploy user restart the web service without a password
+### 1. GitHub repo secrets (Settings → Secrets and variables → Actions)
+
+| Secret        | Value                                                        |
+|---------------|---------------------------------------------------------------|
+| `VPS_HOST`    | the VPS's **real public IP or hostname** (`103.235.196.98`) — **not** a Tailscale IP (`100.x.x.x`); GitHub's runners aren't on your tailnet and can't reach one |
+| `VPS_USER`    | `deploy`                                                       |
+| `VPS_SSH_KEY` | a private key whose public half is in `deploy`'s `~/.ssh/authorized_keys` on the VPS |
+
+Port 22 is already open to the internet on this VPS (`sudo ufw status` shows
+`22/tcp ALLOW IN Anywhere`), so the real public IP works directly — no extra
+firewall change needed.
+
+### 2. Let the deploy user restart the web service without a password
 
 GitHub Actions SSHes in as `deploy` and needs `deploy-web.sh` to run
 `sudo systemctl restart aimerszone-next` non-interactively. Scope the sudo
@@ -67,7 +79,7 @@ Add this single line, then save:
 deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart aimerszone-next
 ```
 
-### 2. Create the frontend's production env file
+### 3. Create the frontend's production env file
 
 This is the actual root cause of the first production incident: nothing had
 ever told the Next.js app where the API lives, so it fell back to
@@ -112,7 +124,7 @@ npm run build
 sudo systemctl restart aimerszone-next
 ```
 
-### 3. Check the API's session/CORS config matches this same-origin setup
+### 4. Check the API's session/CORS config matches this same-origin setup
 
 Because the browser only ever talks to `aimerszone.edu.np` (Next.js proxies
 API calls to `api.aimerszone.edu.np` server-side, invisibly to the browser),
@@ -145,7 +157,7 @@ php artisan config:clear
 php artisan config:cache
 ```
 
-### 4. Start the queue worker under PM2
+### 5. Start the queue worker under PM2
 
 The queue worker has never run in production before this setup — confirm
 with `ps aux | grep queue:work` (expect nothing) before starting it:
@@ -158,7 +170,7 @@ pm2 save
 pm2 startup       # run the sudo command it prints, once, so PM2 survives a reboot
 ```
 
-### 5. Confirm the scheduler cron entry exists
+### 6. Confirm the scheduler cron entry exists
 
 ```bash
 crontab -l | grep schedule:run
@@ -174,7 +186,7 @@ crontab -e
 * * * * * cd /var/www/myapp/api && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-### 6. Test it
+### 7. Test it
 
 Push a small change under `nepal-lms-api/` or `nepal-lms-frontend/` to
 `main` and watch the run under the repo's **Actions** tab on GitHub. Then
