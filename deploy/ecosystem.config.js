@@ -4,19 +4,12 @@
 // Deploy scripts only ever `pm2 restart <name>` afterward — they never
 // re-register these definitions, so editing this file requires re-running
 // `pm2 start deploy/ecosystem.config.js` by hand on the VPS to pick it up.
+//
+// The web app is NOT here: it's owned by the aimerszone-next systemd unit,
+// which already existed on this VPS before this file did. PM2 only manages
+// the one process this VPS had nothing else running: the queue worker.
 module.exports = {
   apps: [
-    {
-      name: "web",
-      // Symlink -> repo/nepal-lms-frontend/.next/standalone (see deploy/README.md)
-      cwd: "/var/www/myapp/web",
-      script: "server.js",
-      env: {
-        NODE_ENV: "production",
-        PORT: 3000,
-        HOSTNAME: "127.0.0.1",
-      },
-    },
     {
       name: "api-queue",
       // Symlink -> repo/nepal-lms-api (see deploy/README.md)

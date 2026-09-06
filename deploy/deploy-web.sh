@@ -4,9 +4,11 @@
 # .github/workflows/deploy-web.yml over SSH after a push to main touches
 # nepal-lms-frontend/**. Assumes:
 #   - /var/www/myapp/repo is a git clone of this repo (branch: main)
-#   - /var/www/myapp/web is a symlink ->
-#     /var/www/myapp/repo/nepal-lms-frontend/.next/standalone
-#     (see deploy/README.md for the one-time setup that creates this)
+#   - /var/www/myapp/web is a symlink -> repo/nepal-lms-frontend
+#   - the aimerszone-next systemd unit runs `npm run start` with
+#     WorkingDirectory=/var/www/myapp/web (already set up on this VPS —
+#     see deploy/README.md) — this script does NOT use PM2 or the Next.js
+#     standalone output, because that systemd unit already owns the process.
 set -euo pipefail
 
 REPO_DIR="/var/www/myapp/repo"
@@ -26,16 +28,7 @@ cd "$WEB_DIR"
 npm ci
 npm run build
 
-# Next.js standalone output does not include public/ or .next/static — the
-# framework's own docs say to copy them in by hand after every build, or the
-# server serves 404s for every asset and page background image.
-echo "==> Assembling standalone output"
-rm -rf .next/standalone/public .next/standalone/.next/static
-cp -r public .next/standalone/public
-mkdir -p .next/standalone/.next
-cp -r .next/static .next/standalone/.next/static
-
-echo "==> Reloading web process"
-pm2 restart web --update-env
+echo "==> Restarting web service"
+sudo /usr/bin/systemctl restart aimerszone-next
 
 echo "==> Web deploy complete"
