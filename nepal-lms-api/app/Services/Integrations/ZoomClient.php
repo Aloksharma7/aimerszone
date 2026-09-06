@@ -120,18 +120,20 @@ class ZoomClient
      * as it arrives rather than buffered in PHP memory — a multi-hour class
      * recording can be hundreds of megabytes, easily enough to exhaust a
      * typical PHP memory limit if read into a string first.
+     *
+     * Deliberately does NOT attach the Server-to-Server OAuth bearer token:
+     * Zoom authenticates a webhook-delivered recording download purely via
+     * the short-lived `download_token` already embedded in $downloadUrl's
+     * query string (see ProcessZoomRecording), which needs no extra scope on
+     * the OAuth app at all. Sending both caused Zoom to reject the request
+     * with 401 rather than honoring the valid download token.
      */
     public function downloadRecordingFile(string $downloadUrl, string $destinationPath): void
     {
-        if (! $this->isConfigured()) {
-            throw new IntegrationException('Zoom credentials are not configured.', 'zoom', retryable: false);
-        }
-
         $startedAt = microtime(true);
 
         try {
-            $response = Http::withToken($this->accessToken())
-                ->timeout((int) config('services.zoom.download_timeout', 1800))
+            $response = Http::timeout((int) config('services.zoom.download_timeout', 1800))
                 ->withOptions(['sink' => $destinationPath])
                 ->get($downloadUrl);
         } catch (Throwable $exception) {
