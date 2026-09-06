@@ -6,6 +6,7 @@ import { Copy, Loader2, UserPlus } from "lucide-react";
 import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@/lib/api/browser-client";
 import type { ApiResponse } from "@/lib/api/contracts";
 import { isMockDataEnabled } from "@/lib/data/config";
+import { useToast } from "@/providers/toast-provider";
 
 const roles = [
   { value: "teacher", label: "Teacher", detail: "Runs batches, classes, attendance and assessments." },
@@ -30,6 +31,7 @@ type Created = { id: string; staffCode: string | null; temporaryPassword: string
  */
 export function CreateUserForm() {
   const router = useRouter();
+  const { toast } = useToast();
   const mockMode = isMockDataEnabled();
 
   const [values, setValues] = useState({
@@ -95,7 +97,9 @@ export function CreateUserForm() {
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The account could not be created.");
+      const message = apiError.message || "The account could not be created.";
+      setError(message);
+      toast({ tone: "danger", title: "Could not create account", message });
     } finally {
       setBusy(false);
     }

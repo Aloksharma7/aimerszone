@@ -6,6 +6,7 @@ import { AlertTriangle, CheckCircle2, Loader2, Save, ShieldCheck } from "lucide-
 import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@/lib/api/browser-client";
 import type { AdminSettingsData, FeatureKey } from "@/lib/data/admin";
 import { isMockDataEnabled } from "@/lib/data/config";
+import { useToast } from "@/providers/toast-provider";
 
 const featureCopy: Record<FeatureKey, { label: string; detail: string }> = {
   single_device_login: {
@@ -54,6 +55,7 @@ type Draft = {
  */
 export function PlatformControls({ settings }: { settings: AdminSettingsData }) {
   const router = useRouter();
+  const { toast } = useToast();
   const mockMode = isMockDataEnabled();
 
   const [draft, setDraft] = useState<Draft>({
@@ -113,11 +115,14 @@ export function PlatformControls({ settings }: { settings: AdminSettingsData }) 
       });
 
       setNotice("Saved. Changes take effect on the next request.");
+      toast({ tone: "success", title: "Settings saved" });
       setDraft((current) => ({ ...current, sms: { ...current.sms, token: "" }, esewa: { ...current.esewa, secretKey: "" } }));
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The settings could not be saved.");
+      const message = apiError.message || "The settings could not be saved.";
+      setError(message);
+      toast({ tone: "danger", title: "Could not save settings", message });
     } finally {
       setBusy(false);
     }

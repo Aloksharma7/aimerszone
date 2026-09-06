@@ -7,6 +7,7 @@ import type { AdminPermission } from "@/lib/data/admin";
 import type { RoleDefinition } from "@/types/lms";
 import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@/lib/api/browser-client";
 import { isMockDataEnabled } from "@/lib/data/config";
+import { useToast } from "@/providers/toast-provider";
 
 /**
  * The role matrix above this is read-only by design. This is the only place
@@ -16,6 +17,7 @@ import { isMockDataEnabled } from "@/lib/data/config";
  */
 export function RoleEditor({ roles, permissions }: { roles: RoleDefinition[]; permissions: AdminPermission[] }) {
   const router = useRouter();
+  const { toast } = useToast();
   const mockMode = isMockDataEnabled();
 
   const editableRoles = roles.filter((role) => role.key !== "super_admin");
@@ -83,10 +85,13 @@ export function RoleEditor({ roles, permissions }: { roles: RoleDefinition[]; pe
       });
 
       setNotice("Role updated.");
+      toast({ tone: "success", title: "Role updated." });
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The role could not be saved.");
+      const message = apiError.message || "The role could not be saved.";
+      setError(message);
+      toast({ tone: "danger", title: "Could not save role", message });
     } finally {
       setBusy(false);
     }

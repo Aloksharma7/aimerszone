@@ -8,6 +8,7 @@ import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { refreshPublicCatalogue } from "@/lib/catalogue-cache";
 import { isMockDataEnabled } from "@/lib/data/config";
+import { useToast } from "@/providers/toast-provider";
 
 type Draft = { id: string | null; name: string; description: string; isActive: boolean };
 
@@ -20,6 +21,7 @@ const emptyDraft: Draft = { id: null, name: "", description: "", isActive: true 
  */
 export function CategoryManager({ categories, endpointBase = "/api/v1/admin/categories" }: { categories: AdminCategory[]; endpointBase?: string }) {
   const router = useRouter();
+  const { toast } = useToast();
   const mockMode = isMockDataEnabled();
 
   const [draft, setDraft] = useState<Draft>(emptyDraft);
@@ -61,13 +63,17 @@ export function CategoryManager({ categories, endpointBase = "/api/v1/admin/cate
         headers: { "Idempotency-Key": createIdempotencyKey(`category-${editing ? "update" : "create"}`) },
       });
 
-      setNotice(editing ? "Category updated." : "Category created.");
+      const message = editing ? "Category updated." : "Category created.";
+      setNotice(message);
+      toast({ tone: "success", title: message });
       reset();
       await refreshPublicCatalogue({ tags: ["public-categories", "public-courses"] });
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The category could not be saved.");
+      const message = apiError.message || "The category could not be saved.";
+      setError(message);
+      toast({ tone: "danger", title: "Could not save category", message });
     } finally {
       setBusy(false);
     }
@@ -82,11 +88,14 @@ export function CategoryManager({ categories, endpointBase = "/api/v1/admin/cate
     try {
       await browserRequest({ url: `${endpointBase}/${encodeURIComponent(category.id)}`, method: "DELETE" });
       setNotice("Category deleted.");
+      toast({ tone: "success", title: "Category deleted." });
       await refreshPublicCatalogue({ tags: ["public-categories", "public-courses"] });
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The category could not be deleted.");
+      const message = apiError.message || "The category could not be deleted.";
+      setError(message);
+      toast({ tone: "danger", title: "Could not delete category", message });
       throw caught;
     }
   }

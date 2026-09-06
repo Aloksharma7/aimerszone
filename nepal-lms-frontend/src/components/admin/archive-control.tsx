@@ -6,6 +6,7 @@ import { Archive, LoaderCircle } from "lucide-react";
 import { AlertBox, Button, Panel } from "@/components/ui";
 import { browserRequest, type NormalizedApiError } from "@/lib/api/browser-client";
 import { refreshPublicCatalogue } from "@/lib/catalogue-cache";
+import { useToast } from "@/providers/toast-provider";
 
 const mockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
 
@@ -37,6 +38,7 @@ export function ArchiveControl({
   slug?: string;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
@@ -55,6 +57,7 @@ export function ArchiveControl({
         url: `/api/v1/admin/${{ course: "courses", batch: "batches", user: "users" }[kind]}/${encodeURIComponent(id)}`,
         method: "DELETE",
       });
+      toast({ tone: "success", title: `${name} archived.` });
       router.replace(redirectTo);
       await refreshPublicCatalogue({ slug });
       router.refresh();

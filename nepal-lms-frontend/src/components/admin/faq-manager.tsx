@@ -8,6 +8,7 @@ import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { refreshPublicCatalogue } from "@/lib/catalogue-cache";
 import { isMockDataEnabled } from "@/lib/data/config";
+import { useToast } from "@/providers/toast-provider";
 
 type Draft = { id: string | null; question: string; answer: string; category: string; isPublished: boolean };
 
@@ -20,6 +21,7 @@ const emptyDraft: Draft = { id: null, question: "", answer: "", category: "gener
  */
 export function FaqManager({ faqs }: { faqs: AdminFaq[] }) {
   const router = useRouter();
+  const { toast } = useToast();
   const mockMode = isMockDataEnabled();
 
   const [draft, setDraft] = useState<Draft>(emptyDraft);
@@ -66,13 +68,17 @@ export function FaqManager({ faqs }: { faqs: AdminFaq[] }) {
         headers: { "Idempotency-Key": createIdempotencyKey(`faq-${editing ? "update" : "create"}`) },
       });
 
-      setNotice(editing ? "FAQ updated." : "FAQ created.");
+      const message = editing ? "FAQ updated." : "FAQ created.";
+      setNotice(message);
+      toast({ tone: "success", title: message });
       reset();
       await refreshPublicCatalogue({ tags: ["public-faqs"] });
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The FAQ could not be saved.");
+      const message = apiError.message || "The FAQ could not be saved.";
+      setError(message);
+      toast({ tone: "danger", title: "Could not save FAQ", message });
     } finally {
       setBusy(false);
     }
@@ -87,11 +93,14 @@ export function FaqManager({ faqs }: { faqs: AdminFaq[] }) {
     try {
       await browserRequest({ url: `/api/v1/admin/faqs/${encodeURIComponent(faq.id)}`, method: "DELETE" });
       setNotice("FAQ deleted.");
+      toast({ tone: "success", title: "FAQ deleted." });
       await refreshPublicCatalogue({ tags: ["public-faqs"] });
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The FAQ could not be deleted.");
+      const message = apiError.message || "The FAQ could not be deleted.";
+      setError(message);
+      toast({ tone: "danger", title: "Could not delete FAQ", message });
       throw caught;
     }
   }

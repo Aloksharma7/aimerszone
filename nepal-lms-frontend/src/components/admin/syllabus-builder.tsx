@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronUp, Loader2, Plus, Save, Trash2 } from "lucide-react";
 import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@/lib/api/browser-client";
 import { isMockDataEnabled } from "@/lib/data/config";
+import { useToast } from "@/providers/toast-provider";
 
 export type SyllabusLesson = { id: string | null; title: string; type: string };
 export type SyllabusModule = { id: string | null; title: string; summary: string; lessons: SyllabusLesson[] };
@@ -33,6 +34,7 @@ export function SyllabusBuilder({
   endpointBase?: string;
 }) {
   const router = useRouter();
+  const { toast } = useToast();
   const mockMode = isMockDataEnabled();
 
   const [modules, setModules] = useState<SyllabusModule[]>(initialModules);
@@ -108,10 +110,13 @@ export function SyllabusBuilder({
       });
 
       setNotice("Syllabus saved. Students see it immediately.");
+      toast({ tone: "success", title: "Syllabus saved", message: "Students see it immediately." });
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The syllabus could not be saved.");
+      const message = apiError.message || "The syllabus could not be saved.";
+      setError(message);
+      toast({ tone: "danger", title: "Could not save syllabus", message });
     } finally {
       setBusy(false);
     }
