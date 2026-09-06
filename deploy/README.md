@@ -63,6 +63,19 @@ Port 22 is already open to the internet on this VPS (`sudo ufw status` shows
 `22/tcp ALLOW IN Anywhere`), so the real public IP works directly — no extra
 firewall change needed.
 
+**Set `VPS_SSH_KEY` with the GitHub CLI, not copy-paste.** A multi-line
+private key pasted through a terminal is an easy way to silently corrupt it
+(a wrapped line merges, a stray character sneaks in) — the symptom is
+`ssh: no key found` in the Action's log even though the key file itself is
+fine. From the VPS, once `gh auth login` is done:
+
+```bash
+gh secret set VPS_SSH_KEY --repo Aloksharma7/aimerszone < ~/.ssh/gh_actions_deploy
+```
+
+This pipes the file's exact bytes to GitHub's API — nothing to mistype or
+mis-paste.
+
 ### 2. Let the deploy user restart the web service without a password
 
 GitHub Actions SSHes in as `deploy` and needs `deploy-web.sh` to run
