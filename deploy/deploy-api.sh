@@ -48,7 +48,7 @@ echo "==> Reloading PHP-FPM"
 # without this a correct redeploy can silently keep serving the old broken
 # state indefinitely (this is exactly how the CollisionServiceProvider bug
 # survived several deploys that should have fixed it).
-sudo /usr/bin/systemctl reload php8.3-fpm
+sudo /usr/bin/systemctl reload php8.3-fpm.service
 
 echo "==> Restarting queue worker"
 php artisan queue:restart
