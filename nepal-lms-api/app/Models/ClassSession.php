@@ -21,6 +21,7 @@ class ClassSession extends Model
         'zoom_sync_status', 'zoom_sync_message', 'zoom_synced_at', 'fallback_join_url',
         'fallback_note', 'fallback_active', 'rescheduled_from', 'reschedule_reason',
         'cancellation_reason', 'attendance_finalized_at', 'attendance_finalized_by', 'created_by',
+        'reminder_sent_at', 'attendance_imported_at',
     ];
 
     /* The host URL must never reach a student payload. */
@@ -37,6 +38,8 @@ class ClassSession extends Model
             'zoom_synced_at' => 'datetime',
             'rescheduled_from' => 'datetime',
             'attendance_finalized_at' => 'datetime',
+            'reminder_sent_at' => 'datetime',
+            'attendance_imported_at' => 'datetime',
             'fallback_active' => 'boolean',
         ];
     }

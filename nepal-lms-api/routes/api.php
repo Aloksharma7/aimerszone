@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\V1\Student;
 use App\Http\Controllers\Api\V1\Support;
 use App\Http\Controllers\Api\V1\Staff;
 use App\Http\Controllers\Api\V1\Teacher;
+use App\Http\Controllers\Api\V1\Webhooks;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -70,6 +71,13 @@ Route::prefix('v1')->group(function () {
         Route::get('teachers', [PublicSite\DirectoryController::class, 'teachers']);
         Route::get('faqs', [PublicSite\DirectoryController::class, 'faqs']);
         Route::post('support-requests', PublicSite\SupportRequestController::class)->middleware('throttle:public-forms');
+    });
+
+    /* ------------------------------------------------------------------
+     | Webhooks — verified by provider-specific signature, not Sanctum
+     | ------------------------------------------------------------------ */
+    Route::prefix('webhooks')->group(function () {
+        Route::post('zoom', [Webhooks\ZoomWebhookController::class, 'handle']);
     });
 
     /* ------------------------------------------------------------------

@@ -113,6 +113,51 @@ class ZoomClient
             ->all();
     }
 
+    /**
+     * Streams a completed cloud recording straight to disk.
+     *
+     * Uses Guzzle's `sink` option so the response body is written to the file
+     * as it arrives rather than buffered in PHP memory — a multi-hour class
+     * recording can be hundreds of megabytes, easily enough to exhaust a
+     * typical PHP memory limit if read into a string first.
+     */
+    public function downloadRecordingFile(string $downloadUrl, string $destinationPath): void
+    {
+        if (! $this->isConfigured()) {
+            throw new IntegrationException('Zoom credentials are not configured.', 'zoom', retryable: false);
+        }
+
+        $startedAt = microtime(true);
+
+        try {
+            $response = Http::withToken($this->accessToken())
+                ->timeout((int) config('services.zoom.download_timeout', 1800))
+                ->withOptions(['sink' => $destinationPath])
+                ->get($downloadUrl);
+        } catch (Throwable $exception) {
+            @unlink($destinationPath);
+            $this->record('recording.download', $destinationPath, 'failed', $exception->getMessage(), $startedAt);
+
+            throw new IntegrationException('Zoom recording download failed.', 'zoom', retryable: true);
+        }
+
+        if ($response->failed()) {
+            // The sink option writes as bytes arrive, so a failed response can
+            // still leave a partial, unusable file behind.
+            @unlink($destinationPath);
+            $this->record('recording.download', $destinationPath, 'failed', 'status '.$response->status(), $startedAt);
+
+            throw new IntegrationException(
+                'Zoom recording download returned status '.$response->status(),
+                'zoom',
+                retryable: $response->serverError(),
+                status: $response->status(),
+            );
+        }
+
+        $this->record('recording.download', $destinationPath, 'success', null, $startedAt);
+    }
+
     /* ----------------------------------------------------------------
      | Transport
      | ---------------------------------------------------------------- */

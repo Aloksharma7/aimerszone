@@ -10,15 +10,11 @@ use App\Models\Attendance;
 use App\Models\ClassSession;
 use App\Models\Enrollment;
 use App\Services\AccessGuard;
+use App\Services\AttendanceImportService;
 use App\Services\AuditLogger;
-use App\Services\Integrations\ClassMeetingService;
-use App\Services\Integrations\IntegrationException;
-use App\Services\Integrations\ZoomClient;
-use App\Services\SettingsRepository;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -35,9 +31,7 @@ class AttendanceController extends Controller
 
     public function __construct(
         protected AccessGuard $guard,
-        protected ZoomClient $zoom,
-        protected ClassMeetingService $meetings,
-        protected SettingsRepository $settings,
+        protected AttendanceImportService $importer,
         protected AuditLogger $audit,
     ) {}
 
@@ -204,101 +198,28 @@ class AttendanceController extends Controller
 
         $this->assertOpen($session);
 
-        if (blank($session->zoom_meeting_id) || ! $this->meetings->enabled()) {
-            throw DomainException::conflict(
-                'This class has no Zoom meeting to import from.',
-                'no_meeting_to_import',
-            );
+        $result = $this->importer->importFromZoom($session);
+
+        if ($result['status'] === 'no_meeting') {
+            throw DomainException::conflict($result['message'], 'no_meeting_to_import');
         }
 
-        try {
-            $participants = $this->zoom->participants($session->zoom_meeting_id);
-        } catch (IntegrationException $exception) {
-            throw DomainException::conflict(
-                'Zoom could not return the participant report: '.$exception->getMessage(),
-                'import_failed',
-            );
+        if ($result['status'] === 'api_error') {
+            throw DomainException::conflict($result['message'], 'import_failed');
         }
 
-        if ($participants === []) {
-            return ApiResponse::item([
-                'imported' => 0,
-                'message' => 'Zoom has no participant report for this class yet. Reports appear a few minutes after a meeting ends.',
-            ]);
-        }
-
-        $enrollments = Enrollment::query()
-            ->where('batch_id', $session->batch_id)
-            ->accessible()
-            ->with('user:id,name,email')
-            ->get();
-
-        $existing = Attendance::where('class_session_id', $session->getKey())
-            ->get()
-            ->keyBy('user_id');
-
-        $lateAfter = $this->settings->int('operations.attendance_late_minutes', 10);
-        $imported = 0;
-
-        foreach ($enrollments as $enrollment) {
-            $match = $this->matchParticipant($participants, $enrollment);
-
-            if ($match === null) {
-                continue;
-            }
-
-            $record = $existing->get($enrollment->user_id);
-
-            // A manual decision outranks anything the provider reports.
-            if ($record !== null && $record->source === 'manual') {
-                continue;
-            }
-
-            $minutes = (int) round($match['duration'] / 60);
-
-            /*
-             * Late means "joined late", not "stayed briefly" — those are
-             * different facts. This used to classify Late whenever minutes
-             * attended fell under the late-minutes setting, which reused a
-             * "how many minutes past start counts as late" number to mean
-             * "how many minutes attended counts as present" instead — so
-             * someone who joined on time but left after a few minutes was
-             * marked Late rather than Present (their real attendance mark),
-             * and duration told us nothing about when they actually joined.
-             * Zoom's report includes each participant's real join_time, so
-             * this now computes lateness exactly like the student's own
-             * join-link path does. The duration heuristic only remains as a
-             * fallback for the rare case Zoom omits join_time.
-             */
-            $joinedAt = filled($match['join_time'] ?? null) ? Carbon::parse($match['join_time']) : null;
-
-            $late = $joinedAt !== null
-                ? $joinedAt->gt($session->starts_at->copy()->addMinutes($lateAfter))
-                : $minutes < $lateAfter;
-
-            Attendance::updateOrCreate(
-                ['class_session_id' => $session->getKey(), 'user_id' => $enrollment->user_id],
-                [
-                    'enrollment_id' => $enrollment->getKey(),
-                    'status' => $late ? AttendanceStatus::Late->value : AttendanceStatus::Present->value,
-                    'joined_at' => $joinedAt,
-                    'minutes_attended' => $minutes,
-                    'note' => $match['name'],
-                    'source' => 'zoom_import',
-                ],
-            );
-
-            $imported++;
+        if ($result['status'] === 'no_report_yet') {
+            return ApiResponse::item(['imported' => 0, 'message' => $result['message']]);
         }
 
         $this->audit->log('attendance.imported', $session, $request->user(), properties: [
-            'reported' => count($participants),
-            'matched' => $imported,
+            'reported' => $result['reported'],
+            'matched' => $result['imported'],
         ]);
 
         return ApiResponse::item([
-            'imported' => $imported,
-            'reported' => count($participants),
+            'imported' => $result['imported'],
+            'reported' => $result['reported'],
         ]);
     }
 

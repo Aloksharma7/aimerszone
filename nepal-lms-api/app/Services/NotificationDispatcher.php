@@ -186,6 +186,52 @@ class NotificationDispatcher
         return $sent;
     }
 
+    /**
+     * Sent a few minutes ahead of the scheduled time, distinct from
+     * classStarted() — this is a heads-up to be ready, not confirmation the
+     * meeting is actually open yet. Reuses the same on/off switch as
+     * classStarted() since both are "class starting" notifications from the
+     * admin's point of view.
+     */
+    public function classStartingSoon(ClassSession $session): int
+    {
+        $students = Enrollment::query()
+            ->where('batch_id', $session->batch_id)
+            ->accessible()
+            ->with('user:id,mobile')
+            ->get()
+            ->pluck('user')
+            ->filter(fn (?User $user) => $user !== null);
+
+        $topic = mb_strimwidth($session->topic, 0, 60, '...');
+        $startsAt = $session->starts_at->timezone('Asia/Kathmandu')->format('g:i A');
+        $sent = 0;
+
+        if ($this->wants('sms.notify_class_starting')) {
+            $message = sprintf('%s: your class "%s" starts at %s. Get ready to join.', $this->institution(), $topic, $startsAt);
+
+            foreach ($students->filter(fn (User $user) => filled($user->mobile)) as $student) {
+                if ($this->sms->send($student->mobile, $message, 'class.starting_soon')) {
+                    $sent++;
+                }
+            }
+        }
+
+        if ($this->wantsPush('sms.notify_class_starting')) {
+            foreach ($students as $student) {
+                $this->push->sendToUser(
+                    $student,
+                    'Class starting soon',
+                    sprintf('"%s" starts at %s. Get ready to join.', $topic, $startsAt),
+                    ['type' => 'class.starting_soon', 'session_id' => $session->id],
+                    'class.starting_soon',
+                );
+            }
+        }
+
+        return $sent;
+    }
+
     public function enrollmentActivated(Enrollment $enrollment): void
     {
         if (! $this->wants('sms.notify_enrollment_activated')) {

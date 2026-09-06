@@ -15,6 +15,7 @@ class IntegrationException extends RuntimeException
         protected string $provider,
         protected bool $retryable = false,
         protected ?int $status = null,
+        protected ?string $reason = null,
     ) {
         parent::__construct($message);
     }
@@ -32,5 +33,11 @@ class IntegrationException extends RuntimeException
     public function status(): ?int
     {
         return $this->status;
+    }
+
+    /** Machine-readable cause, e.g. 'quota_exceeded' — null when not applicable. */
+    public function reason(): ?string
+    {
+        return $this->reason;
     }
 }

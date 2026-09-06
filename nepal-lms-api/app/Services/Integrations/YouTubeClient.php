@@ -88,6 +88,101 @@ class YouTubeClient
         ], 'playlist.add', $videoId);
     }
 
+    /**
+     * Resumable upload (Data API v3), streamed from disk so a multi-hour
+     * class recording never has to fit in PHP's memory. Always unlisted —
+     * this app never uploads anything that should be public.
+     *
+     * Throws with reason() === 'quota_exceeded' when the account's daily
+     * upload quota is used up; the caller decides how to handle that (this
+     * app re-queues the job for the next day rather than losing the upload).
+     */
+    public function uploadVideo(string $filePath, string $title, string $description, string $mimeType = 'video/mp4'): string
+    {
+        if (! $this->isConfigured()) {
+            throw new IntegrationException('YouTube credentials are not configured.', 'youtube', retryable: false);
+        }
+
+        $startedAt = microtime(true);
+        $fileSize = filesize($filePath);
+
+        if ($fileSize === false) {
+            throw new IntegrationException("Recording file not found: {$filePath}", 'youtube', retryable: false);
+        }
+
+        try {
+            $init = Http::withToken($this->accessToken())
+                ->timeout((int) config('services.youtube.timeout', 15))
+                ->withHeaders([
+                    'X-Upload-Content-Type' => $mimeType,
+                    'X-Upload-Content-Length' => (string) $fileSize,
+                ])
+                ->post('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', [
+                    'snippet' => [
+                        'title' => mb_substr($title, 0, 100),
+                        'description' => mb_substr($description, 0, 5000),
+                    ],
+                    'status' => ['privacyStatus' => 'unlisted'],
+                ]);
+        } catch (Throwable $exception) {
+            $this->record('video.upload_init', null, 'failed', $exception->getMessage(), $startedAt);
+
+            throw new IntegrationException('YouTube upload could not start.', 'youtube', retryable: true);
+        }
+
+        if ($init->failed() || blank($init->header('Location'))) {
+            $this->failUpload($init, 'video.upload_init', $startedAt);
+        }
+
+        $uploadUrl = $init->header('Location');
+        $stream = fopen($filePath, 'r');
+
+        try {
+            $upload = Http::withToken($this->accessToken())
+                // Uploads can genuinely take a long time on a modest server
+                // connection; the normal 15s API timeout would abort a real
+                // multi-hundred-megabyte transfer well before it finishes.
+                ->timeout((int) config('services.youtube.upload_timeout', 3600))
+                ->withBody($stream, $mimeType)
+                ->put($uploadUrl);
+        } catch (Throwable $exception) {
+            $this->record('video.upload', null, 'failed', $exception->getMessage(), $startedAt);
+
+            throw new IntegrationException('YouTube upload failed mid-transfer.', 'youtube', retryable: true);
+        } finally {
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+        }
+
+        if ($upload->failed()) {
+            $this->failUpload($upload, 'video.upload', $startedAt);
+        }
+
+        $videoId = (string) $upload->json('id');
+
+        $this->record('video.upload', $videoId, 'success', null, $startedAt);
+
+        return $videoId;
+    }
+
+    protected function failUpload(Response $response, string $action, float $startedAt): never
+    {
+        $reasonCode = (string) $response->json('error.errors.0.reason', '');
+        $message = (string) ($response->json('error.message') ?? 'YouTube returned status '.$response->status());
+        $quotaExceeded = $response->status() === 403 && in_array($reasonCode, ['quotaExceeded', 'dailyLimitExceeded'], true);
+
+        $this->record($action, null, 'failed', $message, $startedAt, ['status' => $response->status(), 'reason' => $reasonCode]);
+
+        throw new IntegrationException(
+            $quotaExceeded ? 'YouTube daily upload quota is used up for today.' : $message,
+            'youtube',
+            retryable: $quotaExceeded || $response->serverError(),
+            status: $response->status(),
+            reason: $quotaExceeded ? 'quota_exceeded' : null,
+        );
+    }
+
     /** ISO-8601 duration (PT1H2M3S) to seconds. */
     protected function parseDuration(string $iso): int
     {

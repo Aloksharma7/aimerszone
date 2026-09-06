@@ -9,6 +9,12 @@ return [
         'base_url' => rtrim(env('ZOOM_BASE_URL', 'https://api.zoom.us/v2'), '/'),
         'oauth_url' => env('ZOOM_OAUTH_URL', 'https://zoom.us/oauth/token'),
         'timeout' => (int) env('ZOOM_TIMEOUT', 15),
+        'download_timeout' => (int) env('ZOOM_DOWNLOAD_TIMEOUT', 1800),
+
+        // From the Zoom Marketplace Webhook/Event Subscription app — a
+        // separate app from the Server-to-Server OAuth one above. Verifies
+        // that an incoming "recording.completed" call really came from Zoom.
+        'webhook_secret' => env('ZOOM_WEBHOOK_SECRET_TOKEN'),
     ],
 
     'youtube' => [
@@ -19,5 +25,6 @@ return [
         'base_url' => rtrim(env('YOUTUBE_BASE_URL', 'https://www.googleapis.com/youtube/v3'), '/'),
         'oauth_url' => env('YOUTUBE_OAUTH_URL', 'https://oauth2.googleapis.com/token'),
         'timeout' => (int) env('YOUTUBE_TIMEOUT', 15),
+        'upload_timeout' => (int) env('YOUTUBE_UPLOAD_TIMEOUT', 3600),
     ],
 ];

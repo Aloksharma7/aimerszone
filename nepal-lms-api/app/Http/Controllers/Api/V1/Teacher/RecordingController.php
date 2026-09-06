@@ -10,10 +10,9 @@ use App\Models\ClassSession;
 use App\Models\Recording;
 use App\Services\AccessGuard;
 use App\Services\AuditLogger;
-use App\Services\Integrations\IntegrationException;
 use App\Services\Integrations\YouTubeClient;
 use App\Models\SyllabusModule;
-use App\Services\SettingsRepository;
+use App\Services\RecordingSyncService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,7 +32,7 @@ class RecordingController extends Controller
     public function __construct(
         protected AccessGuard $guard,
         protected YouTubeClient $youtube,
-        protected SettingsRepository $settings,
+        protected RecordingSyncService $syncService,
         protected AuditLogger $audit,
     ) {}
 
@@ -217,53 +216,24 @@ class RecordingController extends Controller
     }
 
     /**
-     * Confirms the video exists and is not publicly listed.
-     *
-     * When YouTube is not connected the recording is still saved — the teacher
-     * gets a warning rather than a blocked workflow.
+     * A hand-typed video id deserves an immediate validation error, unlike
+     * the automatic pipeline (RecheckProcessingRecordings) which treats a
+     * momentary "not found" right after its own upload as just not ready yet.
      *
      * @return array{verified: bool, public?: bool, state?: string, duration_seconds?: int, thumbnail_url?: ?string, message?: string}
      */
     protected function verify(string $videoId): array
     {
-        if (! $this->settings->bool('integrations.youtube_enabled', false) || ! $this->youtube->isConfigured()) {
-            return [
-                'verified' => false,
-                'message' => 'YouTube is not connected, so this video id could not be verified.',
-            ];
-        }
+        $result = $this->syncService->verify($videoId);
 
-        try {
-            $video = $this->youtube->video($videoId);
-        } catch (IntegrationException $exception) {
-            return ['verified' => false, 'message' => 'YouTube could not be reached: '.$exception->getMessage()];
-        }
-
-        if ($video === null) {
+        if ($result['not_found'] ?? false) {
             throw DomainException::unprocessable(
-                'No video was found for that id on the connected channel.',
+                $result['message'],
                 'video_not_found',
                 ['youtube_video_id' => ['Check the video id and that it belongs to the institution channel.']],
             );
         }
 
-        // A public video is reachable by anyone with the link, which hands paid
-        // course content to the open internet — allowed by choice, not blocked,
-        // but flagged so the teacher list keeps warning about it until it's
-        // switched to unlisted.
-        $isPublic = ! $this->youtube->isSafelyRestricted($video);
-
-        return [
-            'verified' => true,
-            'public' => $isPublic,
-            'state' => $video['state'],
-            'duration_seconds' => $video['duration_seconds'],
-            'thumbnail_url' => $video['thumbnail_url'],
-            'message' => match (true) {
-                $isPublic => 'This video is public on YouTube — anyone with the link can watch it, even people who never enrolled. Set it to unlisted when you can.',
-                $video['state'] !== 'processed' => 'YouTube is still processing this video.',
-                default => null,
-            },
-        ];
+        return $result;
     }
 }
