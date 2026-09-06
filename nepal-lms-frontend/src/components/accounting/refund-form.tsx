@@ -7,6 +7,7 @@ import { PaymentPicker, type PaymentSummary } from "@/components/accounting/adju
 import { AlertBox, Button, Panel, StatusBadge, labelledFieldClass } from "@/components/ui";
 import { browserRequest, createIdempotencyKey, normalizeApiError } from "@/lib/api/browser-client";
 import type { ApiResponse } from "@/lib/api/contracts";
+import { useToast } from "@/providers/toast-provider";
 import { formatNpr } from "@/lib/utils";
 
 const mockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
@@ -14,6 +15,7 @@ const inputClass = labelledFieldClass;
 
 export function AccountingRefundForm({ returnPath = "/accounting/refunds" }: { returnPath?: string } = {}) {
   const router = useRouter();
+  const { toast } = useToast();
   const [selected, setSelected] = useState<PaymentSummary | null>(null);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ tone: "success" | "danger"; title: string; message: string } | null>(null);
@@ -36,7 +38,7 @@ export function AccountingRefundForm({ returnPath = "/accounting/refunds" }: { r
     setBusy(true); setNotice(null);
     try {
       if (mockMode) {
-        setNotice({ tone: "success", title: "Preview validated", message: "Laravel will verify the payment is approved and that the refund does not exceed what was actually paid before creating it." });
+        setNotice({ tone: "success", title: "Preview validated", message: "The server will double-check the payment is approved and that the refund does not exceed what was actually paid before creating it." });
         return;
       }
       const response = await browserRequest<ApiResponse<{ id: string }>>({
@@ -51,10 +53,13 @@ export function AccountingRefundForm({ returnPath = "/accounting/refunds" }: { r
         },
         headers: { "Idempotency-Key": createIdempotencyKey("accounting-refund") },
       });
+      toast({ tone: "success", title: "Refund request submitted" });
       router.replace(`${returnPath}?created=${encodeURIComponent(response.data.id)}`);
       router.refresh();
     } catch (caught) {
-      setNotice({ tone: "danger", title: "Refund not submitted", message: normalizeApiError(caught).message });
+      const message = normalizeApiError(caught).message;
+      setNotice({ tone: "danger", title: "Refund not submitted", message });
+      toast({ tone: "danger", title: "Refund not submitted", message });
     } finally { setBusy(false); }
   }
 

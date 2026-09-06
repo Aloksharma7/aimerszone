@@ -6,6 +6,7 @@ import { ArrowDownUp, LoaderCircle, Save, Search, X } from "lucide-react";
 import { AlertBox, Button, Panel, StatusBadge, labelledFieldClass } from "@/components/ui";
 import { browserRequest, createIdempotencyKey, normalizeApiError } from "@/lib/api/browser-client";
 import type { ApiResponse, PaginatedResponse } from "@/lib/api/contracts";
+import { useToast } from "@/providers/toast-provider";
 import { formatNpr } from "@/lib/utils";
 
 const mockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
@@ -108,6 +109,7 @@ export function PaymentPicker({ onSelect }: { onSelect: (payment: PaymentSummary
 
 export function AccountingAdjustmentForm({ initialPayment = null, returnPath = "/accounting/adjustments" }: { initialPayment?: PaymentSummary | null; returnPath?: string }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [selected, setSelected] = useState<PaymentSummary | null>(initialPayment);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<{ tone: "success" | "danger"; title: string; message: string } | null>(null);
@@ -130,7 +132,7 @@ export function AccountingAdjustmentForm({ initialPayment = null, returnPath = "
     setBusy(true); setNotice(null);
     try {
       if (mockMode) {
-        setNotice({ tone: "success", title: "Preview validated", message: "Laravel will verify the payment, authorization, policy limits and duplicate requests before creating the adjustment." });
+        setNotice({ tone: "success", title: "Preview validated", message: "The server will double-check the payment, authorization, policy limits and duplicate requests before creating the adjustment." });
         return;
       }
       const response = await browserRequest<ApiResponse<{ id: string }>>({
@@ -139,10 +141,13 @@ export function AccountingAdjustmentForm({ initialPayment = null, returnPath = "
         data,
         headers: { "Idempotency-Key": createIdempotencyKey("accounting-adjustment") },
       });
+      toast({ tone: "success", title: "Adjustment submitted" });
       router.replace(`${returnPath}?created=${encodeURIComponent(response.data.id)}`);
       router.refresh();
     } catch (caught) {
-      setNotice({ tone: "danger", title: "Adjustment not submitted", message: normalizeApiError(caught).message });
+      const message = normalizeApiError(caught).message;
+      setNotice({ tone: "danger", title: "Adjustment not submitted", message });
+      toast({ tone: "danger", title: "Adjustment not submitted", message });
     } finally { setBusy(false); }
   }
 
@@ -178,7 +183,7 @@ export function AccountingAdjustmentForm({ initialPayment = null, returnPath = "
         </form>
       </Panel>
       <aside className="space-y-5">
-        <AlertBox title="No destructive edits" tone="warning">Laravel creates a separate immutable financial action. It never overwrites or deletes the original payment and receipt.</AlertBox>
+        <AlertBox title="No destructive edits" tone="warning">This creates a separate, permanent financial record. It never overwrites or deletes the original payment and receipt.</AlertBox>
         <AlertBox title="Server authorization required" tone="info">The backend rechecks accountant permission, amount limits, approval policy, payment state and idempotency before committing anything.</AlertBox>
       </aside>
     </div>
