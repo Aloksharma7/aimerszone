@@ -40,7 +40,7 @@ php artisan migrate --force
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
-php artisan storage:link || true
+[ -L public/storage ] || php artisan storage:link
 
 echo "==> Restarting queue worker"
 php artisan queue:restart
