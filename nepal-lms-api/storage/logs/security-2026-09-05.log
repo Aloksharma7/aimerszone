@@ -1,2 +1,0 @@
-[2026-09-05 21:30:13] local.INFO: auth.logged_in {"audit_id":"01m1s3xk19pdrk5hyb01a27cda","actor_id":"01m09q7kvqfnm27cyeyww19n7h","target":"User:01m09q7kvqfnm27cyeyww19n7h","request_id":"e3ef38ae-d421-46ca-a78e-92af36a3c85a"} 
-[2026-09-05 21:31:17] local.INFO: integration.connect {"audit_id":"01m1s3zj32phg4m58hnndjk2ea","actor_id":"01m09q7kvqfnm27cyeyww19n7h","target":":","request_id":"2088f3d0-4284-4215-96ee-9f56f0129909"} 

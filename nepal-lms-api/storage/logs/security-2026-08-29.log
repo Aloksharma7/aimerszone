@@ -1,2 +1,0 @@
-[2026-08-29 08:55:16] local.INFO: auth.logged_in {"audit_id":"01m15qy6n98sy9169keryky5q1","actor_id":"01m09q7kvqfnm27cyeyww19n7h","target":"User:01m09q7kvqfnm27cyeyww19n7h","request_id":"df5c9642-23b5-402a-9de9-10b8cdce5552"} 
-[2026-08-29 08:55:52] local.INFO: recording.resynced {"audit_id":"01m15qza7z9ee3ejv184jnprw7","actor_id":"01m09q7kvqfnm27cyeyww19n7h","target":"Recording:01m0z3e4edxxnjhdzn4p89ssxk","request_id":"41e0cac8-9ba5-4a74-b074-f1158d14e69e"} 
