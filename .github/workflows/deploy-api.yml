@@ -6,6 +6,7 @@ on:
     paths:
       - "nepal-lms-api/**"
       - "deploy/deploy-api.sh"
+      - ".github/workflows/deploy-api.yml"
 
 jobs:
   deploy:
@@ -17,4 +18,8 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          # Without a pty, `sudo systemctl reload php8.3-fpm.service` inside
+          # deploy-api.sh demanded a password despite the matching NOPASSWD
+          # sudoers rule working fine over a normal interactive SSH session.
+          request_pty: true
           script: bash /var/www/myapp/repo/deploy/deploy-api.sh

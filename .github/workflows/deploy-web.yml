@@ -6,6 +6,7 @@ on:
     paths:
       - "nepal-lms-frontend/**"
       - "deploy/deploy-web.sh"
+      - ".github/workflows/deploy-web.yml"
 
 jobs:
   deploy:
@@ -17,4 +18,7 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          # Same reasoning as deploy-api.yml: sudo systemctl restart needs a
+          # pty to reliably honor the NOPASSWD sudoers rule non-interactively.
+          request_pty: true
           script: bash /var/www/myapp/repo/deploy/deploy-web.sh
