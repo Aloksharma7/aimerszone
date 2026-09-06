@@ -1,3 +1,0 @@
-{
-  "/(public)/batches/[batchPublicId]/page": "app/(public)/batches/[batchPublicId]/page.js"
-}
