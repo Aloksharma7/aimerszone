@@ -42,6 +42,14 @@ php artisan route:cache
 php artisan view:cache
 [ -L public/storage ] || php artisan storage:link
 
+echo "==> Reloading PHP-FPM"
+# OPcache keeps the previous deploy's compiled bytecode in memory — including
+# bootstrap/cache/packages.php and services.php — until PHP-FPM reloads, so
+# without this a correct redeploy can silently keep serving the old broken
+# state indefinitely (this is exactly how the CollisionServiceProvider bug
+# survived several deploys that should have fixed it).
+sudo /usr/bin/systemctl reload php8.3-fpm
+
 echo "==> Restarting queue worker"
 php artisan queue:restart
 pm2 restart api-queue --update-env

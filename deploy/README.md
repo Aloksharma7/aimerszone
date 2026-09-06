@@ -76,20 +76,23 @@ gh secret set VPS_SSH_KEY --repo Aloksharma7/aimerszone < ~/.ssh/gh_actions_depl
 This pipes the file's exact bytes to GitHub's API — nothing to mistype or
 mis-paste.
 
-### 2. Let the deploy user restart the web service without a password
+### 2. Let the deploy user restart services without a password
 
-GitHub Actions SSHes in as `deploy` and needs `deploy-web.sh` to run
-`sudo systemctl restart aimerszone-next` non-interactively. Scope the sudo
-grant to exactly that one command:
+GitHub Actions SSHes in as `deploy` and needs to run two commands
+non-interactively: `deploy-web.sh` restarts the web service, and
+`deploy-api.sh` reloads PHP-FPM (to clear OPcache after every deploy — see
+`deploy-api.sh` for why this matters). Scope the sudo grant to exactly those
+two commands:
 
 ```bash
 sudo visudo -f /etc/sudoers.d/aimerszone-deploy
 ```
 
-Add this single line, then save:
+Add these two lines, then save:
 
 ```
 deploy ALL=(root) NOPASSWD: /usr/bin/systemctl restart aimerszone-next
+deploy ALL=(root) NOPASSWD: /usr/bin/systemctl reload php8.3-fpm
 ```
 
 ### 3. Create the frontend's production env file
