@@ -30,8 +30,12 @@ ever restart them — they don't create or own them:**
   already existed on this VPS) runs `npm run start` with
   `WorkingDirectory=/var/www/myapp/web`. `deploy-web.sh` runs
   `npm ci && npm run build`, then `sudo systemctl restart aimerszone-next`.
-  This is a plain `next start` process, not the Next.js standalone build —
-  `output: "standalone"` in `next.config.ts` is harmless but unused here.
+  This is a plain `next start` process, not the Next.js standalone build.
+  `next.config.ts` no longer sets `output: "standalone"` — that setting is
+  incompatible with `next start` (Next.js warns about it directly) and one
+  real side effect was that `next start` silently skipped loading
+  `.env.production.local`, which is how `API_INTERNAL_URL` ended up stuck on
+  its `127.0.0.1:8000` fallback in production despite the file existing.
 - **`api-queue` PM2 process** (defined in `deploy/ecosystem.config.js`) runs
   `php artisan queue:work`, because this app actually queues jobs
   (`ProvisionClassMeetings`, `RecalculateBatchProgress`, notifications) —

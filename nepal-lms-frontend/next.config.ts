@@ -3,7 +3,6 @@ import type { NextConfig } from "next";
 const apiTarget = process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8000";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
