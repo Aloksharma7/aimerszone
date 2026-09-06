@@ -16,10 +16,15 @@ export NVM_DIR="$HOME/.nvm"
 
 REPO_DIR="/var/www/myapp/repo"
 API_DIR="$REPO_DIR/nepal-lms-api"
-LOCK_FILE="/tmp/deploy-api.lock"
+# Shared with deploy-web.sh: both scripts git fetch/reset the same $REPO_DIR
+# checkout, so an API deploy and a web deploy triggered by the same push
+# must never touch git at the same time — a per-script lock file wouldn't
+# stop that, since it only ever serializes a script against itself.
+LOCK_FILE="/tmp/aimerszone-deploy.lock"
 
 exec 200>"$LOCK_FILE"
-flock -n 200 || { echo "Another API deploy is already running, skipping."; exit 1; }
+echo "Waiting for any other deploy in progress..."
+flock 200
 
 echo "==> Pulling latest code"
 cd "$REPO_DIR"
