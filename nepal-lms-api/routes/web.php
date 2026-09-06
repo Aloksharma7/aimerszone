@@ -14,4 +14,13 @@ Route::get('/', fn () => response()->json([
     ],
 ]));
 
+/*
+ * The Zoom webhook app's OAuth redirect URL, configured only because Zoom's
+ * "Add app" install flow requires one to exist — this app never uses the
+ * OAuth code it receives here (webhook delivery, once installed, needs no
+ * user authorization). Without a real response, that redirect 404s and the
+ * app install never completes, so the webhook subscription stays inactive.
+ */
+Route::get('/oauth/callback', fn () => response('App installed.', 200));
+
 require __DIR__.'/media.php';
