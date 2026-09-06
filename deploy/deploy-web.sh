@@ -11,6 +11,12 @@
 #     standalone output, because that systemd unit already owns the process.
 set -euo pipefail
 
+# Non-interactive SSH sessions (this is one, via GitHub Actions) don't source
+# .bashrc, so nvm's PATH additions never happen and `npm`/`node` aren't found
+# even though they work fine when SSHing in by hand.
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
 REPO_DIR="/var/www/myapp/repo"
 WEB_DIR="$REPO_DIR/nepal-lms-frontend"
 LOCK_FILE="/tmp/deploy-web.lock"

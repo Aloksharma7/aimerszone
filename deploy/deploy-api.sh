@@ -8,6 +8,12 @@
 #     (see deploy/README.md for the one-time setup that creates this)
 set -euo pipefail
 
+# Non-interactive SSH sessions (this is one, via GitHub Actions) don't source
+# .bashrc, so nvm's PATH additions never happen and `pm2` isn't found even
+# though it works fine when SSHing in by hand.
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
 REPO_DIR="/var/www/myapp/repo"
 API_DIR="$REPO_DIR/nepal-lms-api"
 LOCK_FILE="/tmp/deploy-api.lock"
