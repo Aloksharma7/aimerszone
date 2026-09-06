@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const apiTarget = process.env.API_INTERNAL_URL ?? "http://127.0.0.1:8000";
 
 const nextConfig: NextConfig = {
+  // Do not set output: "standalone" — production runs via `next start`
+  // (systemd), and Next.js silently skips loading .env.production.local in
+  // standalone mode, which took down API connectivity in prod once already.
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,
