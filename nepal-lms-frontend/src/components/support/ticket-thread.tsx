@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { EyeOff, LoaderCircle, Send } from "lucide-react";
 import { AlertBox, Button, Panel, StatusBadge } from "@/components/ui";
 import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@/lib/api/browser-client";
+import { useToast } from "@/providers/toast-provider";
 import type { SupportTicketDetail } from "@/lib/data/support-inbox";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +22,7 @@ const mockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
  */
 export function TicketThread({ ticket }: { ticket: SupportTicketDetail }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [body, setBody] = useState("");
   const [internal, setInternal] = useState(false);
   const [status, setStatus] = useState("");
@@ -59,10 +61,13 @@ export function TicketThread({ ticket }: { ticket: SupportTicketDetail }) {
       setBody("");
       setInternal(false);
       setStatus("");
+      toast({ tone: "success", title: ticket.canManage ? "Reply sent" : "Message sent" });
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The reply could not be sent.");
+      const message = apiError.message || "The reply could not be sent.";
+      setError(message);
+      toast({ tone: "danger", title: "Not sent", message });
     } finally {
       setBusy(false);
     }
