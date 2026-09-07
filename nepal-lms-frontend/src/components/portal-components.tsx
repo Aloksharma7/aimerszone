@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Clock3,
   FileText,
+  Inbox,
   Megaphone,
   MonitorPlay,
   PlayCircle,
@@ -194,6 +195,8 @@ export function DataTable({
   rowKey,
   actions = false,
   needsAttention,
+  emptyTitle = "Nothing here yet",
+  emptyDescription = "New records will show up in this list as soon as they exist.",
 }: {
   columns: { key: string; label: string; render?: (row: Record<string, unknown>) => React.ReactNode }[];
   rows: Record<string, unknown>[];
@@ -201,37 +204,52 @@ export function DataTable({
   actions?: boolean;
   /** Marks a row as needing a decision — a highlighted background instead of a status value buried in a column. */
   needsAttention?: (row: Record<string, unknown>) => boolean;
+  /** Shown instead of a bare empty table when there are no rows — a page-specific message beats this generic default. */
+  emptyTitle?: string;
+  emptyDescription?: string;
 }) {
   const showActions = actions && rows.some((row) => typeof row.href === "string" && String(row.href).startsWith("/"));
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <div className="soft-scrollbar overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-          <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
-            <tr>
-              {columns.map((column) => <th key={column.key} className="border-b border-slate-200 px-4 py-3 font-bold">{column.label}</th>)}
-              {showActions ? <th className="border-b border-slate-200 px-4 py-3 text-right font-bold">Actions</th> : null}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {rows.map((row) => {
-              const attention = needsAttention?.(row) ?? false;
-              return (
-                <tr key={String(row[rowKey])} className={attention ? "bg-amber-50/70 hover:bg-amber-50" : "hover:bg-slate-50/70"}>
-                  {columns.map((column, index) => (
-                    <td key={column.key} className="px-4 py-3.5 align-middle text-slate-700">
-                      {index === 0 && attention ? <span className="mr-2 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden="true" title="Needs a decision" /> : null}
-                      {column.render ? column.render(row) : String(row[column.key] ?? "—")}
-                    </td>
-                  ))}
-                  {showActions ? <td className="px-4 py-3.5 text-right">{typeof row.href === "string" && row.href.startsWith("/") ? <ButtonLink href={row.href} variant="outline" size="sm">Open</ButtonLink> : null}</td> : null}
+      {rows.length === 0 ? (
+        <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
+            <Inbox className="h-6 w-6" />
+          </div>
+          <h3 className="text-base font-semibold text-slate-900">{emptyTitle}</h3>
+          <p className="mt-2 max-w-sm text-sm leading-6 text-slate-600">{emptyDescription}</p>
+        </div>
+      ) : (
+        <>
+          <div className="soft-scrollbar overflow-x-auto">
+            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
+                <tr>
+                  {columns.map((column) => <th key={column.key} className="border-b border-slate-200 px-4 py-3 font-bold">{column.label}</th>)}
+                  {showActions ? <th className="border-b border-slate-200 px-4 py-3 text-right font-bold">Actions</th> : null}
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div className="border-t border-slate-200 px-4 py-3 text-xs text-slate-500">Showing {rows.length} record{rows.length === 1 ? "" : "s"}.</div>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rows.map((row) => {
+                  const attention = needsAttention?.(row) ?? false;
+                  return (
+                    <tr key={String(row[rowKey])} className={attention ? "bg-amber-50/70 hover:bg-amber-50" : "hover:bg-slate-50/70"}>
+                      {columns.map((column, index) => (
+                        <td key={column.key} className="px-4 py-3.5 align-middle text-slate-700">
+                          {index === 0 && attention ? <span className="mr-2 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden="true" title="Needs a decision" /> : null}
+                          {column.render ? column.render(row) : String(row[column.key] ?? "—")}
+                        </td>
+                      ))}
+                      {showActions ? <td className="px-4 py-3.5 text-right">{typeof row.href === "string" && row.href.startsWith("/") ? <ButtonLink href={row.href} variant="outline" size="sm">Open</ButtonLink> : null}</td> : null}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t border-slate-200 px-4 py-3 text-xs text-slate-500">Showing {rows.length} record{rows.length === 1 ? "" : "s"}.</div>
+        </>
+      )}
     </div>
   );
 }

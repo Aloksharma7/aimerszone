@@ -5,6 +5,7 @@ import { useState } from "react";
 import { FileVideo, RefreshCw, Trash2 } from "lucide-react";
 import { browserRequest, type NormalizedApiError } from "@/lib/api/browser-client";
 import { isMockDataEnabled } from "@/lib/data/config";
+import { useToast } from "@/providers/toast-provider";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { StatusBadge } from "@/components/ui";
 import type { Recording } from "@/types/lms";
@@ -17,6 +18,7 @@ import type { Recording } from "@/types/lms";
  */
 export function RecordingList({ batchId, items }: { batchId: string; items: Recording[] }) {
   const router = useRouter();
+  const { toast } = useToast();
   const mockMode = isMockDataEnabled();
   const [error, setError] = useState<string | null>(null);
   const [checkingId, setCheckingId] = useState<string | null>(null);
@@ -32,10 +34,13 @@ export function RecordingList({ batchId, items }: { batchId: string; items: Reco
         method: "POST",
       });
 
+      toast({ tone: "success", title: "Recording re-checked." });
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The recording could not be re-checked.");
+      const message = apiError.message || "The recording could not be re-checked.";
+      setError(message);
+      toast({ tone: "danger", title: "Re-check failed", message });
     } finally {
       setCheckingId(null);
     }
@@ -52,10 +57,13 @@ export function RecordingList({ batchId, items }: { batchId: string; items: Reco
         method: "DELETE",
       });
 
+      toast({ tone: "success", title: "Recording removed." });
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The recording could not be removed.");
+      const message = apiError.message || "The recording could not be removed.";
+      setError(message);
+      toast({ tone: "danger", title: "Could not remove recording", message });
       throw caught;
     }
   }
@@ -79,7 +87,7 @@ export function RecordingList({ batchId, items }: { batchId: string; items: Reco
                   This video is public on YouTube — anyone with the link can watch it without enrolling. Set it to unlisted, then press &ldquo;Re-check&rdquo;.
                 </p>
               ) : (
-                <p className="mt-1 text-xs text-slate-400">Changes use a versioned recording update endpoint; published items remain auditable.</p>
+                <p className="mt-1 text-xs text-slate-400">Every change here is recorded, so there is always a history of who updated this recording and when.</p>
               )}
             </div>
             <div className="flex shrink-0 gap-2 self-start sm:self-center">

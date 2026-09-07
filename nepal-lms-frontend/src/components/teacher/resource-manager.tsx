@@ -6,6 +6,7 @@ import { Download, FileText, Loader2, Trash2, Upload } from "lucide-react";
 import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@/lib/api/browser-client";
 import { ConfirmAction } from "@/components/shared/confirm-action";
 import { isMockDataEnabled } from "@/lib/data/config";
+import { useToast } from "@/providers/toast-provider";
 import type { SyllabusOutlineModule } from "@/lib/data/teacher";
 
 export type TeacherResource = {
@@ -36,6 +37,7 @@ function humanSize(bytes: number | null): string {
  */
 export function ResourceManager({ batchId, resources, syllabusOutline = [] }: { batchId: string; resources: TeacherResource[]; syllabusOutline?: SyllabusOutlineModule[] }) {
   const router = useRouter();
+  const { toast } = useToast();
   const mockMode = isMockDataEnabled();
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -81,14 +83,18 @@ export function ResourceManager({ batchId, resources, syllabusOutline = [] }: { 
         headers: { "Idempotency-Key": createIdempotencyKey("resource-upload") },
       });
 
-      setNotice(values.releaseNow ? "Uploaded and released to students." : "Uploaded. Release it when you are ready.");
+      const message = values.releaseNow ? "Uploaded and released to students." : "Uploaded. Release it when you are ready.";
+      setNotice(message);
+      toast({ tone: "success", title: message });
       setValues({ title: "", moduleTitle: "", syllabusLessonId: "", releaseNow: true });
       setFile(null);
       if (fileInput.current) fileInput.current.value = "";
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The file could not be uploaded.");
+      const message = apiError.message || "The file could not be uploaded.";
+      setError(message);
+      toast({ tone: "danger", title: "Upload failed", message });
     } finally {
       setBusy(false);
     }
@@ -111,10 +117,13 @@ export function ResourceManager({ batchId, resources, syllabusOutline = [] }: { 
         headers: { "Idempotency-Key": createIdempotencyKey("resource-release") },
       });
 
+      toast({ tone: "success", title: resource.released ? "Resource withdrawn." : "Resource released to students." });
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The resource could not be updated.");
+      const message = apiError.message || "The resource could not be updated.";
+      setError(message);
+      toast({ tone: "danger", title: "Could not update resource", message });
     } finally {
       setBusy(false);
     }
@@ -132,10 +141,13 @@ export function ResourceManager({ batchId, resources, syllabusOutline = [] }: { 
         method: "DELETE",
       });
 
+      toast({ tone: "success", title: "Resource removed." });
       router.refresh();
     } catch (caught) {
       const apiError = caught as Partial<NormalizedApiError>;
-      setError(apiError.message || "The resource could not be removed.");
+      const message = apiError.message || "The resource could not be removed.";
+      setError(message);
+      toast({ tone: "danger", title: "Could not remove resource", message });
       throw caught;
     }
   }
