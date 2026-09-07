@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { CalendarDays, Clock3, PlayCircle, UserRound } from "lucide-react";
 import { CourseWorkspaceHeader } from "@/components/course-workspace";
 import { AnnouncementFeed, LiveClassCard } from "@/components/portal-components";
+import { LiveClassWatcher } from "@/components/student/live-class-watcher";
 import { ButtonLink, EmptyState, Panel, ProgressBar } from "@/components/ui";
 import { getStudentAnnouncements, getStudentClasses, getStudentEnrollment, getStudentRecordings } from "@/lib/data/student";
 
@@ -19,6 +20,7 @@ export default async function CourseOverviewPage({ params }: { params: Promise<{
 
   return (
     <>
+      <LiveClassWatcher />
       <CourseWorkspaceHeader enrollmentId={enrollment.id} course={enrollment.course} progress={enrollment.progress} accessExpiry={enrollment.accessExpiry} />
       <div className="grid gap-6 xl:grid-cols-[1.3fr_.7fr]">
         <div className="space-y-6">

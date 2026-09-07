@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers\Api\V1\Teacher;
 
+use App\Enums\AnnouncementAudience;
+use App\Enums\AnnouncementStatus;
 use App\Enums\ClassSessionStatus;
 use App\Jobs\ProvisionClassMeetings;
 use Carbon\Carbon;
 use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
+use App\Models\Announcement;
+use App\Models\Batch;
 use App\Models\ClassSession;
 use App\Models\Enrollment;
 use App\Services\AccessGuard;
@@ -17,6 +21,7 @@ use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 /**
@@ -106,6 +111,17 @@ class ClassSessionController extends Controller
         $this->meetings->provision($session);
 
         $this->audit->log('class.created', $session, $request->user());
+
+        $this->announceNewClass(
+            $batch,
+            $request->user()->getKey(),
+            'New class scheduled: '.$session->topic,
+            sprintf(
+                'A new class, "%s", has been scheduled for %s.',
+                $session->topic,
+                $session->starts_at->timezone('Asia/Kathmandu')->format('l, j F Y \a\t g:i A'),
+            ),
+        );
 
         return ApiResponse::item(['id' => $session->id], status: 201);
     }
@@ -226,6 +242,22 @@ class ClassSessionController extends Controller
             'skipped_past' => $skipped,
             'frequency' => $data['frequency'],
         ]);
+
+        // One announcement for the whole batch of classes, not one per
+        // session — a term can be a hundred occurrences, and a hundred
+        // separate notices would bury everything else in the feed.
+        $this->announceNewClass(
+            $batch,
+            $request->user()->getKey(),
+            'New classes scheduled: '.$data['title'],
+            sprintf(
+                '%d new classes for "%s" have been added, from %s to %s.',
+                count($created),
+                $data['title'],
+                $created[0]->starts_at->timezone('Asia/Kathmandu')->format('j F Y'),
+                end($created)->starts_at->timezone('Asia/Kathmandu')->format('j F Y'),
+            ),
+        );
 
         return ApiResponse::item([
             'created' => count($created),
@@ -416,5 +448,30 @@ class ClassSessionController extends Controller
         ]);
 
         return ApiResponse::item(['fallback_active' => true]);
+    }
+
+    /**
+     * Puts a new class on the batch's notification feed and announcement list.
+     *
+     * Scheduling a class previously left enrolled students to discover it only
+     * by reloading a page that happened to list classes — nothing told them one
+     * had been added. This reuses the same Announcement mechanism a teacher's
+     * manual announcement uses, so it shows up in the student portal's
+     * notification bell exactly the same way.
+     */
+    protected function announceNewClass(Batch $batch, string $creatorId, string $title, string $body): void
+    {
+        Announcement::create([
+            'title' => Str::limit($title, 177),
+            'summary' => Str::limit($body, 200),
+            'body' => $body,
+            'audience' => AnnouncementAudience::Batch->value,
+            'batch_id' => $batch->getKey(),
+            'course_id' => $batch->course_id,
+            'channel' => 'portal',
+            'status' => AnnouncementStatus::Published->value,
+            'published_at' => now(),
+            'created_by' => $creatorId,
+        ]);
     }
 }

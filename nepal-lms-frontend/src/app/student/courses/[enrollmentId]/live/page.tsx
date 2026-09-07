@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { CalendarDays, Clock3, Info, UserRound } from "lucide-react";
 import { CourseWorkspaceHeader } from "@/components/course-workspace";
 import { JoinClassButton } from "@/components/student/secure-learning-actions";
+import { LiveClassWatcher } from "@/components/student/live-class-watcher";
 import { Badge, EmptyState, Panel, StatusBadge } from "@/components/ui";
 import { getStudentClasses, getStudentEnrollment } from "@/lib/data/student";
 
@@ -16,6 +17,7 @@ export default async function LivePage({ params }: { params: Promise<{ enrollmen
 
   return (
     <>
+      <LiveClassWatcher />
       <CourseWorkspaceHeader enrollmentId={enrollment.id} course={enrollment.course} progress={enrollment.progress} accessExpiry={enrollment.accessExpiry} />
       <div className="space-y-6">
         {primary ? <Panel className="overflow-hidden border-0 bg-brand-900 text-white"><div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between"><div><Badge tone={primary.status === "Live now" ? "green" : "blue"} className="bg-white/10 text-white ring-white/10">{primary.status}</Badge><h1 className="mt-4 text-2xl font-bold sm:text-3xl">{primary.title}</h1><div className="mt-4 flex flex-wrap gap-4 text-sm text-blue-100"><span className="flex items-center gap-2"><Clock3 className="h-4 w-4" />{primary.date} · {primary.time} NPT</span><span className="flex items-center gap-2"><UserRound className="h-4 w-4" />{primary.teacher}</span></div></div><JoinClassButton sessionId={primary.id} disabled={!primary.joinAvailable} label={primary.joinAvailable ? "Join class" : primary.joinState} /></div></Panel> : <EmptyState title="No class scheduled" description="The teacher or administrator has not published a class session for this batch." />}

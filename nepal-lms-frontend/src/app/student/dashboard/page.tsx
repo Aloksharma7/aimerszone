@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Bell, BookOpen, CalendarDays, CheckCircle2, ClipboardCheck, CreditCard, PlayCircle } from "lucide-react";
 import { AnnouncementFeed, CompactTestCard, CourseProgressCard, LiveClassCard } from "@/components/portal-components";
 import { ButtonLink, EmptyState, MetricCard, PageHeader, Panel, ProgressBar } from "@/components/ui";
+import { LiveClassWatcher } from "@/components/student/live-class-watcher";
 import { getSessionUser } from "@/lib/auth/server";
 import { getStudentDashboard } from "@/lib/data/student";
 
@@ -17,6 +18,7 @@ export default async function StudentDashboardPage() {
 
   return (
     <>
+      <LiveClassWatcher />
       <PageHeader
         eyebrow="Student workspace"
         title={`Welcome back, ${data.greetingName.split(" ")[0] || "Student"}`}
