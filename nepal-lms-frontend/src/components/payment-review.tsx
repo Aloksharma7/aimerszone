@@ -13,7 +13,7 @@ type Decision = "approve" | "reject" | "flag";
 
 function ErrorNotice({ error }: { error: NormalizedApiError | null }) {
   if (!error) return null;
-  return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p className="font-bold">{error.message}</p>{error.requestId ? <p className="mt-1 font-mono text-xs">Reference: {error.requestId}</p> : null}</div>;
+  return <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"><p className="font-bold">{error.message}</p>{error.requestId ? <p className="mt-1 font-mono text-xs">Support code: {error.requestId}</p> : null}</div>;
 }
 
 export function PaymentProofButton({ paymentId, available, endpoint = "/api/v1/accounting/payments" }: { paymentId: string; available: boolean; endpoint?: string }) {

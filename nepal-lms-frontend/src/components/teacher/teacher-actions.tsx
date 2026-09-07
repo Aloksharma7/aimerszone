@@ -23,7 +23,7 @@ function ErrorNotice({ error }: { error: NormalizedApiError | null }) {
   return (
     <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
       <p className="font-bold">{error.message}</p>
-      {error.requestId ? <p className="mt-1 font-mono text-xs">Reference: {error.requestId}</p> : null}
+      {error.requestId ? <p className="mt-1 font-mono text-xs">Support code: {error.requestId}</p> : null}
     </div>
   );
 }

@@ -16,12 +16,12 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
           <AlertTriangle className="h-8 w-8" />
         </div>
         <p className="mt-6 text-sm font-bold uppercase tracking-[0.16em] text-red-700">Something went wrong</p>
-        <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">The page could not be loaded.</h1>
+        <h1 className="mt-3 text-3xl font-bold tracking-tight text-slate-950">This page couldn&apos;t load.</h1>
         <p className="mt-3 text-base leading-7 text-slate-600">
-          Retry the request. If the problem continues, return to a safe page and contact support with the time of the error.
+          This isn&apos;t something you did — try again in a moment. If it keeps happening, contact support and share the code below so we can look into it.
         </p>
         {error.digest ? (
-          <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs text-slate-500">Reference: {error.digest}</p>
+          <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 font-mono text-xs text-slate-500">Support code: {error.digest}</p>
         ) : null}
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
           <Button onClick={reset}>

@@ -69,7 +69,7 @@ function ErrorMessage({ error }: { error: NormalizedApiError | null }) {
   return (
     <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">
       <p className="font-semibold">{error.message}</p>
-      {error.requestId ? <p className="mt-1 text-xs text-red-700">Reference: {error.requestId}</p> : null}
+      {error.requestId ? <p className="mt-1 text-xs text-red-700">Support code: {error.requestId}</p> : null}
     </div>
   );
 }

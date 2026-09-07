@@ -110,9 +110,11 @@ class ApiExceptionRenderer
                 $e->getStatusCode(),
             ),
 
-            // Never leak internals: the request id is the support handle.
+            // Never leak internals: the request id (shown separately by the
+            // frontend, see meta.request_id) is the support handle — this
+            // message itself should read fine without knowing that exists.
             default => ApiResponse::error(
-                config('app.debug') ? $e->getMessage() : 'An unexpected error occurred. Quote the request id when reporting this.',
+                config('app.debug') ? $e->getMessage() : 'Something went wrong on our end. Please try again — if it keeps happening, contact support and share the reference code shown below.',
                 'server_error',
                 500,
             ),
