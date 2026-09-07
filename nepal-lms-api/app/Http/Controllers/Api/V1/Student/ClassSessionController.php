@@ -53,6 +53,17 @@ class ClassSessionController extends Controller
             );
         }
 
+        // The join window alone isn't enough: the Zoom link exists from the
+        // moment the class is scheduled, well before anyone actually starts
+        // it. Without this, a student could join a class the teacher never
+        // started, simply because the scheduled time window happens to be open.
+        if ($session->status->value !== 'live') {
+            throw DomainException::conflict(
+                'The teacher has not started this class yet. Try again closer to the start time.',
+                'class_not_started',
+            );
+        }
+
         // Manual fallback takes priority: when the provider failed, the teacher
         // publishes a replacement link and students must receive that instead.
         $url = $session->fallback_active && filled($session->fallback_join_url)

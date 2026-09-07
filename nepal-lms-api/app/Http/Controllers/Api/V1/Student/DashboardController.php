@@ -85,10 +85,15 @@ class DashboardController extends Controller
             $this->settings->int('operations.join_window_minutes_after', 20),
         );
 
+        // The scheduled window opening isn't the same as the teacher actually
+        // starting the class — without this, the dashboard card would offer a
+        // working join link before anyone has shown up to teach.
+        $canJoin = $open && $session->status->value === 'live';
+
         return (new ClassSessionResource($session))->additional([
             'enrollment_id' => $enrollmentByBatch[$session->batch_id]->id ?? null,
-            'join_available' => $open,
-            'action_reason' => $open ? null : 'Opens shortly before class',
+            'join_available' => $canJoin,
+            'action_reason' => $canJoin ? null : ($open ? 'Waiting for the teacher to start' : 'Opens shortly before class'),
         ])->toArray($request);
     }
 

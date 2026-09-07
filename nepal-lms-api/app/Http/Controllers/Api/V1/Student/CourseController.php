@@ -93,12 +93,16 @@ class CourseController extends Controller
             ->get();
 
         return ApiResponse::collection($sessions->map(function (ClassSession $session) use ($enrollment, $before, $after, $request) {
-            $open = $session->joinWindowIsOpen($before, $after);
+            // Being inside the scheduled window isn't enough on its own — the
+            // teacher must have actually started the class. Otherwise the
+            // button reads as live and joinable purely because of the clock,
+            // even when no teacher has shown up.
+            $canJoin = $session->joinWindowIsOpen($before, $after) && $session->status->value === 'live';
 
             return (new ClassSessionResource($session))->additional([
                 'enrollment_id' => $enrollment->id,
-                'join_available' => $open,
-                'action_reason' => $open ? null : $this->joinReason($session),
+                'join_available' => $canJoin,
+                'action_reason' => $canJoin ? null : $this->joinReason($session, $before, $after),
             ])->toArray($request);
         }));
     }
@@ -429,12 +433,16 @@ class CourseController extends Controller
             ->firstOrFail();
     }
 
-    protected function joinReason(ClassSession $session): string
+    protected function joinReason(ClassSession $session, int $before, int $after): string
     {
+        $windowOpen = $session->joinWindowIsOpen($before, $after);
+
         return match (true) {
             $session->status->value === 'cancelled' => 'This class was cancelled',
             $session->status->value === 'completed' => 'This class has ended',
-            $session->starts_at->isFuture() => 'Opens shortly before class',
+            ! $windowOpen && $session->starts_at->isFuture() => 'Opens shortly before class',
+            ! $windowOpen => 'The join window has closed',
+            $session->status->value !== 'live' => 'Waiting for the teacher to start',
             default => 'The join window has closed',
         };
     }
