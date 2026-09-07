@@ -4,6 +4,7 @@ use App\Console\Commands\AutoImportZoomAttendance;
 use App\Console\Commands\CheckIntegrationHealth;
 use App\Console\Commands\CleanupStaleRecordingDownloads;
 use App\Console\Commands\ExpireEnrollments;
+use App\Console\Commands\ExpireLiveClasses;
 use App\Console\Commands\FinalizeExpiredAttempts;
 use App\Console\Commands\NotifyUpcomingClasses;
 use App\Console\Commands\RecheckProcessingRecordings;
@@ -27,6 +28,11 @@ Schedule::command(NotifyUpcomingClasses::class)->everyMinute()->withoutOverlappi
 // Requires the system cron entry `* * * * * php artisan schedule:run` on the
 // VPS — see deploy/README.md — or this (and everyMinute() above) never fires.
 Schedule::command(SyncZoomSessions::class)->everyFifteenMinutes()->withoutOverlapping();
+
+// Nothing else ever moves a class out of "Live" on a timeline a student can
+// see — only the teacher manually finalizing attendance does, which can be
+// hours later or never. Runs on the same cadence as the sync above.
+Schedule::command(ExpireLiveClasses::class)->everyFifteenMinutes()->withoutOverlapping();
 
 // Replaces the teacher's manual "Import" click — same Zoom processing delay
 // as the sync above, so it runs on the same cadence.
