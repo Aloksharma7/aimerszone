@@ -20,7 +20,7 @@ export default async function StudentExploreCoursePage({ params }: { params: Pro
         actions={<ButtonLink href="/student/explore" variant="outline">Back to courses</ButtonLink>}
       />
       <div className="grid gap-6 xl:grid-cols-[1fr_370px]">
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           <Panel className="overflow-hidden p-0" padded={false}>
             {/*
               * The description used to live inside this overlay, absolutely
@@ -61,7 +61,7 @@ export default async function StudentExploreCoursePage({ params }: { params: Pro
           </Panel>
         </div>
 
-        <aside>
+        <aside className="min-w-0">
           <Panel className="sticky top-24">
             <p className="text-sm font-bold uppercase tracking-wider text-brand-700">Available batch</p>
             <h2 className="mt-2 line-clamp-2 text-lg font-bold text-slate-950" title={course.batch}>{course.batch}</h2>
