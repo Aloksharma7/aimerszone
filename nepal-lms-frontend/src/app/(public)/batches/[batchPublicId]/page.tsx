@@ -73,7 +73,7 @@ export default async function BatchPage({ params }: { params: Promise<{ batchPub
         <div className="mt-6 grid gap-7 lg:grid-cols-[1fr_390px]">
           <div>
             <div className="flex flex-wrap gap-2"><Badge tone="blue">{course.category}</Badge><StatusBadge status={course.status} /></div>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">{course.batch}</h1>
+            <h1 className="wrap-break-word mt-4 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">{course.batch}</h1>
             <p className="mt-2 text-lg font-semibold text-brand-700">{course.title}</p>
             <p className="mt-4 max-w-2xl text-base leading-7 text-slate-600">Review the final schedule, access and payment information before creating your submission.</p>
             <Panel className="mt-7">

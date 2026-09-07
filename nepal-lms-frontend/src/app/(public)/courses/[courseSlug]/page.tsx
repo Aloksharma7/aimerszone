@@ -40,7 +40,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ c
           <div className="mt-6 grid gap-8 lg:grid-cols-[1.08fr_.92fr] lg:items-start">
             <div>
               <div className="flex flex-wrap items-center gap-2"><Badge tone="blue">{course.category}</Badge>{course.isFree ? <Badge tone="green">Free learning</Badge> : <StatusBadge status={course.status} />}</div>
-              <h1 className="mt-5 text-balance text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">{course.title}</h1>
+              <h1 className="wrap-break-word mt-5 text-balance text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl lg:text-5xl">{course.title}</h1>
               <p className="mt-5 max-w-2xl text-base leading-8 text-slate-600 sm:text-lg">{course.description}</p>
               <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 text-sm text-slate-600">
                 <span className="flex items-center gap-2"><UserRound className="h-4 w-4 text-brand-700" />{course.teacher}</span>
@@ -68,7 +68,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ c
                     {course.batches.map((option) => (
                       <div key={option.id} className="rounded-xl border border-slate-200 p-4 text-sm">
                         <div className="flex flex-wrap items-start justify-between gap-2">
-                          <p className="font-bold text-slate-900">{option.title}</p>
+                          <p className="wrap-break-word font-bold text-slate-900">{option.title}</p>
                           {course.isFree ? null : <p className="font-bold text-slate-900">{formatNpr(option.priceNpr)}</p>}
                         </div>
                         <p className="mt-2 text-slate-600">{option.schedule}</p>

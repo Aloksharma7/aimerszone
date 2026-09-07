@@ -24,7 +24,7 @@ export function CourseCard({ course, href }: { course: Course; href?: string }) 
       </Link>
       <div className="flex flex-1 flex-col p-5">
         <p className="text-xs font-bold uppercase tracking-[0.12em] text-brand-700">{course.category}</p>
-        <Link href={detailHref} className="mt-2 text-lg font-bold leading-7 text-slate-950 transition-colors group-hover:text-brand-700">{course.title}</Link>
+        <Link href={detailHref} className="wrap-break-word mt-2 text-lg font-bold leading-7 text-slate-950 transition-colors group-hover:text-brand-700">{course.title}</Link>
         <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{course.description}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {course.features.map((feature) => {

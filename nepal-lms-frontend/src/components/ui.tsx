@@ -284,7 +284,7 @@ export function PageHeader({
           </Link>
         ) : null}
         {eyebrow ? <p className="mb-1 text-sm font-bold uppercase tracking-[0.14em] text-brand-700">{eyebrow}</p> : null}
-        <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">{title}</h1>
+        <h1 className="wrap-break-word text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">{title}</h1>
         {description ? <p className="mt-2 text-sm leading-6 text-slate-600 sm:text-base">{description}</p> : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
