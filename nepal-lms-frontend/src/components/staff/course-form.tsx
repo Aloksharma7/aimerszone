@@ -5,6 +5,7 @@ import { CheckCircle2, ImageUp, LoaderCircle, Save, Send, Trash2, XCircle } from
 import { useRouter } from "next/navigation";
 import { AlertBox, Button, ButtonLink, Panel } from "@/components/ui";
 import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@/lib/api/browser-client";
+import { ConfirmAction } from "@/components/shared/confirm-action";
 import { refreshPublicCatalogue } from "@/lib/catalogue-cache";
 import { useToast } from "@/providers/toast-provider";
 import type { ApiResponse } from "@/lib/api/contracts";
@@ -143,6 +144,7 @@ export function CourseForm({
       const error = caught as Partial<NormalizedApiError>;
       setServerError(error.message || "The thumbnail could not be removed.");
       toast({ tone: "danger", title: "Thumbnail not removed", message: error.message || "The thumbnail could not be removed." });
+      throw caught;
     } finally {
       setThumbnailBusy(false);
     }
@@ -259,9 +261,16 @@ export function CourseForm({
                       <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={readOnly || thumbnailBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadThumbnail(file); event.target.value = ""; }} />
                     </label>
                     {previewUrl ? (
-                      <button type="button" onClick={() => void removeThumbnail()} disabled={readOnly || thumbnailBusy} className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-red-200 px-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
-                        <Trash2 className="h-4 w-4" />Remove
-                      </button>
+                      <ConfirmAction
+                        label="Remove"
+                        icon={<Trash2 className="h-4 w-4" />}
+                        title="Remove this thumbnail?"
+                        description="The course will show no image until you upload or paste a new one."
+                        confirmLabel="Remove thumbnail"
+                        disabled={readOnly || thumbnailBusy}
+                        triggerClassName="inline-flex h-10 items-center gap-1.5 rounded-lg border border-red-200 px-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50"
+                        onConfirm={() => removeThumbnail()}
+                      />
                     ) : null}
                     <p className="w-full text-xs text-slate-500">JPG, PNG or WebP · maximum 2 MB</p>
                   </div>
