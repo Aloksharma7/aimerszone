@@ -40,6 +40,18 @@
   box-sizing: border-box;
 }
 
+/*
+ * A grid item's default min-width is "auto", which means the browser refuses
+ * to shrink it below its content's natural size — so a table, chart or image
+ * several levels inside a grid column can force that column, and the whole
+ * page, wider than the screen on mobile even though the column itself sizes
+ * correctly. This resets that floor to 0 so grid items actually respect
+ * their track's width and shrink/wrap instead of overflowing.
+ */
+.grid > * {
+  min-width: 0;
+}
+
 html {
   scroll-behavior: smooth;
 }

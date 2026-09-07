@@ -25,7 +25,7 @@ export function Brand({
 }) {
   const displayName = name || siteConfig.name;
   return (
-    <Link href={href} className={cn("inline-flex items-center gap-3", className)} aria-label={`${displayName} home`}>
+    <Link href={href} className={cn("inline-flex min-w-0 items-center gap-3", className)} aria-label={`${displayName} home`}>
       <span
         className={cn(
           "flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border shadow-sm",

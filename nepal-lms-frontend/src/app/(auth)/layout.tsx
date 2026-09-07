@@ -19,7 +19,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
         <p className="relative text-xs text-slate-500">Your sign-in is protected with secure, server-side session handling.</p>
       </aside>
       <section className="flex min-h-screen flex-col">
-        <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-8 lg:hidden"><Brand name={settings.name} tagline={settings.tagline} logoUrl={settings.logoUrl} /><Link href="/" className="text-sm font-semibold text-slate-600">Back to website</Link></header>
+        <header className="flex h-20 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-8 lg:hidden"><Brand name={settings.name} tagline={settings.tagline} logoUrl={settings.logoUrl} /><Link href="/" className="shrink-0 text-sm font-semibold text-slate-600">Back to website</Link></header>
         <div className="flex flex-1 items-center justify-center px-4 py-10 sm:px-8"><div className="w-full max-w-xl rounded-2xl border border-slate-200 bg-white p-6 shadow-card sm:p-8">{children}</div></div>
         <footer className="px-6 pb-8 text-center text-xs text-slate-400">Protected by server-side permissions when connected to the API.</footer>
       </section>
