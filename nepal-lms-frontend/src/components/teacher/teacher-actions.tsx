@@ -58,7 +58,7 @@ export function StartTeacherClassButton({
     setSuccess(null);
     try {
       if (mockMode) {
-        setSuccess("Preview only: Laravel will authorize the teacher, issue a short-lived host redirect, and record the start action.");
+        setSuccess("Preview only: starting a real class securely fetches a one-time host link and records the start.");
         return;
       }
       const response = await browserRequest<{ data: { redirect_url: string } }>({
@@ -126,7 +126,7 @@ export function TeacherAttendanceEditor({ detail }: { detail: TeacherAttendanceD
     setSuccess(null);
     try {
       if (mockMode) {
-        setSuccess(mode === "finalize" ? "Preview validated. Laravel will finalize attendance and create an audit entry." : "Preview draft validated. Laravel will save these overrides without finalizing.");
+        setSuccess(mode === "finalize" ? "The form passed validation. Preview mode does not finalize attendance." : "The form passed validation. Preview mode does not save the draft.");
         return;
       }
       await browserRequest({
@@ -150,7 +150,7 @@ export function TeacherAttendanceEditor({ detail }: { detail: TeacherAttendanceD
     setSuccess(null);
     try {
       if (mockMode) {
-        setSuccess("Preview only: Laravel will queue a signed Zoom attendance import and preserve existing manual overrides.");
+        setSuccess("Preview only: a real import would queue the Zoom attendance report without overwriting your manual overrides.");
         return;
       }
       await browserRequest({
@@ -258,7 +258,7 @@ export function TeacherRecordingForm({ batchId, sessionOptions = [], syllabusOut
     setWarning(null);
     try {
       if (mockMode) {
-        setSuccess("Preview validated. Laravel will verify this video ID, confirm batch ownership, and save the release record.");
+        setSuccess("The form passed validation. Preview mode does not save the recording.");
         return;
       }
       const response = await browserRequest<{ data: { id: string; state: string; warning: string | null; is_public: boolean } }>({
@@ -327,7 +327,7 @@ export function TeacherAnnouncementForm({ batches }: { batches: TeacherBatch[] }
         return;
       }
       if (mockMode) {
-        setSuccess("Preview validated. Laravel will verify batch assignment and publish the announcement.");
+        setSuccess("The form passed validation. Preview mode does not publish the announcement.");
         return;
       }
       await browserRequest({ url: "/api/v1/teacher/announcements", method: "POST", data, headers: { "Idempotency-Key": createIdempotencyKey("announcement") } });
@@ -389,7 +389,7 @@ export function TeacherSessionForm({ batches }: { batches: TeacherBatch[] }) {
     setSuccess(null);
     try {
       if (mockMode) {
-        setSuccess("Preview validated. Laravel will verify the batch assignment and create the Zoom-backed session.");
+        setSuccess("The form passed validation. Preview mode does not create the session.");
         return;
       }
       const response = await browserRequest<{ data: { id: string } }>({
@@ -438,7 +438,7 @@ export function TeacherSessionManagement({ sessionId }: { sessionId: string }) {
         });
         router.refresh();
       }
-      setSuccess(mockMode ? `Preview validated. Laravel will process the ${kind} request after permission and state checks.` : kind === "sync" ? "Zoom status synchronized." : kind === "fallback" ? "Fallback configuration saved." : "Session rescheduled.");
+      setSuccess(mockMode ? "The form passed validation. Preview mode does not send the request." : kind === "sync" ? "Zoom status synchronized." : kind === "fallback" ? "Fallback configuration saved." : "Session rescheduled.");
     } catch (caught) { setError(caught as NormalizedApiError); } finally { setLoading(null); }
   }
 

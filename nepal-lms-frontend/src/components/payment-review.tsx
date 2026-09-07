@@ -26,7 +26,7 @@ export function PaymentProofButton({ paymentId, available, endpoint = "/api/v1/a
     setError(null);
     try {
       if (mockMode) {
-        setError({ status: 0, code: "preview_only", message: "Preview mode does not expose a real payment proof. Laravel will issue a short-lived authorized viewer URL.", retryable: false });
+        setError({ status: 0, code: "preview_only", message: "Preview mode does not expose a real payment proof — viewing one uses a secure, one-time link.", retryable: false });
         return;
       }
       const response = await browserRequest<{ data: { url: string } }>({ url: `${endpoint}/${encodeURIComponent(paymentId)}/proof`, method: "POST", headers: { "Idempotency-Key": createIdempotencyKey("proof-view") } });
@@ -138,7 +138,7 @@ export function PaymentReview({ paymentId, initialStatus = "Under review", baseP
       if (mockMode) {
         const next = pendingDecision === "approve" ? "Approved" : pendingDecision === "reject" ? "Rejected" : "Flagged for duplicate review";
         setStatus(next);
-        setSuccess("Preview validated. Laravel will re-check the external reference and complete the decision transaction.");
+        setSuccess("The form passed validation. Preview mode does not record a real decision.");
         setPendingDecision(null);
         toast({ tone: "success", title: `Preview: ${decisionLabel(pendingDecision)}`, message: "Nothing was saved — preview mode only." });
         return;
@@ -169,7 +169,7 @@ export function PaymentReview({ paymentId, initialStatus = "Under review", baseP
         <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-semibold text-slate-500">Current decision state</p><div className="mt-2"><StatusBadge status={status} /></div></div><ShieldCheck className="h-7 w-7 text-brand-700" /></div>
         <label className="mt-6 block text-sm font-semibold text-slate-700">Decision reason / internal note<textarea value={reason} onChange={(event) => setReason(event.target.value)} className="mt-2 min-h-24 w-full rounded-lg border border-slate-300 p-3 font-normal outline-none focus:border-brand-600" placeholder="Required for rejection, duplicate flag, reversal or adjustment" maxLength={1000} disabled={decisionLocked} /></label>
         {!decisionLocked ? <><div className="mt-5 grid gap-3 sm:grid-cols-2"><Button onClick={() => setPendingDecision("approve")} disabled={loading}><CheckCircle2 className="h-4 w-4" />Approve payment</Button><Button variant="danger" onClick={() => setPendingDecision("reject")} disabled={loading}><XCircle className="h-4 w-4" />Reject payment</Button></div><Button variant="outline" className="mt-3 w-full" onClick={() => setPendingDecision("flag")} disabled={loading}><AlertTriangle className="h-4 w-4" />Flag possible duplicate</Button></> : <p className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">This payment has a completed decision state. Further changes require an authorized adjustment or refund workflow.</p>}
-        {pendingDecision ? <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4"><p className="font-bold text-amber-950">Confirm: {decisionLabel(pendingDecision)}</p><p className="mt-1 text-sm leading-6 text-amber-800">Laravel will lock the payment row, re-check conflicts, record the accountant and request ID, then perform the decision atomically.</p><div className="mt-4 flex gap-2"><Button size="sm" onClick={confirmDecision} disabled={loading}>{loading ? "Processing…" : "Confirm decision"}</Button><Button size="sm" variant="outline" onClick={() => setPendingDecision(null)} disabled={loading}>Cancel</Button></div></div> : null}
+        {pendingDecision ? <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 p-4"><p className="font-bold text-amber-950">Confirm: {decisionLabel(pendingDecision)}</p><p className="mt-1 text-sm leading-6 text-amber-800">This locks the payment record, re-checks for conflicts, and records who approved it — all as one safe, all-or-nothing step.</p><div className="mt-4 flex gap-2"><Button size="sm" onClick={confirmDecision} disabled={loading}>{loading ? "Processing…" : "Confirm decision"}</Button><Button size="sm" variant="outline" onClick={() => setPendingDecision(null)} disabled={loading}>Cancel</Button></div></div> : null}
         <div className="mt-4 space-y-3"><ErrorNotice error={error} />{success ? <div role="status" className="rounded-xl border border-green-200 bg-green-50 p-4 text-sm leading-6 text-green-900"><p className="font-bold">Decision recorded</p><p className="mt-1">{success}</p></div> : null}</div>
       </Panel>
       <Panel><div className="flex gap-3"><FileText className="mt-0.5 h-5 w-5 shrink-0 text-brand-700" /><div><h2 className="font-bold text-slate-950">Audit record</h2><p className="mt-2 text-sm leading-6 text-slate-600">Every decision records the accountant, payment, reason, time, source IP and request ID.</p></div></div><ButtonLink href={`${basePath}/${paymentId}`} variant="ghost" className="mt-4 w-full">Refresh payment record</ButtonLink></Panel>

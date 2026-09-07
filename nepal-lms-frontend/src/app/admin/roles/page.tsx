@@ -11,7 +11,7 @@ export default async function AdminRolesPage() {
       <PageHeader
         eyebrow="Identity and access"
         title="Roles and permissions"
-        description="Review protected role boundaries and confirm that browser navigation never replaces Laravel authorization."
+        description="Review protected role boundaries and confirm that browser navigation never replaces server-side authorization."
         actions={<div className="flex h-11 items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 text-sm font-semibold text-green-800"><ShieldCheck className="h-4 w-4"/>Server policies required</div>}
       />
       <RoleMatrix roles={roles}/>

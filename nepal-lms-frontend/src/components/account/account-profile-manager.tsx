@@ -70,7 +70,7 @@ export function AccountProfileManager({
       setNotice({
         tone: "success",
         title: mockMode ? "Preview validated" : "Profile updated",
-        message: mockMode ? "The profile payload is ready for the Laravel account endpoint." : "Your account details were saved securely.",
+        message: mockMode ? "The form passed validation. Preview mode does not save changes." : "Your account details were saved securely.",
       });
     } catch (error) {
       setNotice({ tone: "danger", title: "Profile not saved", message: errorMessage(error) });
@@ -106,7 +106,7 @@ export function AccountProfileManager({
       setNotice({
         tone: "success",
         title: mockMode ? "Preview validated" : "Password updated",
-        message: mockMode ? "The password-change contract is ready for Laravel." : "Your password was changed. Other sessions may be revoked according to institution policy.",
+        message: mockMode ? "The form passed validation. Preview mode does not change your password." : "Your password was changed. Other sessions may be revoked according to institution policy.",
       });
     } catch (error) {
       setNotice({ tone: "danger", title: "Password not updated", message: errorMessage(error) });
@@ -128,7 +128,7 @@ export function AccountProfileManager({
         });
       }
       setSessions((items) => items.filter((session) => session.current));
-      setNotice({ tone: "success", title: mockMode ? "Preview validated" : "Other sessions revoked", message: mockMode ? "The audited revoke-session request is ready for Laravel." : "All other authenticated sessions were signed out." });
+      setNotice({ tone: "success", title: mockMode ? "Preview validated" : "Other sessions revoked", message: mockMode ? "The form passed validation. Preview mode does not sign anyone out." : "All other authenticated sessions were signed out." });
     } catch (error) {
       setNotice({ tone: "danger", title: "Sessions not revoked", message: errorMessage(error) });
     } finally {
@@ -142,7 +142,7 @@ export function AccountProfileManager({
     setNotice(null);
     try {
       if (mockMode) {
-        setNotice({ tone: "info", title: "Preview validated", message: "Laravel will create the secret server-side and return a one-time setup flow without exposing provider credentials." });
+        setNotice({ tone: "info", title: "Preview validated", message: "The setup secret is generated securely on the server and never exposed to the browser." });
         return;
       }
       const response = await browserRequest<ApiResponse<{ redirect_to?: string | null }>>({
@@ -200,7 +200,7 @@ export function AccountProfileManager({
           })}</div>
           <Button variant="outline" onClick={revokeOtherSessions} disabled={securityBusy || nonCurrentSessions.length === 0} className="mt-5 w-full"><LogOut className="h-4 w-4" />{nonCurrentSessions.length ? "Revoke other sessions" : "No other sessions"}</Button>
         </Panel>
-        <AlertBox title="Identity protection" tone="info"><p>Locked identity fields and role changes require verified staff support and remain auditable in Laravel.</p></AlertBox>
+        <AlertBox title="Identity protection" tone="info"><p>Locked identity fields and role changes require verified staff support, and every change stays in the permanent audit history.</p></AlertBox>
       </aside>
     </div>
   );

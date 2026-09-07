@@ -40,7 +40,7 @@ export default async function PaymentInstructionsPage() {
             </div>
             <Panel className="h-fit">
               <h2 className="text-xl font-bold text-slate-950">Approved payment methods</h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">These methods are published from the Laravel administration settings. Confirm the selected batch amount before paying.</p>
+              <p className="mt-2 text-sm leading-6 text-slate-500">These methods are set by the institution&apos;s admin team. Confirm the selected batch amount before paying.</p>
               {methods.length ? (
                 <div className="mt-5 space-y-3">
                   {methods.map((method) => (

@@ -68,7 +68,7 @@ export function ApiMutationButton({
           headers: { "Idempotency-Key": createIdempotencyKey("portal-action") },
         });
       }
-      setMessage(mockMode ? "Preview validated. Laravel will perform this authorized action." : successMessage);
+      setMessage(mockMode ? "The form passed validation. Preview mode does not perform the action." : successMessage);
     } catch (caught) {
       setError(normalizeApiError(caught).message);
       throw caught;
@@ -113,7 +113,7 @@ export function AuthorizedDownloadButton({ endpoint, label = "Download", classNa
     setError(null);
     try {
       if (mockMode) {
-        setError("Preview mode: Laravel will issue a short-lived authorized download.");
+        setError("Preview mode: downloads use a secure, one-time link and are disabled here.");
         return;
       }
       const response = await browserRequest<ApiResponse<DownloadPayload>>({
@@ -152,7 +152,7 @@ export function AuthorizedViewButton({ endpoint, label = "Open secure file", cla
     setBusy(true); setError(null);
     try {
       if (mockMode) {
-        setError("Preview mode: Laravel will issue a short-lived authorized viewer URL.");
+        setError("Preview mode: viewing uses a secure, one-time link and is disabled here.");
         return;
       }
       const response = await browserRequest<ApiResponse<ViewPayload>>({

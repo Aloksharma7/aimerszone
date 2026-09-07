@@ -48,7 +48,7 @@ export function JoinClassButton({
     setError(null);
     try {
       if (mockMode) {
-        setError("Preview mode: Laravel will return a short-lived authorised meeting link here.");
+        setError("Preview mode: joining uses a secure, one-time link and is disabled here.");
         return;
       }
       const response = await browserRequest<ApiResponse<LinkPayload>>({
@@ -88,7 +88,7 @@ export function SecureDownloadButton({ resourceId, label = "Download", className
     setError(null);
     try {
       if (mockMode) {
-        setError("Preview mode: the protected PDF download will be requested from Laravel.");
+        setError("Preview mode: downloads use a secure, one-time link and are disabled here.");
         return;
       }
       const response = await browserRequest<ApiResponse<LinkPayload>>({
@@ -133,7 +133,7 @@ export function SecureRecordingPlayer({ recordingId, title }: { recordingId: str
     setError(null);
     try {
       if (mockMode) {
-        setError("Preview mode: Laravel will verify enrollment and return the authorised video embed.");
+        setError("Preview mode: video playback is disabled here since it needs your real enrollment.");
         return;
       }
       const response = await browserRequest<ApiResponse<LinkPayload>>({

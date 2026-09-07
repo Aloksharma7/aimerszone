@@ -52,7 +52,7 @@ export function PublicSupportRequestForm() {
         });
       }
       formElement.reset();
-      setNotice({ tone: "success", title: mockMode ? "Preview validated" : "Support request submitted", message: mockMode ? "The protected support-request payload is ready for Laravel." : "Your request was queued. Keep the confirmation reference shown by the institution." });
+      setNotice({ tone: "success", title: mockMode ? "Preview validated" : "Support request submitted", message: mockMode ? "The form passed validation. Preview mode does not submit anything." : "Your request was queued. Keep the confirmation reference shown by the institution." });
     } catch (error) {
       setNotice({ tone: "danger", title: "Request not submitted", message: messageFor(error) });
     } finally {
@@ -110,7 +110,7 @@ export function StudentSupportManager({ initialData }: { initialData: StudentSup
       }
       setTickets((items) => [{ id: ticketId, subject, category, status: "Open", createdAt: "Just now", latestReply: null, replyCount: 0, updatedAt: "Just now" }, ...items]);
       formElement.reset();
-      setNotice({ tone: "success", title: mockMode ? "Preview validated" : "Support ticket created", message: mockMode ? "The authenticated support-ticket payload is ready for Laravel." : `Ticket ${ticketId} was created and can now be tracked here.` });
+      setNotice({ tone: "success", title: mockMode ? "Preview validated" : "Support ticket created", message: mockMode ? "The form passed validation. Preview mode does not create a ticket." : `Ticket ${ticketId} was created and can now be tracked here.` });
     } catch (error) {
       setNotice({ tone: "danger", title: "Ticket not submitted", message: messageFor(error) });
     } finally {

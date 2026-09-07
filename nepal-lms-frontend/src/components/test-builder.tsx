@@ -366,7 +366,7 @@ export function TestBuilder({ initialData }: { initialData: TeacherTestBuilderDa
       setNotice({
         tone: "success",
         title: mockMode ? "Preview validated" : publishAfter ? "Test published" : "Draft saved",
-        message: mockMode ? "The complete assessment payload and answer-key rules are ready for Laravel." : publishAfter ? "The test is available according to the configured schedule." : "The draft and question order were saved.",
+        message: mockMode ? "The form passed validation. Preview mode does not save the test." : publishAfter ? "The test is available according to the configured schedule." : "The draft and question order were saved.",
       });
       if (!values.id && testId && !mockMode) router.replace(portalPath(`/teacher/tests/${encodeURIComponent(testId)}`));
       router.refresh();

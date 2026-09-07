@@ -79,7 +79,7 @@ export default async function StudentExploreCoursePage({ params }: { params: Pro
             ) : (
               <ButtonLink href={`/student/payments/new?course=${course.slug}&batch=${course.batchId}`} className="mt-5 w-full">Continue to payment</ButtonLink>
             )}
-            <p className="mt-3 text-center text-xs leading-5 text-slate-500">Enrollment access is created only after Laravel validates the request or approves payment.</p>
+            <p className="mt-3 text-center text-xs leading-5 text-slate-500">Your access is created only after the request is validated or the payment is approved.</p>
           </Panel>
         </aside>
       </div>
