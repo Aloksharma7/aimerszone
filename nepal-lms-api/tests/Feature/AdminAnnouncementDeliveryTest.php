@@ -131,4 +131,39 @@ class AdminAnnouncementDeliveryTest extends TestCase
             fn ($item) => str_contains($item['title'], 'Office closed'),
         ));
     }
+
+    /**
+     * Regression: the course-scoped announcements list never passed its
+     * actual read state through to AnnouncementResource, so every
+     * announcement read as unread here even after being read from the main
+     * notification feed — the two lists disagreed about the same fact.
+     */
+    public function test_the_course_scoped_announcement_list_reflects_real_read_state(): void
+    {
+        $admin = $this->makeUser(RoleKey::Admin);
+        $student = $this->makeUser(RoleKey::Student);
+        $batch = $this->makeBatch($this->makeCourse());
+        $enrollment = $this->enroll($student, $batch);
+
+        $created = $this->actingAs($admin)
+            ->postJson('/api/v1/admin/announcements', [
+                'title' => 'Batch schedule change',
+                'body' => 'This batch now meets an hour earlier starting next week.',
+                'audience' => 'batch',
+                'batch_id' => $batch->getKey(),
+                'status' => 'published',
+            ])
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->actingAs($student)
+            ->postJson('/api/v1/student/announcements/'.$created.'/read')
+            ->assertOk();
+
+        $response = $this->actingAs($student)
+            ->getJson('/api/v1/student/courses/'.$enrollment->getKey().'/announcements')
+            ->assertOk();
+
+        $this->assertTrue(collect($response->json('data'))->firstWhere('id', $created)['read']);
+    }
 }

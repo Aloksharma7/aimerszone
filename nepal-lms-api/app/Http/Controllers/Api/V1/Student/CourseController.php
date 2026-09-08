@@ -336,7 +336,18 @@ class CourseController extends Controller
             ->orderByDesc('published_at')
             ->get();
 
-        return ApiResponse::collection(AnnouncementResource::collection($announcements));
+        // Without this, AnnouncementResource's fallback (`$this->additional['read']
+        // ?? false`) fires every time, so every announcement on this course-scoped
+        // list reads as unread even after being read from the main notification feed.
+        $read = DB::table('announcement_reads')
+            ->where('user_id', $request->user()->getKey())
+            ->whereIn('announcement_id', $announcements->pluck('id'))
+            ->pluck('announcement_id')
+            ->flip();
+
+        return ApiResponse::collection($announcements->map(fn (Announcement $announcement) => (new AnnouncementResource($announcement))
+            ->additional(['read' => $read->has($announcement->id)])
+            ->toArray($request)));
     }
 
     /**
