@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Enrollment;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\AuthenticationRevoker;
 use App\Services\DeviceGuard;
 use App\Services\UserDirectory;
 use App\Support\ApiResponse;
@@ -31,6 +32,7 @@ class UserController extends Controller
     public function __construct(
         protected UserDirectory $directory,
         protected AuditLogger $audit,
+        protected AuthenticationRevoker $revoker,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -247,12 +249,29 @@ class UserController extends Controller
             );
         }
 
+        // Suspend produces the exact same immediate access loss as Archive
+        // (EnsureAccountIsUsable blocks every request the instant status
+        // isn't Active) but, unlike Archive, had none of its safeguards — a
+        // paying student mid-course could be cut off with no warning via the
+        // button sitting right next to the properly-guarded one.
+        if ($action === 'suspend') {
+            $active = Enrollment::query()->where('user_id', $user->getKey())->accessible()->count();
+
+            if ($active > 0) {
+                throw DomainException::conflict(
+                    "This account has {$active} course".($active === 1 ? '' : 's')
+                        .' with active access. End or transfer the enrolment first, so the student is not cut off without a record of why.',
+                    'user_has_active_access',
+                );
+            }
+        }
+
         $status = match ($action) {
             'password-reset' => $this->sendPasswordReset($user),
-            'revoke-sessions' => $this->revokeSessions($user),
-            'mfa-reset' => $this->resetMfa($user),
-            'suspend' => $this->setStatus($user, UserStatus::Suspended),
-            'reactivate' => $this->setStatus($user, UserStatus::Active),
+            'revoke-sessions' => $this->revokeSessions($request, $user),
+            'mfa-reset' => $this->resetMfa($request, $user),
+            'suspend' => $this->setStatus($request, $user, UserStatus::Suspended),
+            'reactivate' => $this->setStatus($request, $user, UserStatus::Active),
             default => null,
         };
 
@@ -382,16 +401,20 @@ class UserController extends Controller
         return 'reset_link_sent';
     }
 
-    protected function revokeSessions(User $user): string
+    /**
+     * Ends every session AND Sanctum token this account holds — not just
+     * database session rows. $user here is always a different account than
+     * the acting admin, so there is no "current" credential of $user's own
+     * to preserve; revokeOthers() naturally revokes everything in that case.
+     */
+    protected function revokeSessions(Request $request, User $user): string
     {
-        if (config('session.driver') === 'database') {
-            DB::table(config('session.table', 'sessions'))->where('user_id', $user->getKey())->delete();
-        }
+        $this->revoker->revokeOthers($request, $user);
 
         return 'sessions_revoked';
     }
 
-    protected function resetMfa(User $user): string
+    protected function resetMfa(Request $request, User $user): string
     {
         $user->forceFill([
             'two_factor_secret' => null,
@@ -399,17 +422,17 @@ class UserController extends Controller
             'two_factor_confirmed_at' => null,
         ])->save();
 
-        $this->revokeSessions($user);
+        $this->revokeSessions($request, $user);
 
         return 'mfa_reset';
     }
 
-    protected function setStatus(User $user, UserStatus $status): string
+    protected function setStatus(Request $request, User $user, UserStatus $status): string
     {
         $user->forceFill(['status' => $status->value])->save();
 
         if ($status === UserStatus::Suspended) {
-            $this->revokeSessions($user);
+            $this->revokeSessions($request, $user);
         }
 
         return $status->value;
