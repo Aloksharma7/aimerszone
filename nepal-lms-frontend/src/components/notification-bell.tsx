@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, Loader2 } from "lucide-react";
 import { browserRequest } from "@/lib/api/browser-client";
 
@@ -14,6 +14,8 @@ type Notification = {
   href: string | null;
 };
 
+const POLL_MS = 60_000;
+
 /**
  * Notification bell with a preview panel.
  *
@@ -22,9 +24,15 @@ type Notification = {
  * place. This shows the most recent few in place, with a link through to the
  * full page for anything longer.
  *
- * The list is fetched when the panel is first opened rather than on every page
- * load: most sessions never open it, and the unread badge does not justify a
- * request on every navigation.
+ * Fetches on mount and polls periodically, rather than only fetching the
+ * first time the panel opens: a badge that only starts counting once you've
+ * already clicked it can never show you anything before you look, which
+ * defeats the entire point of a badge — the count was always 0 until opened,
+ * at which point load() immediately marked everything it just fetched as
+ * seen, so it went straight back to 0. Since this lives in the persistent
+ * portal layout rather than being remounted per page, polling is also the
+ * only way anything created after the page first loaded is ever noticed for
+ * the rest of the session.
  */
 export function NotificationBell({ href, endpoint = "/api/v1/student/notifications" }: { href: string; endpoint?: string }) {
   const [open, setOpen] = useState(false);
@@ -37,12 +45,64 @@ export function NotificationBell({ href, endpoint = "/api/v1/student/notificatio
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Read from inside load(), which is called from a mount effect and a
+  // setInterval callback — both close over whatever `open` was when they
+  // were created unless this is a ref, so a background poll would otherwise
+  // never know the panel had since been opened.
+  const openRef = useRef(open);
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+
   const unread = items?.filter((item) => !item.read && !dismissedIds.has(item.id)).length ?? 0;
 
   function markSeen(list: Notification[]) {
     if (!list.length) return;
     setDismissedIds((current) => new Set([...current, ...list.map((item) => item.id)]));
   }
+
+  const load = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setBusy(true);
+      setError(false);
+    }
+
+    try {
+      const response = await browserRequest<{ data: Notification[] }>({
+        url: endpoint,
+        method: "GET",
+      });
+
+      const fetched = response.data.slice(0, 6);
+      setItems(fetched);
+
+      // Only actually "seen" once the panel showing them is genuinely open —
+      // a background poll while it's closed must not silently clear the
+      // badge for something the user never looked at.
+      if (openRef.current) markSeen(fetched);
+    } catch {
+      // Distinct from "genuinely nothing new" — an empty list from a failed
+      // fetch used to look identical to zero real notifications, so a real
+      // outage was invisible. A silent background poll failing just leaves
+      // the last good list in place instead of replacing it with an error.
+      if (!options?.silent) {
+        setItems([]);
+        setError(true);
+      }
+    } finally {
+      if (!options?.silent) setBusy(false);
+    }
+  }, [endpoint]);
+
+  useEffect(() => {
+    // The standard fetch-on-mount pattern: setBusy(true) runs synchronously
+    // at the top of load() before its first await, which is what this rule
+    // is (over-)cautious about for a plain data fetch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+    const timer = window.setInterval(() => void load({ silent: true }), POLL_MS);
+    return () => window.clearInterval(timer);
+  }, [load]);
 
   // Close on an outside click or Escape, the behaviour a dropdown is expected
   // to have and the reason this is a panel rather than a page.
@@ -68,40 +128,16 @@ export function NotificationBell({ href, endpoint = "/api/v1/student/notificatio
     };
   }, [open]);
 
-  async function load() {
-    setBusy(true);
-    setError(false);
-
-    try {
-      const response = await browserRequest<{ data: Notification[] }>({
-        url: endpoint,
-        method: "GET",
-      });
-
-      const fetched = response.data.slice(0, 6);
-      setItems(fetched);
-      // load() only ever runs while the panel is open (first open, or a retry
-      // click from inside it), so whatever it fetches is being looked at now.
-      markSeen(fetched);
-    } catch {
-      // Distinct from "genuinely nothing new" — an empty list from a failed
-      // fetch used to look identical to zero real notifications, so a real
-      // outage was invisible.
-      setItems([]);
-      setError(true);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   function toggle() {
     const next = !open;
     setOpen(next);
 
-    if (next) {
-      if (items === null) void load();
-      else markSeen(items);
-    }
+    if (!next) return;
+
+    // Opening is exactly the moment a fresh look is worth it, and the
+    // moment whatever is currently shown counts as seen.
+    if (items) markSeen(items);
+    void load();
   }
 
   return (
