@@ -65,24 +65,40 @@ class AnnouncementController extends Controller
             'batch_id' => ['required_if:audience,batch', 'nullable', 'string', Rule::exists('batches', 'id')],
             'role_key' => ['required_if:audience,role', 'nullable', 'string', 'max:40'],
             'channel' => ['nullable', Rule::in(['portal', 'email', 'sms', 'whatsapp'])],
+
+            // Distinct from publishing: the composer's own "Save draft"
+            // button previously had no effect here at all — this field
+            // wasn't validated, so it was silently dropped and every save
+            // published or scheduled immediately regardless of which
+            // button was clicked.
+            'status' => ['nullable', Rule::in(['draft', 'published'])],
             'publish_at' => ['nullable', 'date'],
             'pinned' => ['nullable', 'boolean'],
             'link' => ['nullable', 'string', 'max:255'],
         ]);
 
+        $isDraft = ($data['status'] ?? 'published') === 'draft';
+
         // A future publish_at schedules; anything else publishes immediately.
-        $scheduled = filled($data['publish_at'] ?? null) && now()->lt($data['publish_at']);
+        // Meaningless for a draft, which isn't going out at all yet.
+        $scheduled = ! $isDraft && filled($data['publish_at'] ?? null) && now()->lt($data['publish_at']);
+
+        $status = match (true) {
+            $isDraft => AnnouncementStatus::Draft,
+            $scheduled => AnnouncementStatus::Scheduled,
+            default => AnnouncementStatus::Published,
+        };
 
         $announcement = Announcement::create(array_merge($data, [
             'channel' => $data['channel'] ?? 'portal',
-            'status' => $scheduled ? AnnouncementStatus::Scheduled->value : AnnouncementStatus::Published->value,
-            'published_at' => $scheduled ? null : now(),
+            'status' => $status->value,
+            'published_at' => $status === AnnouncementStatus::Published ? now() : null,
             'created_by' => $request->user()->getKey(),
         ]));
 
         $this->audit->log('announcement.created', $announcement, $request->user(), properties: [
             'audience' => $data['audience'],
-            'scheduled' => $scheduled,
+            'status' => $status->value,
         ]);
 
         return ApiResponse::item(['id' => $announcement->id, 'status' => $announcement->status->value], status: 201);

@@ -74,4 +74,28 @@ class Announcement extends Model
                 ->orWhere(fn ($q) => $q->where('audience', AnnouncementAudience::Course->value)->whereIn('course_id', $courseIds ?: ['-']));
         });
     }
+
+    /**
+     * Restricts to what a non-student portal (teacher/staff/admin) may see:
+     * institution-wide notices plus notices addressed to their specific
+     * role. Batch/course-targeted announcements are a student-facing
+     * concept only — the admin composer's "one batch" audience means "that
+     * batch's students," not that batch's teacher, so those are
+     * deliberately excluded here rather than guessed at.
+     *
+     * AnnouncementAudience::Role is generic (not restricted to students),
+     * and the composer really does let an admin target "teacher"/"staff"/
+     * "admin" — but until this scope existed, nothing outside
+     * Student\NotificationController ever read the Announcement model at
+     * all, so a role-targeted announcement for any other role reached
+     * nobody: it existed in the database and the admin's own history list,
+     * and nowhere else.
+     */
+    public function scopeForRole($query, string $roleKey)
+    {
+        return $query->where(function ($builder) use ($roleKey) {
+            $builder->where('audience', AnnouncementAudience::All->value)
+                ->orWhere(fn ($q) => $q->where('audience', AnnouncementAudience::Role->value)->where('role_key', $roleKey));
+        });
+    }
 }

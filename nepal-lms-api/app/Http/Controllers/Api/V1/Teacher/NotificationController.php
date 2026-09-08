@@ -3,16 +3,18 @@
 namespace App\Http\Controllers\Api\V1\Teacher;
 
 use App\Http\Controllers\Controller;
+use App\Models\Announcement;
 use App\Services\AccessGuard;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * The teacher notification bell, reusing the same follow-up signals the
+ * The teacher notification bell, combining the same follow-up signals the
  * dashboard already computes (pending attendance, unreleased recordings,
- * draft tests) — outstanding work rather than archived messages, so every
- * item is always live (read is always false).
+ * draft tests — outstanding work, so always shown as unread) with any
+ * institution-wide or teacher-targeted announcement, which previously
+ * reached nobody outside the student portal at all.
  */
 class NotificationController extends Controller
 {
@@ -24,13 +26,30 @@ class NotificationController extends Controller
     {
         $batchIds = $this->guard->taughtBatchIds($request->user());
 
-        return ApiResponse::collection(collect($this->followUps($batchIds))->map(fn (array $item) => [
+        $followUps = collect($this->followUps($batchIds))->map(fn (array $item) => [
             'id' => $item['id'],
             'title' => $item['title'],
             'summary' => $item['detail'] ?? null,
             'published_at' => null,
             'read' => false,
             'href' => $item['href'] ?? null,
-        ])->all());
+        ]);
+
+        $announcements = Announcement::query()
+            ->published()
+            ->forRole('teacher')
+            ->orderByDesc('published_at')
+            ->limit(20)
+            ->get()
+            ->map(fn (Announcement $announcement) => [
+                'id' => $announcement->id,
+                'title' => $announcement->title,
+                'summary' => $announcement->summary,
+                'published_at' => $announcement->published_at?->toIso8601String(),
+                'read' => false,
+                'href' => $announcement->link,
+            ]);
+
+        return ApiResponse::collection($followUps->concat($announcements)->all());
     }
 }

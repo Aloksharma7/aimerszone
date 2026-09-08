@@ -219,24 +219,50 @@ export function RoleMatrix({ roles }: { roles: RoleDefinition[] }) {
 
 export function AnnouncementComposer({ batches, roles }: { batches: AdminBatch[]; roles: RoleDefinition[] }) {
   const router = useRouter();
-  const [values, setValues] = useState({ title: "", body: "", audience: "all", targetId: "", channel: "in_app", schedule: "" });
+  const { toast } = useToast();
+  const [values, setValues] = useState({ title: "", body: "", audience: "all", targetId: "", schedule: "" });
   const [notice, setNotice] = useState<{ tone: "success" | "danger"; title: string; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
   async function submit(status: "draft" | "published") {
     if (values.title.trim().length < 4 || values.body.trim().length < 10) { setNotice({ tone: "danger", title: "Announcement not saved", message: "Add a clear title and message." }); return; }
+    if (values.audience !== "all" && !values.targetId) { setNotice({ tone: "danger", title: "Announcement not saved", message: "Choose which batch or role this is for." }); return; }
     setBusy(true); setNotice(null);
     try {
-      if (!mockMode) await browserRequest<ApiResponse<{ id: string }>>({ url: "/api/v1/admin/announcements", method: "POST", data: { title: values.title.trim(), body: values.body.trim(), audience_type: values.audience, audience_id: values.targetId || null, channel: values.channel, scheduled_at: values.schedule || null, status }, headers: { "Idempotency-Key": createIdempotencyKey(`admin-announcement-${status}`) } });
-      else await new Promise((resolve) => window.setTimeout(resolve, 300));
+      if (!mockMode) {
+        // Field names here must match what AnnouncementController::store()
+        // actually validates (audience, course_id/batch_id/role_key,
+        // channel as a real portal/email/sms/whatsapp value, publish_at) —
+        // this previously sent audience_type/audience_id/scheduled_at and a
+        // channel value the backend didn't recognize, so every submission
+        // 422'd and no admin announcement had ever actually been created.
+        await browserRequest<ApiResponse<{ id: string }>>({
+          url: "/api/v1/admin/announcements",
+          method: "POST",
+          data: {
+            title: values.title.trim(),
+            body: values.body.trim(),
+            audience: values.audience,
+            batch_id: values.audience === "batch" ? values.targetId : null,
+            role_key: values.audience === "role" ? values.targetId : null,
+            channel: "portal",
+            publish_at: values.schedule || null,
+            status,
+          },
+          headers: { "Idempotency-Key": createIdempotencyKey(`admin-announcement-${status}`) },
+        });
+      } else {
+        await new Promise((resolve) => window.setTimeout(resolve, 300));
+      }
+      toast({ tone: "success", title: mockMode ? "Preview validated" : status === "published" ? "Announcement published" : "Draft saved" });
       setNotice({ tone: "success", title: mockMode ? "Preview validated" : status === "published" ? "Announcement published" : "Draft saved", message: mockMode ? "The form passed validation. Preview mode does not publish anything." : "The audience and delivery request were recorded." });
-      if (status === "published") setValues({ title: "", body: "", audience: "all", targetId: "", channel: "in_app", schedule: "" });
+      if (status === "published") setValues({ title: "", body: "", audience: "all", targetId: "", schedule: "" });
       if (!mockMode) router.refresh();
     } catch (caught) { const error = caught as Partial<NormalizedApiError>; setNotice({ tone: "danger", title: "Announcement not saved", message: error.message || "The request could not be completed." }); }
     finally { setBusy(false); }
   }
-  const targets = values.audience === "batch" ? batches.map((batch) => ({ id: batch.id, label: batch.name })) : values.audience === "role" ? roles.map((role) => ({ id: role.id, label: role.name })) : [];
+  const targets = values.audience === "batch" ? batches.map((batch) => ({ id: batch.id, label: batch.name })) : values.audience === "role" ? roles.map((role) => ({ id: role.key, label: role.name })) : [];
   return (
-    <div className="space-y-4"><RequestNotice notice={notice} /><Panel><div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-bold text-slate-950">Create announcement</h2><p className="mt-1 text-sm leading-6 text-slate-500">Target a role or batch. Private meeting and file links must never be pasted into the message.</p></div><Megaphone className="h-6 w-6 text-brand-700" /></div><div className="mt-6 grid gap-5 sm:grid-cols-2"><div className="sm:col-span-2"><Field label="Title" required><input className={inputClass} value={values.title} maxLength={120} onChange={(event) => setValues((current) => ({ ...current, title: event.target.value }))} /></Field></div><Field label="Audience"><select className={inputClass} value={values.audience} onChange={(event) => setValues((current) => ({ ...current, audience: event.target.value, targetId: "" }))}><option value="all">All active users</option><option value="role">One role</option><option value="batch">One batch</option></select></Field><Field label="Audience target"><select className={inputClass} value={values.targetId} onChange={(event) => setValues((current) => ({ ...current, targetId: event.target.value }))} disabled={!targets.length}><option value="">{targets.length ? "Select target" : "Not required"}</option>{targets.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></Field><Field label="Channel"><select className={inputClass} value={values.channel} onChange={(event) => setValues((current) => ({ ...current, channel: event.target.value }))}><option value="in_app">In-app</option><option value="in_app_email">In-app and email</option></select></Field><Field label="Schedule (optional)"><input className={inputClass} type="datetime-local" value={values.schedule} onChange={(event) => setValues((current) => ({ ...current, schedule: event.target.value }))} /></Field><div className="sm:col-span-2"><Field label="Message" required><textarea className={textareaClass} value={values.body} maxLength={5000} onChange={(event) => setValues((current) => ({ ...current, body: event.target.value }))} /></Field></div></div><div className="mt-6 flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => submit("draft")} disabled={busy}><Save className="h-4 w-4" />Save draft</Button><Button onClick={() => submit("published")} disabled={busy}>{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Publish / schedule</Button></div></Panel></div>
+    <div className="space-y-4"><RequestNotice notice={notice} /><Panel><div className="flex items-start justify-between gap-4"><div><h2 className="text-xl font-bold text-slate-950">Create announcement</h2><p className="mt-1 text-sm leading-6 text-slate-500">Target a role or batch. Private meeting and file links must never be pasted into the message.</p></div><Megaphone className="h-6 w-6 text-brand-700" /></div><div className="mt-6 grid gap-5 sm:grid-cols-2"><div className="sm:col-span-2"><Field label="Title" required><input className={inputClass} value={values.title} maxLength={120} onChange={(event) => setValues((current) => ({ ...current, title: event.target.value }))} /></Field></div><Field label="Audience"><select className={inputClass} value={values.audience} onChange={(event) => setValues((current) => ({ ...current, audience: event.target.value, targetId: "" }))}><option value="all">All active users</option><option value="role">One role</option><option value="batch">One batch</option></select></Field><Field label="Audience target"><select className={inputClass} value={values.targetId} onChange={(event) => setValues((current) => ({ ...current, targetId: event.target.value }))} disabled={!targets.length}><option value="">{targets.length ? "Select target" : "Not required"}</option>{targets.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></Field><Field label="Schedule (optional)"><input className={inputClass} type="datetime-local" value={values.schedule} onChange={(event) => setValues((current) => ({ ...current, schedule: event.target.value }))} /></Field><div className="sm:col-span-2"><Field label="Message" required><textarea className={textareaClass} value={values.body} maxLength={5000} onChange={(event) => setValues((current) => ({ ...current, body: event.target.value }))} /></Field></div></div><div className="mt-6 flex flex-wrap justify-end gap-2"><Button variant="outline" onClick={() => submit("draft")} disabled={busy}><Save className="h-4 w-4" />Save draft</Button><Button onClick={() => submit("published")} disabled={busy}>{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}Publish / schedule</Button></div></Panel></div>
   );
 }
 
