@@ -42,7 +42,7 @@ export function Brand({
       {!compact ? (
         <span className="min-w-0">
           <span className={cn("block truncate text-[15px] font-bold leading-5", light ? "text-white" : "text-slate-950")}>{displayName}</span>
-          <span className={cn("block truncate text-[11px] font-medium", light ? "text-blue-100" : "text-slate-500")}>{tagline || "Learn with a clear plan"}</span>
+          <span className={cn("block truncate text-[11px] font-medium", light ? "text-blue-100" : "text-slate-500")}>{tagline || siteConfig.tagline}</span>
         </span>
       ) : null}
     </Link>

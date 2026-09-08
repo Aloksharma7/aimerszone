@@ -9,7 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const settings = await getPublicSettings();
   return {
     title: {
-      default: `${settings.name} — Learn with a clear plan`,
+      default: `${settings.name} — ${settings.tagline}`,
       template: `%s | ${settings.name}`,
     },
     description: settings.tagline,
