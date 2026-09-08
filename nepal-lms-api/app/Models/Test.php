@@ -97,6 +97,39 @@ class Test extends Model
             ->exists();
     }
 
+    /**
+     * The status as it should currently read, not just what is stored.
+     *
+     * The stored column only ever holds Draft or Open — everything past
+     * publishing is derived from timestamps and result_release, the same
+     * way StudentTestResource::displayStatus() already computes it for a
+     * student's own view. Teacher-facing reads (summary(), builder()) used
+     * the raw column directly, so a test scheduled to open next week read
+     * as "open" the moment it was published, and one that closed weeks ago
+     * kept reading as "open" forever, because nothing ever moves the stored
+     * value past that point.
+     */
+    public function effectiveStatus(): TestStatus
+    {
+        if ($this->status === TestStatus::Draft) {
+            return TestStatus::Draft;
+        }
+
+        if ($this->isOpenNow()) {
+            return TestStatus::Open;
+        }
+
+        if ($this->resultsAreReleased()) {
+            return TestStatus::ResultReleased;
+        }
+
+        if ($this->opens_at !== null && $this->opens_at->isFuture()) {
+            return TestStatus::Scheduled;
+        }
+
+        return TestStatus::Closed;
+    }
+
     /** Whether a scored result may be disclosed to the student. */
     public function resultsAreReleased(): bool
     {

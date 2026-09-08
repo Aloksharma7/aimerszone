@@ -133,7 +133,7 @@ class TestController extends Controller
             'course_title' => $test->batch?->course?->title,
             'title' => $test->title,
             'instructions' => $test->instructions,
-            'status' => $test->status->value,
+            'status' => $test->effectiveStatus()->value,
             'opens_at' => $test->opens_at?->toIso8601String(),
             'closes_at' => $test->closes_at?->toIso8601String(),
             'duration_minutes' => (int) $test->duration_minutes,
@@ -362,7 +362,7 @@ class TestController extends Controller
             'duration_minutes' => (int) $test->duration_minutes,
             'submissions_count' => (int) ($test->submissions_count ?? 0),
             'attempts_allowed' => (int) $test->attempts_allowed,
-            'status' => $test->status->value,
+            'status' => $test->effectiveStatus()->value,
         ];
     }
 

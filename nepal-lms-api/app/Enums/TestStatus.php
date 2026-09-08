@@ -8,7 +8,6 @@ enum TestStatus: string
     case Scheduled = 'scheduled';
     case Open = 'open';
     case Closed = 'closed';
-    case ResultHidden = 'result_hidden';
     case ResultReleased = 'result_released';
 
     public function label(): string
@@ -18,7 +17,6 @@ enum TestStatus: string
             self::Scheduled => 'Scheduled',
             self::Open => 'Open',
             self::Closed => 'Closed',
-            self::ResultHidden => 'Result hidden',
             self::ResultReleased => 'Result released',
         };
     }

@@ -156,7 +156,7 @@ export type ApiTest = {
   enrollment_id?: string;
   course_title?: string;
   title: string;
-  status: "draft" | "scheduled" | "open" | "closed" | "result_hidden" | "result_released";
+  status: "draft" | "scheduled" | "open" | "closed" | "result_released";
   opens_at: string;
   closes_at: string;
   duration_minutes: number;
