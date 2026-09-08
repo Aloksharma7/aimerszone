@@ -19,6 +19,7 @@ class RecordingProgress extends Model
         'user_id',
         'progress_percent',
         'last_position_seconds',
+        'watched_seconds',
         'last_watched_at',
         'completed_at',
     ];

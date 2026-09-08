@@ -153,14 +153,28 @@ class RecordingController extends Controller
         // never regress an already-reached percentage.
         $percent = max((int) ($existing->progress_percent ?? 0), (int) ($data['progress_percent'] ?? 0));
 
+        // Corroborates $percent against real elapsed time instead of trusting
+        // the reported position alone. Each check-in credits at most a few
+        // seconds past the last one (capped just above the player's own ~15s
+        // interval), so scrubbing straight to the end and letting it play for
+        // a moment accumulates almost nothing here even though $percent alone
+        // would already read 100 — see completedWithCorroboration() below.
+        $sinceLastCheckIn = $existing->last_watched_at !== null
+            ? max(0, $existing->last_watched_at->diffInSeconds(now(), false))
+            : 0;
+        $watchedSeconds = (int) ($existing->watched_seconds ?? 0) + min(20, $sinceLastCheckIn);
+
+        $verified = $this->completedWithCorroboration($recording, $percent, $watchedSeconds);
+
         $existing->fill([
             'progress_percent' => $percent,
             'last_position_seconds' => $data['position_seconds'] ?? $existing->last_position_seconds ?? 0,
+            'watched_seconds' => $watchedSeconds,
             'last_watched_at' => now(),
-            'completed_at' => $percent >= 95 ? ($existing->completed_at ?? now()) : $existing->completed_at,
+            'completed_at' => $verified ? ($existing->completed_at ?? now()) : $existing->completed_at,
         ])->save();
 
-        if ($percent >= 95) {
+        if ($verified) {
             $enrollment = $this->guard->enrollmentFor($user, $recording->batch_id);
 
             // Watching a lesson's video to the end is completing that
@@ -181,5 +195,27 @@ class RecordingController extends Controller
         }
 
         return $existing;
+    }
+
+    /**
+     * Whether a reported high-water-mark of 95%+ is backed by enough actual
+     * watch time to count as complete, closing the gap where scrubbing
+     * straight to the end and letting it play for a moment reported the
+     * same 100% as watching the whole thing.
+     */
+    protected function completedWithCorroboration(Recording $recording, int $percent, int $watchedSeconds): bool
+    {
+        if ($percent < 95) {
+            return false;
+        }
+
+        // Nothing to corroborate against for a recording with no known
+        // length — trust the reported position rather than permanently
+        // blocking completion.
+        if ($recording->duration_seconds === null || $recording->duration_seconds <= 0) {
+            return true;
+        }
+
+        return $watchedSeconds >= (int) round($recording->duration_seconds * 0.5);
     }
 }
