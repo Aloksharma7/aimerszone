@@ -34,6 +34,7 @@ export type TeacherSession = {
   startAvailable?: boolean;
   canStart?: boolean;
   canFinalizeAttendance?: boolean;
+  canReopenAttendance?: boolean;
 };
 
 export type TeacherFollowUp = {
@@ -177,6 +178,7 @@ type ApiTeacherSession = {
   start_available?: boolean;
   can_start?: boolean;
   can_finalize_attendance?: boolean;
+  can_reopen_attendance?: boolean;
 };
 
 type ApiTeacherDashboard = {
@@ -286,6 +288,7 @@ function mapTeacherSession(value: ApiTeacherSession): TeacherSession {
     startAvailable: value.start_available,
     canStart: value.can_start,
     canFinalizeAttendance: value.can_finalize_attendance,
+    canReopenAttendance: value.can_reopen_attendance,
   };
 }
 

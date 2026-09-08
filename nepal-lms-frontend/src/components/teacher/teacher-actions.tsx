@@ -92,9 +92,10 @@ export function TeacherAttendanceEditor({ detail }: { detail: TeacherAttendanceD
   const canFinalize = detail.session.canFinalizeAttendance !== false;
   const initialRows = useMemo(() => detail.rows.map((row) => ({ ...row, overrideReason: row.overrideReason || "" })), [detail.rows]);
   const [rows, setRows] = useState(initialRows);
-  const [loading, setLoading] = useState<"draft" | "finalize" | "import" | null>(null);
+  const [loading, setLoading] = useState<"draft" | "finalize" | "import" | "reopen" | null>(null);
   const [error, setError] = useState<NormalizedApiError | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [reopenReason, setReopenReason] = useState("");
 
   function updateRow(id: string, field: "status" | "overrideReason", value: string) {
     setRows((items) => items.map((item) => (item.id === id ? { ...item, [field]: value } : item)));
@@ -166,6 +167,35 @@ export function TeacherAttendanceEditor({ detail }: { detail: TeacherAttendanceD
     }
   }
 
+  async function reopen() {
+    if (reopenReason.trim().length < 10) {
+      setError({ status: 422, code: "validation_failed", message: "Explain why this register needs to be reopened (at least 10 characters).", retryable: false });
+      return;
+    }
+    setLoading("reopen");
+    setError(null);
+    setSuccess(null);
+    try {
+      if (mockMode) {
+        setSuccess("Preview only: a real reopen would unlock this register for editing again.");
+        return;
+      }
+      await browserRequest({
+        url: `/api/v1/teacher/classes/${encodeURIComponent(detail.session.id)}/attendance/reopen`,
+        method: "POST",
+        data: { reason: reopenReason.trim() },
+        headers: { "Idempotency-Key": createIdempotencyKey("attendance-reopen") },
+      });
+      setReopenReason("");
+      setSuccess("Register reopened. You can edit and finalize it again below.");
+      router.refresh();
+    } catch (caught) {
+      setError(caught as NormalizedApiError);
+    } finally {
+      setLoading(null);
+    }
+  }
+
   return (
     <>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -198,7 +228,19 @@ export function TeacherAttendanceEditor({ detail }: { detail: TeacherAttendanceD
           </div>
           {!canFinalize ? <p className="text-sm text-slate-500">Only {detail.session.teacher}, the assigned teacher, can finalize this register.</p> : null}
         </div>
-      ) : <div className="mt-5 flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-800"><CheckCircle2 className="h-5 w-5" />Attendance is finalized. Reopening requires a separate permission and audited reason.</div>}
+      ) : (
+        <div className="mt-5 space-y-3">
+          <div className="flex items-center gap-2 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-semibold text-green-800"><CheckCircle2 className="h-5 w-5" />Attendance is finalized.{!detail.session.canReopenAttendance ? " Reopening requires a separate permission and audited reason." : ""}</div>
+          {detail.session.canReopenAttendance ? (
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-sm font-semibold text-slate-900">Reopen this register</p>
+              <p className="mt-1 text-sm text-slate-500">Explain why — this is written to the audit trail.</p>
+              <textarea value={reopenReason} onChange={(event) => setReopenReason(event.target.value)} className="mt-3 min-h-20 w-full rounded-lg border border-slate-300 p-3 text-sm outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100" placeholder="Reason for reopening (at least 10 characters)" maxLength={500} disabled={loading !== null} />
+              <div className="mt-3 flex justify-end"><Button variant="outline" onClick={reopen} disabled={loading !== null}><RefreshCw className="h-4 w-4" />{loading === "reopen" ? "Reopening…" : "Reopen register"}</Button></div>
+            </div>
+          ) : null}
+        </div>
+      )}
     </>
   );
 }
