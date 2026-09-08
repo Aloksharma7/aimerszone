@@ -4,7 +4,7 @@ import { Brand } from "@/components/brand";
 import { siteConfig } from "@/lib/site";
 import type { PublicSettings } from "@/lib/data/settings";
 
-const courseLinks = ["Management", "Entrance Preparation", "Banking & Loksewa", "Free Learning"];
+const courseLinks = ["Physics", "Chemistry", "Entrance Preparation", "Free Learning"];
 const supportLinks = [
   { label: "Contact Support", href: "/contact" },
   { label: "Payment Instructions", href: "/payment-instructions" },

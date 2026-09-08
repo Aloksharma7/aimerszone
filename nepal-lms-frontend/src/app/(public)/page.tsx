@@ -52,7 +52,7 @@ export default async function HomePage() {
             <form action="/courses" method="get" role="search" className="mt-8 flex max-w-xl items-center gap-3 rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
               <Search className="ml-2 h-5 w-5 text-slate-400" aria-hidden="true" />
               <label htmlFor="home-course-search" className="sr-only">Search courses</label>
-              <input id="home-course-search" name="search" maxLength={100} className="min-w-0 flex-1 bg-transparent px-1 py-2 text-sm outline-none placeholder:text-slate-400" placeholder="Search CMAT, BBS, Banking..." />
+              <input id="home-course-search" name="search" maxLength={100} className="min-w-0 flex-1 bg-transparent px-1 py-2 text-sm outline-none placeholder:text-slate-400" placeholder="Search Physics, Chemistry..." />
               <Button type="submit" size="sm" className="hidden sm:inline-flex">Find a course</Button>
             </form>
           </div>

@@ -68,7 +68,7 @@ export function PublicSupportRequestForm() {
       <form onSubmit={submit} className="mt-7 grid gap-5 sm:grid-cols-2" noValidate>
         <label className="text-sm font-semibold text-slate-700">Full name<span className="text-red-600"> *</span><input name="name" required minLength={2} maxLength={120} autoComplete="name" className={inputClass} placeholder="Your full name" /></label>
         <label className="text-sm font-semibold text-slate-700">Mobile number<span className="text-red-600"> *</span><input name="mobile" required minLength={7} maxLength={20} autoComplete="tel" className={inputClass} placeholder="98XXXXXXXX" /></label>
-        <label className="text-sm font-semibold text-slate-700 sm:col-span-2">Course or batch<input name="course" maxLength={160} className={inputClass} placeholder="Example: CMAT Morning Batch" /></label>
+        <label className="text-sm font-semibold text-slate-700 sm:col-span-2">Course or batch<input name="course" maxLength={160} className={inputClass} placeholder="Example: Physics Morning Batch" /></label>
         <label className="text-sm font-semibold text-slate-700 sm:col-span-2">How can we help?<span className="text-red-600"> *</span><textarea name="message" required minLength={10} maxLength={2000} className={textareaClass} placeholder="Describe the issue clearly" /></label>
         <label className="sr-only" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
         <div className="sm:col-span-2"><Button type="submit" disabled={busy}>{busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}{busy ? "Submitting…" : "Submit support request"}</Button></div>

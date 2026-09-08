@@ -151,7 +151,7 @@ export function BatchEditor({ mode = "new", courses, teachers, batch }: { mode?:
       <RequestNotice notice={notice} />
       <Panel>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Batch title" required error={errors.title}><input className={inputClass} value={values.title} onChange={(event) => update("title", event.target.value)} placeholder="Microeconomics · Evening Batch 2083" /></Field>
+          <Field label="Batch title" required error={errors.title}><input className={inputClass} value={values.title} onChange={(event) => update("title", event.target.value)} placeholder="Physics · Evening Batch 2083" /></Field>
           <Field label="Course" required error={errors.courseId}><select className={inputClass} value={values.courseId} onChange={(event) => update("courseId", event.target.value)}><option value="">Select course</option>{courses.map((course) => <option key={course.id || course.slug} value={course.id || course.slug}>{course.title}</option>)}</select></Field>
           {/*
             * More than one teacher per batch.

@@ -189,7 +189,7 @@ export function RecurringClassForm({
             value={values.title}
             onChange={(event) => setValues((c) => ({ ...c, title: event.target.value }))}
             className="h-11 rounded-lg border border-slate-300 px-3 text-sm"
-            placeholder="Microeconomics evening class"
+            placeholder="Physics evening class"
           />
         </label>
 
