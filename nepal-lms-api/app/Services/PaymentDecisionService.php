@@ -326,6 +326,12 @@ class PaymentDecisionService
             'activated_at' => $enrollment->activated_at ?? now(),
             'cancelled_at' => null,
             'cancellation_reason' => null,
+
+            // A student who let access lapse once and is now renewing needs
+            // the expiry warning again for this new period — otherwise
+            // whoever sent the first warning permanently opts them out of
+            // ever getting a second one, on any future renewal.
+            'expiry_warned_at' => null,
         ])->save();
 
         return $enrollment;

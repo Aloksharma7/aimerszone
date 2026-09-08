@@ -384,17 +384,29 @@ class CourseController extends Controller
                 throw DomainException::conflict('You are already enrolled in this batch.', 'already_enrolled');
             }
 
+            $newEnd = $batch->access_until ?? now()->addDays($this->settings->int('operations.default_access_days', 180));
+
             $attributes = [
                 'status' => EnrollmentStatus::Active->value,
                 'access_start_at' => now(),
-                'access_end_at' => $batch->access_until ?? now()->addDays($this->settings->int('operations.default_access_days', 180)),
+                'access_end_at' => $newEnd,
                 'source' => 'free',
                 'activated_at' => now(),
                 'cancelled_at' => null,
                 'cancellation_reason' => null,
+
+                // Re-enrolling after a lapsed access period needs a fresh
+                // expiry warning for the new period, not permanent silence
+                // because an earlier period already sent one.
+                'expiry_warned_at' => null,
             ];
 
             if ($existing !== null) {
+                // An early renewal must never shorten access the student
+                // already holds, mirroring the paid renewal path.
+                $currentEnd = $existing->access_end_at;
+                $attributes['access_end_at'] = $currentEnd === null || $currentEnd->lt($newEnd) ? $newEnd : $currentEnd;
+
                 $existing->forceFill($attributes)->save();
 
                 return $existing;
