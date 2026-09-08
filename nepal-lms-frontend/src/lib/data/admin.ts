@@ -67,7 +67,7 @@ export type FinanceReportRow = { id: string; date: string; transactions: number;
 export type IntegrationRow = Record<string, string> & { id: string };
 
 export type AdminSettingsData = {
-  institution: { name: string; shortName: string; tagline: string; primaryPhone: string; supportEmail: string; whatsapp: string; website: string; address: string; logoUrl: string | null; faviconUrl: string | null };
+  institution: { name: string; shortName: string; tagline: string; primaryPhone: string; supportEmail: string; whatsapp: string; website: string; address: string; logoUrl: string | null; faviconUrl: string | null; facebookUrl: string; instagramUrl: string; youtubeUrl: string };
   paymentMethods: Array<{ id: string; name: string; accountName: string; accountReference: string; bankName: string; branch: string; qrImageUrl: string | null; status: string; sort: number }>;
   security: { publicRegistration: boolean; emailVerification: boolean; privilegedMfa: boolean; forcePasswordChange: boolean; sessionTimeoutHours: number; failedLoginAttempts: number; lockoutMinutes: number };
   operations: { maintenanceNotice: boolean; automaticReceipts: boolean; dailyIntegrationHealthCheck: boolean };
@@ -143,7 +143,7 @@ type ApiAdminUserDetail = {
 };
 
 type ApiAdminSettings = {
-  institution: { name: string; short_name: string; tagline?: string | null; primary_phone?: string | null; support_email?: string | null; whatsapp?: string | null; website?: string | null; address?: string | null; logo_url?: string | null; favicon_url?: string | null };
+  institution: { name: string; short_name: string; tagline?: string | null; primary_phone?: string | null; support_email?: string | null; whatsapp?: string | null; website?: string | null; address?: string | null; logo_url?: string | null; favicon_url?: string | null; facebook_url?: string | null; instagram_url?: string | null; youtube_url?: string | null };
   payment_methods: Array<{ id: string; name: string; account_name?: string | null; account_reference?: string | null; bank_name?: string | null; branch?: string | null; qr_image_url?: string | null; status: string; sort_order: number }>;
   security: { public_registration: boolean; email_verification: boolean; privileged_mfa: boolean; force_password_change: boolean; session_timeout_hours: number; failed_login_attempts: number; lockout_minutes: number };
   operations: { maintenance_notice: boolean; automatic_receipts: boolean; daily_integration_health_check: boolean };
@@ -686,7 +686,7 @@ export async function getAdminIntegrationRows(provider: "zoom" | "youtube"): Pro
 
 export async function getAdminSettings(): Promise<AdminSettingsData> {
   if (isMockDataEnabled()) return {
-    institution: { name: "Aimers Zone", shortName: "Aimers Zone", tagline: "Start with an Aim, Finish with Success.", primaryPhone: "+977 984-4445200", supportEmail: "info.aimerszone@gmail.com", whatsapp: "9779844445200", website: "https://aimerszone.edu.np", address: "Birgunj, Nepal", logoUrl: null, faviconUrl: null },
+    institution: { name: "Aimers Zone", shortName: "Aimers Zone", tagline: "Start with an Aim, Finish with Success.", primaryPhone: "+977 984-4445200", supportEmail: "info.aimerszone@gmail.com", whatsapp: "9779844445200", website: "https://aimerszone.edu.np", address: "Birgunj, Nepal", logoUrl: null, faviconUrl: null, facebookUrl: "https://www.facebook.com/aimerszoneclasses", instagramUrl: "https://www.instagram.com/aimers.zone", youtubeUrl: "https://www.youtube.com/@aimerszoneclasses" },
     paymentMethods: [{ id: "pm-esewa", name: "eSewa", accountName: "Institution LMS", accountReference: "98XXXXXX01", bankName: "", branch: "", qrImageUrl: null, status: "Active", sort: 1 }, { id: "pm-khalti", name: "Khalti", accountName: "Institution LMS", accountReference: "98XXXXXX02", bankName: "", branch: "", qrImageUrl: null, status: "Active", sort: 2 }, { id: "pm-bank", name: "Bank transfer", accountName: "Institution LMS Pvt. Ltd.", accountReference: "Account ending 2083", bankName: "Nepal Investment Bank", branch: "New Road", qrImageUrl: null, status: "Active", sort: 3 }, { id: "pm-cash", name: "Cash at office", accountName: "Main office", accountReference: "Receipt required", bankName: "", branch: "", qrImageUrl: null, status: "Paused", sort: 4 }],
     security: { publicRegistration: true, emailVerification: true, privilegedMfa: true, forcePasswordChange: true, sessionTimeoutHours: 8, failedLoginAttempts: 5, lockoutMinutes: 15 },
     operations: { maintenanceNotice: false, automaticReceipts: true, dailyIntegrationHealthCheck: true },
@@ -704,7 +704,7 @@ export async function getAdminSettings(): Promise<AdminSettingsData> {
   };
   const response = await serverApiFetch<ApiResponse<ApiAdminSettings>>("/api/v1/admin/settings");
   return {
-    institution: { name: response.data.institution.name, shortName: response.data.institution.short_name, tagline: response.data.institution.tagline || "", primaryPhone: response.data.institution.primary_phone || "", supportEmail: response.data.institution.support_email || "", whatsapp: response.data.institution.whatsapp || "", website: response.data.institution.website || "", address: response.data.institution.address || "", logoUrl: response.data.institution.logo_url || null, faviconUrl: response.data.institution.favicon_url || null },
+    institution: { name: response.data.institution.name, shortName: response.data.institution.short_name, tagline: response.data.institution.tagline || "", primaryPhone: response.data.institution.primary_phone || "", supportEmail: response.data.institution.support_email || "", whatsapp: response.data.institution.whatsapp || "", website: response.data.institution.website || "", address: response.data.institution.address || "", logoUrl: response.data.institution.logo_url || null, faviconUrl: response.data.institution.favicon_url || null, facebookUrl: response.data.institution.facebook_url || "", instagramUrl: response.data.institution.instagram_url || "", youtubeUrl: response.data.institution.youtube_url || "" },
     paymentMethods: response.data.payment_methods.map((item) => ({ id: item.id, name: item.name, accountName: item.account_name || "", accountReference: item.account_reference || "", bankName: item.bank_name || "", branch: item.branch || "", qrImageUrl: item.qr_image_url || null, status: titleCase(item.status), sort: item.sort_order })),
     security: { publicRegistration: response.data.security.public_registration, emailVerification: response.data.security.email_verification, privilegedMfa: response.data.security.privileged_mfa, forcePasswordChange: response.data.security.force_password_change, sessionTimeoutHours: response.data.security.session_timeout_hours, failedLoginAttempts: response.data.security.failed_login_attempts, lockoutMinutes: response.data.security.lockout_minutes },
     operations: { maintenanceNotice: response.data.operations.maintenance_notice, automaticReceipts: response.data.operations.automatic_receipts, dailyIntegrationHealthCheck: response.data.operations.daily_integration_health_check },

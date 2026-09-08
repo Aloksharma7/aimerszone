@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, MapPin, MessageCircle, Phone } from "lucide-react";
+import { Facebook, Instagram, Mail, MapPin, MessageCircle, Phone, Youtube } from "lucide-react";
 import { Brand } from "@/components/brand";
 import { siteConfig } from "@/lib/site";
 import type { PublicSettings } from "@/lib/data/settings";
@@ -34,6 +34,23 @@ export function PublicFooter({ settings }: { settings?: PublicSettings }) {
               <p className="flex items-center gap-3"><Phone className="h-4 w-4 shrink-0 text-blue-300" />{site.phone}</p>
               <p className="flex items-center gap-3"><Mail className="h-4 w-4 shrink-0 text-blue-300" />{site.email}</p>
               <p className="flex items-center gap-3"><MessageCircle className="h-4 w-4 shrink-0 text-blue-300" />WhatsApp support available</p>
+            </div>
+            <div className="mt-6 flex items-center gap-3">
+              {site.facebookUrl ? (
+                <a href={site.facebookUrl} target="_blank" rel="noopener noreferrer" aria-label="Aimers Zone on Facebook" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-800 text-slate-300 transition-colors hover:border-brand-700 hover:text-brand-500">
+                  <Facebook className="h-4 w-4" />
+                </a>
+              ) : null}
+              {site.instagramUrl ? (
+                <a href={site.instagramUrl} target="_blank" rel="noopener noreferrer" aria-label="Aimers Zone on Instagram" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-800 text-slate-300 transition-colors hover:border-brand-700 hover:text-brand-500">
+                  <Instagram className="h-4 w-4" />
+                </a>
+              ) : null}
+              {site.youtubeUrl ? (
+                <a href={site.youtubeUrl} target="_blank" rel="noopener noreferrer" aria-label="Aimers Zone on YouTube" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-800 text-slate-300 transition-colors hover:border-brand-700 hover:text-brand-500">
+                  <Youtube className="h-4 w-4" />
+                </a>
+              ) : null}
             </div>
           </div>
           <div>

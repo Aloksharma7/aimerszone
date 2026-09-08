@@ -44,6 +44,9 @@ class SettingsController extends Controller
                 'address' => $this->settings->string('institution.address'),
                 'logo_url' => $this->assetUrl($this->settings->get('institution.logo_path')),
                 'favicon_url' => $this->assetUrl($this->settings->get('institution.favicon_path')),
+                'facebook_url' => $this->settings->string('institution.facebook_url'),
+                'instagram_url' => $this->settings->string('institution.instagram_url'),
+                'youtube_url' => $this->settings->string('institution.youtube_url'),
             ],
             'payment_methods' => PaymentMethod::orderBy('sort_order')->get()->map(fn (PaymentMethod $method) => [
                 'id' => $method->id,
@@ -160,6 +163,9 @@ class SettingsController extends Controller
             'institution.whatsapp' => ['nullable', 'string', 'max:20'],
             'institution.website' => ['nullable', 'url', 'max:190'],
             'institution.address' => ['nullable', 'string', 'max:255'],
+            'institution.facebook_url' => ['nullable', 'url', 'max:190'],
+            'institution.instagram_url' => ['nullable', 'url', 'max:190'],
+            'institution.youtube_url' => ['nullable', 'url', 'max:190'],
 
             'security' => ['sometimes', 'array'],
             'security.public_registration' => ['boolean'],

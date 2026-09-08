@@ -56,6 +56,9 @@ return [
             'tagline' => 'Start with an Aim, Finish with Success.',
             'map_url' => 'https://www.google.com/maps/search/?api=1&query=Birgunj%2C%20Nepal',
             'support_hours' => 'Sunday to Friday, 9:00 AM-6:00 PM (Nepal time).',
+            'facebook_url' => 'https://www.facebook.com/aimerszoneclasses',
+            'instagram_url' => 'https://www.instagram.com/aimers.zone',
+            'youtube_url' => 'https://www.youtube.com/@aimerszoneclasses',
         ],
 
         'security' => [

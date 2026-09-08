@@ -23,6 +23,9 @@ export type PublicSettings = {
   currency: string;
   registrationOpen: boolean;
   maintenanceNotice: string | null;
+  facebookUrl: string | null;
+  instagramUrl: string | null;
+  youtubeUrl: string | null;
 };
 
 type ApiPublicSettings = {
@@ -37,6 +40,7 @@ type ApiPublicSettings = {
   map_url: string | null;
   website: string | null;
   support: { whatsapp: string | null; phone: string | null; email: string | null; hours: string | null };
+  social: { facebook: string | null; instagram: string | null; youtube: string | null };
   registration_open: boolean;
   maintenance_notice: string | null;
 };
@@ -59,6 +63,9 @@ const fallback: PublicSettings = {
   currency: siteConfig.currency,
   registrationOpen: true,
   maintenanceNotice: null,
+  facebookUrl: siteConfig.facebookUrl,
+  instagramUrl: siteConfig.instagramUrl,
+  youtubeUrl: siteConfig.youtubeUrl,
 };
 
 /**
@@ -99,6 +106,9 @@ export const getPublicSettings = cache(async (): Promise<PublicSettings> => {
       currency: data.currency || fallback.currency,
       registrationOpen: data.registration_open,
       maintenanceNotice: data.maintenance_notice,
+      facebookUrl: data.social.facebook || fallback.facebookUrl,
+      instagramUrl: data.social.instagram || fallback.instagramUrl,
+      youtubeUrl: data.social.youtube || fallback.youtubeUrl,
     };
   } catch {
     return fallback;

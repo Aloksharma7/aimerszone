@@ -12,4 +12,7 @@ export const siteConfig = {
   supportHours: process.env.NEXT_PUBLIC_SUPPORT_HOURS || "Sunday to Friday, 9:00 AM–6:00 PM (Nepal time). Messages outside these hours remain queued.",
   timezone: "Asia/Kathmandu",
   currency: "NPR",
+  facebookUrl: process.env.NEXT_PUBLIC_FACEBOOK_URL || "https://www.facebook.com/aimerszoneclasses",
+  instagramUrl: process.env.NEXT_PUBLIC_INSTAGRAM_URL || "https://www.instagram.com/aimers.zone",
+  youtubeUrl: process.env.NEXT_PUBLIC_YOUTUBE_URL || "https://www.youtube.com/@aimerszoneclasses",
 };

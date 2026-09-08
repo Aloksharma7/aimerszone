@@ -43,6 +43,11 @@ class SettingsController extends Controller
                 'email' => $institution['support_email'] ?? null,
                 'hours' => $institution['support_hours'] ?? null,
             ],
+            'social' => [
+                'facebook' => $institution['facebook_url'] ?? null,
+                'instagram' => $institution['instagram_url'] ?? null,
+                'youtube' => $institution['youtube_url'] ?? null,
+            ],
             'registration_open' => $this->settings->bool('security.public_registration', true),
 
             /*
