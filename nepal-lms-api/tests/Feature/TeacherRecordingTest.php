@@ -102,6 +102,40 @@ class TeacherRecordingTest extends TestCase
     }
 
     /**
+     * Regression: resync() unconditionally recomputed state from a fresh
+     * verify() call, with no guard for "this was already Available" — a
+     * transient failure (quota, timeout, the integration toggled off, all
+     * reported as verified:false with no state key, indistinguishable here
+     * from "still processing") instantly demoted an already-released
+     * recording to Processing, pulling it from every enrolled student
+     * through no fault of the recording itself.
+     */
+    public function test_resync_cannot_demote_a_recording_that_was_already_available(): void
+    {
+        $batch = $this->makeBatch($this->makeCourse());
+        $teacher = $this->makeUser(RoleKey::Teacher);
+        $batch->teachers()->attach($teacher->getKey(), ['is_lead' => true]);
+
+        $recording = Recording::create([
+            'batch_id' => $batch->getKey(),
+            'title' => 'Elasticity of Demand',
+            'source' => 'youtube',
+            'youtube_video_id' => 'dQw4w9WgXcQ',
+            'state' => 'available',
+            'released_at' => now()->subDay(),
+        ]);
+
+        // No YouTubeClient mock: verify() hits the "integration not
+        // configured" soft-failure path (verified:false, no state key) —
+        // the exact transient-failure shape this fix guards against.
+        $this->actingAs($teacher)
+            ->postJson('/api/v1/teacher/batches/'.$batch->getKey().'/recordings/'.$recording->getKey().'/resync')
+            ->assertOk();
+
+        $this->assertSame('available', $recording->fresh()->state->value);
+    }
+
+    /**
      * A public video is a costly mistake (paid content freely watchable by
      * anyone with the link, no enrollment needed) but not one the platform
      * blocks outright — the institution chose to allow it with a standing

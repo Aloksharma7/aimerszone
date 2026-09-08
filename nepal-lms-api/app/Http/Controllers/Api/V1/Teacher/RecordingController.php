@@ -168,10 +168,22 @@ class RecordingController extends Controller
 
         $verified = $this->verify($recording->youtube_video_id);
 
+        // A transient failure (quota, timeout, the integration toggled off)
+        // reports verified:false with no state key at all — indistinguishable
+        // here from "still processing" unless the recording's own prior state
+        // is considered. Without this, re-checking a recording that was
+        // already released and being watched could instantly demote it to
+        // Processing and pull it from every enrolled student, through no
+        // fault of the recording itself, on nothing more than a flaky API
+        // call. Only an explicit "processed" can promote; nothing here can
+        // demote a recording that was already Available.
+        $wasAvailable = $recording->state === RecordingState::Available;
+        $verifiedProcessed = ($verified['state'] ?? null) === 'processed';
+
         $recording->fill([
             'thumbnail_url' => $verified['thumbnail_url'] ?? $recording->thumbnail_url,
             'duration_seconds' => $verified['duration_seconds'] ?? $recording->duration_seconds,
-            'state' => ($verified['state'] ?? null) === 'processed'
+            'state' => $verifiedProcessed || $wasAvailable
                 ? RecordingState::Available->value
                 : RecordingState::Processing->value,
             'sync_message' => $verified['message'] ?? null,
