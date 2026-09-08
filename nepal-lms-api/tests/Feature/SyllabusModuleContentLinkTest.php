@@ -202,4 +202,48 @@ class SyllabusModuleContentLinkTest extends TestCase
         ]);
         $this->assertSame(100, $enrollment->fresh()->syllabus_percent);
     }
+
+    /**
+     * Regression: editing a course's syllabus (add/remove/reorder lessons)
+     * never recalculated any enrollment's progress. A student who'd
+     * completed every existing lesson kept reading 100% forever after the
+     * academic team added a new one, while the syllabus tab's own live
+     * per-module numbers correctly showed the new lesson as incomplete right
+     * below that stale figure.
+     */
+    public function test_editing_the_syllabus_recalculates_existing_students_progress(): void
+    {
+        $course = $this->makeCourse();
+        $batch = $this->makeBatch($course);
+        $module = SyllabusModule::create(['course_id' => $course->getKey(), 'title' => 'Elasticity', 'order' => 0]);
+        $lesson = SyllabusLesson::create(['syllabus_module_id' => $module->getKey(), 'title' => 'Meaning and scope', 'type' => 'Lesson', 'order' => 0]);
+
+        $student = $this->makeUser(RoleKey::Student);
+        $enrollment = $this->enroll($student, $batch);
+
+        LessonCompletion::create([
+            'user_id' => $student->getKey(),
+            'enrollment_id' => $enrollment->getKey(),
+            'syllabus_lesson_id' => $lesson->getKey(),
+            'completed_at' => now(),
+        ]);
+        $enrollment->forceFill(['syllabus_percent' => 100, 'overall_percent' => 100])->save();
+
+        $staff = $this->makeUser(RoleKey::Staff);
+
+        $this->actingAs($staff)
+            ->putJson("/api/v1/staff/courses/{$course->getKey()}/syllabus", [
+                'modules' => [[
+                    'id' => $module->getKey(),
+                    'title' => $module->title,
+                    'lessons' => [
+                        ['id' => $lesson->getKey(), 'title' => $lesson->title, 'type' => 'Lesson'],
+                        ['title' => 'A brand new, not-yet-completed lesson', 'type' => 'Lesson'],
+                    ],
+                ]],
+            ])
+            ->assertOk();
+
+        $this->assertLessThan(100, $enrollment->fresh()->syllabus_percent);
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\RecalculateBatchProgress;
 use App\Models\Course;
 use App\Models\SyllabusLesson;
 use App\Models\SyllabusModule;
@@ -143,6 +144,18 @@ class SyllabusController extends Controller
         $this->audit->log('syllabus.updated', $model, $request->user(), properties: [
             'modules' => count($data['modules']),
         ]);
+
+        // enrollment.syllabus_percent is a denormalised snapshot, refreshed
+        // only when specific events happen (a lesson toggled, a recording
+        // watched, attendance finalized) — adding, removing or reordering
+        // lessons here was never one of those events. A student who'd
+        // completed every lesson kept reading 100% forever after the
+        // academic team added two more, while the syllabus tab's own
+        // per-module numbers (computed live on every request) correctly
+        // showed the new lessons as incomplete right below it.
+        foreach ($model->batches()->pluck('id') as $batchId) {
+            RecalculateBatchProgress::dispatch($batchId);
+        }
 
         return $this->show($request, $course);
     }
