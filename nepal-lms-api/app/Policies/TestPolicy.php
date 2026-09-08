@@ -29,7 +29,11 @@ class TestPolicy
 
     public function attempt(User $user, Test $test): bool
     {
-        return $test->isOpenNow() && $this->guard->studentCanAccessBatch($user, $test->batch_id);
+        if (! $this->guard->studentCanAccessBatch($user, $test->batch_id)) {
+            return false;
+        }
+
+        return $test->isOpenNow() || $test->hasResumableAttemptFor($user->getKey());
     }
 
     public function manage(User $user, Test $test): bool

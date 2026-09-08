@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AttemptStatus;
 use App\Enums\TestStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -70,6 +71,30 @@ class Test extends Model
         $beforeClose = $this->closes_at === null || $this->closes_at->isFuture();
 
         return $afterOpen && $beforeClose;
+    }
+
+    /**
+     * Whether $userId specifically may still act on this test even though the
+     * test-wide window in isOpenNow() has closed.
+     *
+     * allow_late_submission deliberately gives an in-progress attempt its own
+     * deadline that can extend past closes_at (see AttemptController::store()),
+     * so the global window closing must not by itself lock a student out of an
+     * attempt they legitimately started and haven't run out of time on —
+     * otherwise a reload right as the test closes strands them with whatever
+     * was last autosaved, defeating the entire point of the setting.
+     */
+    public function hasResumableAttemptFor(string $userId): bool
+    {
+        if (! $this->allow_late_submission) {
+            return false;
+        }
+
+        return $this->attempts()
+            ->where('user_id', $userId)
+            ->where('status', AttemptStatus::InProgress->value)
+            ->where('expires_at', '>', now())
+            ->exists();
     }
 
     /** Whether a scored result may be disclosed to the student. */

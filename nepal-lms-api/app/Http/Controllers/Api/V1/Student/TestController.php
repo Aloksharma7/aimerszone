@@ -73,7 +73,7 @@ class TestController extends Controller
 
     protected function blockingReason(Test $test, int $used, Request $request): ?string
     {
-        if (! $test->isOpenNow()) {
+        if (! $test->isOpenNow() && ! $test->hasResumableAttemptFor($request->user()->getKey())) {
             return $test->opens_at?->isFuture()
                 ? 'This test opens '.$test->opens_at->toIso8601String()
                 : 'This test is closed.';
