@@ -70,10 +70,21 @@ class Enrollment extends Model
         return $query->where('status', EnrollmentStatus::Active->value);
     }
 
+    /**
+     * The query-builder form of grantsAccess() — used by every real
+     * content-serving path (AccessGuard and everything built on it), unlike
+     * grantsAccess() itself, which only one self-enrollment guard actually
+     * calls. Kept in sync with it deliberately: this used to skip the
+     * access_start_at check entirely, which happened to be harmless only
+     * because no write path has ever set a future access_start_at on an
+     * Active row. The moment one did (e.g. "access begins when the batch
+     * starts"), this would have silently granted early access while
+     * grantsAccess() correctly withheld it.
+     */
     public function scopeAccessible($query)
     {
-        return $query->active()->where(fn ($builder) => $builder
-            ->whereNull('access_end_at')
-            ->orWhere('access_end_at', '>', now()));
+        return $query->active()
+            ->where(fn ($builder) => $builder->whereNull('access_start_at')->orWhere('access_start_at', '<=', now()))
+            ->where(fn ($builder) => $builder->whereNull('access_end_at')->orWhere('access_end_at', '>', now()));
     }
 }

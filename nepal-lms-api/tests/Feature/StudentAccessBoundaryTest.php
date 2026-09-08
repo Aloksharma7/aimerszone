@@ -72,6 +72,31 @@ class StudentAccessBoundaryTest extends TestCase
     }
 
     /**
+     * Regression: scopeAccessible() — what every real content-serving path
+     * actually uses — never checked access_start_at at all, unlike
+     * grantsAccess() (used by exactly one self-enrollment guard), which
+     * does. Harmless only by coincidence: no write path had ever set a
+     * future access_start_at on an Active row. This proves the query-builder
+     * form now agrees with grantsAccess() rather than being a silently
+     * looser, undocumented alternate definition of "has access."
+     */
+    public function test_an_active_enrollment_with_a_future_access_start_cannot_reach_a_recording(): void
+    {
+        $course = $this->makeCourse();
+        $batch = $this->makeBatch($course);
+        $student = $this->makeUser(RoleKey::Student);
+        $recording = $this->makeRecording($batch);
+
+        $enrollment = $this->enroll($student, $batch, ['access_start_at' => now()->addDay()]);
+
+        $this->assertFalse($enrollment->grantsAccess());
+
+        $this->actingAs($student)
+            ->postJson('/api/v1/student/recordings/'.$recording->getKey().'/playback')
+            ->assertForbidden();
+    }
+
+    /**
      * Regression: show() (the single-recording fetch, used when opening a
      * recording directly rather than from a list) never included
      * enrollment_id in its response, unlike index(). The frontend uses this

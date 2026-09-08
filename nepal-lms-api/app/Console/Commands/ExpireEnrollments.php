@@ -10,8 +10,10 @@ use Illuminate\Console\Command;
 /**
  * Moves seats past their access window to "expired".
  *
- * Access is already denied in real time by Enrollment::grantsAccess(); this
- * only keeps the stored status honest for reporting and dashboards.
+ * Access is already denied in real time by Enrollment::scopeAccessible() —
+ * every real content-serving path goes through that, not grantsAccess()
+ * (which only one self-enrollment guard calls) — this only keeps the stored
+ * status honest for reporting and dashboards.
  */
 class ExpireEnrollments extends Command
 {
