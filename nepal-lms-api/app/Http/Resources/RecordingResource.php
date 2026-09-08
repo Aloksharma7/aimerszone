@@ -28,6 +28,7 @@ class RecordingResource extends JsonResource
             'state' => $this->state->value,
             'sync_message' => $this->state === \App\Enums\RecordingState::Processing ? $this->sync_message : null,
             'thumbnail_url' => $this->thumbnail_url,
+            'orientation' => $this->orientation->value,
             'youtube_video_id' => $this->source === 'youtube' ? $this->youtube_video_id : null,
             'syllabus_lesson_id' => $this->syllabus_lesson_id,
         ];

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1\Teacher;
 
+use App\Enums\RecordingOrientation;
 use App\Enums\RecordingState;
 use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
@@ -70,6 +71,7 @@ class RecordingController extends Controller
                 fn ($query) => $query->whereIn('syllabus_module_id', SyllabusModule::where('course_id', $batch->course_id)->select('id')),
             )],
             'release_at' => ['nullable', 'date'],
+            'orientation' => ['nullable', Rule::in(RecordingOrientation::values())],
         ]);
 
         // A session id from the request is only accepted if it belongs to this
@@ -92,6 +94,7 @@ class RecordingController extends Controller
             'syllabus_lesson_id' => $data['syllabus_lesson_id'] ?? null,
             'source' => 'youtube',
             'youtube_video_id' => $data['youtube_video_id'],
+            'orientation' => $data['orientation'] ?? RecordingOrientation::Landscape->value,
             'thumbnail_url' => $verified['thumbnail_url'] ?? null,
             'duration_seconds' => $verified['duration_seconds'] ?? null,
             'recorded_at' => now(),
@@ -139,6 +142,7 @@ class RecordingController extends Controller
                 fn ($query) => $query->whereIn('syllabus_module_id', SyllabusModule::where('course_id', $batch->course_id)->select('id')),
             )],
             'release_at' => ['sometimes', 'nullable', 'date'],
+            'orientation' => ['sometimes', Rule::in(RecordingOrientation::values())],
         ]);
 
         if (array_key_exists('release_at', $data)) {

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\RecordingOrientation;
 use App\Enums\RecordingState;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,7 +19,7 @@ class Recording extends Model
         'batch_id', 'class_session_id', 'title', 'module_title', 'description', 'source',
         'youtube_video_id', 'storage_path', 'storage_disk', 'external_url', 'thumbnail_url',
         'duration_seconds', 'recorded_at', 'released_at', 'state', 'sync_message', 'is_youtube_public',
-        'syllabus_lesson_id', 'synced_at', 'created_by',
+        'syllabus_lesson_id', 'synced_at', 'created_by', 'orientation',
     ];
 
     protected $hidden = ['storage_path', 'external_url'];
@@ -27,6 +28,7 @@ class Recording extends Model
     {
         return [
             'state' => RecordingState::class,
+            'orientation' => RecordingOrientation::class,
             'recorded_at' => 'datetime',
             'released_at' => 'datetime',
             'synced_at' => 'datetime',

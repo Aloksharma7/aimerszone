@@ -211,4 +211,105 @@ class TeacherRecordingTest extends TestCase
 
         $this->assertDatabaseHas('recordings', ['id' => $recording->getKey()]);
     }
+
+    /**
+     * Regression: the player forced every recording into a 16:9 box
+     * regardless of the video's actual shape, since nothing anywhere ever
+     * recorded whether a recording was landscape or portrait. A teacher can
+     * now set this at upload time, and it reaches the student payload so the
+     * player can size itself correctly instead of guessing.
+     */
+    public function test_a_teacher_can_mark_a_recording_as_portrait_on_creation(): void
+    {
+        app(SettingsRepository::class)->set('integrations', 'youtube_enabled', true);
+
+        $this->mock(YouTubeClient::class, function ($mock) {
+            $mock->shouldReceive('isConfigured')->andReturn(true);
+            $mock->shouldReceive('video')->andReturn([
+                'video_id' => 'dQw4w9WgXcQ',
+                'title' => 'Phone-recorded revision clip',
+                'duration_seconds' => 90,
+                'privacy' => 'unlisted',
+                'state' => 'processed',
+                'thumbnail_url' => null,
+            ]);
+            $mock->shouldReceive('isSafelyRestricted')->andReturn(true);
+        });
+
+        $batch = $this->makeBatch($this->makeCourse());
+        $teacher = $this->makeUser(RoleKey::Teacher);
+        $batch->teachers()->attach($teacher->getKey(), ['is_lead' => true]);
+
+        $this->actingAs($teacher)
+            ->postJson('/api/v1/teacher/batches/'.$batch->getKey().'/recordings', [
+                'title' => 'Phone-recorded revision clip',
+                'youtube_video_id' => 'dQw4w9WgXcQ',
+                'orientation' => 'portrait',
+            ])
+            ->assertCreated();
+
+        $recording = Recording::where('youtube_video_id', 'dQw4w9WgXcQ')->firstOrFail();
+        $this->assertSame('portrait', $recording->orientation->value);
+
+        $student = $this->makeUser(RoleKey::Student);
+        $this->enroll($student, $batch);
+        $recording->update(['released_at' => now()->subMinute()]);
+
+        $this->actingAs($student)
+            ->getJson('/api/v1/student/recordings')
+            ->assertOk()
+            ->assertJsonPath('data.0.orientation', 'portrait');
+    }
+
+    public function test_a_recording_defaults_to_landscape_when_orientation_is_not_given(): void
+    {
+        $recording = Recording::create([
+            'batch_id' => $this->makeBatch($this->makeCourse())->getKey(),
+            'title' => 'Elasticity of Demand',
+            'source' => 'youtube',
+            'youtube_video_id' => 'dQw4w9WgXcQ',
+            'state' => 'available',
+        ]);
+
+        $this->assertSame('landscape', $recording->fresh()->orientation->value);
+    }
+
+    public function test_a_teacher_can_change_an_existing_recordings_orientation(): void
+    {
+        $batch = $this->makeBatch($this->makeCourse());
+        $teacher = $this->makeUser(RoleKey::Teacher);
+        $batch->teachers()->attach($teacher->getKey(), ['is_lead' => true]);
+
+        $recording = Recording::create([
+            'batch_id' => $batch->getKey(),
+            'title' => 'Elasticity of Demand',
+            'source' => 'youtube',
+            'youtube_video_id' => 'dQw4w9WgXcQ',
+            'state' => 'available',
+            'orientation' => 'landscape',
+        ]);
+
+        $this->actingAs($teacher)
+            ->patchJson('/api/v1/teacher/batches/'.$batch->getKey().'/recordings/'.$recording->getKey(), [
+                'orientation' => 'portrait',
+            ])
+            ->assertOk();
+
+        $this->assertSame('portrait', $recording->fresh()->orientation->value);
+    }
+
+    public function test_an_invalid_orientation_value_is_rejected(): void
+    {
+        $batch = $this->makeBatch($this->makeCourse());
+        $teacher = $this->makeUser(RoleKey::Teacher);
+        $batch->teachers()->attach($teacher->getKey(), ['is_lead' => true]);
+
+        $this->actingAs($teacher)
+            ->postJson('/api/v1/teacher/batches/'.$batch->getKey().'/recordings', [
+                'title' => 'Elasticity of Demand',
+                'youtube_video_id' => 'dQw4w9WgXcQ',
+                'orientation' => 'sideways',
+            ])
+            ->assertStatus(422);
+    }
 }
