@@ -111,12 +111,23 @@ class PaymentSubmissionController extends Controller
         // in the accountant's review queue.
         if ($data['status'] === 'draft') {
             $payment->forceFill(['status' => PaymentStatus::Draft->value, 'submitted_at' => null])->save();
-        } elseif ($payment->risk_label === null) {
+        } elseif ($payment->risk_label === null && $request->user()->hasPermission('payments.review')) {
             // The staff member already verified this evidence in person
             // before capturing it here — see PaymentDecisionService for why
             // that makes the usual second reviewer unnecessary. A flagged
             // submission (duplicate evidence, short or over payment) still
             // falls through to the normal review queue below.
+            //
+            // Gated on payments.review, not just the payments.submit this
+            // action is authorized under: submitting evidence and deciding
+            // a payment are deliberately separate powers everywhere else in
+            // this module (see PaymentPolicy::review(), viewProof()) — a
+            // custom role granted only payments.submit ("submit evidence on
+            // behalf of a student") must not silently gain real approval
+            // power just because the submission happened to come back
+            // unflagged. Without payments.review too, it stays Submitted
+            // and falls through to the normal queue for someone who holds
+            // that permission to decide.
             $payment = $this->decisions->approveStaffCapturedPayment(
                 $payment,
                 $request->user(),
