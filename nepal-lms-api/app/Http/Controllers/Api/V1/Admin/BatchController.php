@@ -191,7 +191,12 @@ class BatchController extends Controller
             'class_end_time' => ['sometimes', 'nullable', 'date_format:H:i'],
             'price_npr' => ['sometimes', 'integer', 'min:0', 'max:10000000'],
             'capacity' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:5000'],
-            'teacher_ids' => ['sometimes', 'array', 'max:5'],
+            // Previously had no floor at all: sending teacher_ids: []
+            // successfully detached every teacher via sync([]), masked only
+            // by a client-side check in the one first-party admin UI — any
+            // direct API call bypassed it entirely and could leave a batch
+            // teacherless, unable to start classes or mark attendance.
+            'teacher_ids' => ['sometimes', 'array', 'min:1', 'max:5'],
             'teacher_ids.*' => ['string', Rule::exists('users', 'id')->whereNull('deleted_at')],
         ]);
     }

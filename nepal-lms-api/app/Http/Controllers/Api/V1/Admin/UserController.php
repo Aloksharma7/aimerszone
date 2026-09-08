@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\V1\Admin;
 
+use App\Enums\BatchStatus;
 use App\Enums\RoleKey;
 use App\Enums\UserStatus;
 use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
+use App\Models\Batch;
 use App\Models\Enrollment;
 use App\Models\User;
 use App\Services\AuditLogger;
@@ -264,6 +266,8 @@ class UserController extends Controller
                     'user_has_active_access',
                 );
             }
+
+            $this->assertArchivingDoesNotOrphanABatch($user);
         }
 
         $status = match ($action) {
@@ -380,6 +384,8 @@ class UserController extends Controller
             );
         }
 
+        $this->assertArchivingDoesNotOrphanABatch($user);
+
         $reason = trim((string) $request->string('reason')->value());
 
         $this->audit->log('user.archived', $user, $actor, $reason ?: 'Account archived');
@@ -388,6 +394,36 @@ class UserController extends Controller
         $user->delete();
 
         return ApiResponse::message('Account archived. Payment history and audit entries are unaffected.');
+    }
+
+    /**
+     * Archiving or suspending a teacher used to check nothing about the
+     * batches they teach — only a student's own active enrollments were
+     * guarded. Batch::teachers() has no enforced minimum, and neither
+     * ClassSessionPolicy::start() nor finalizeAttendance() falls back to
+     * admin the way manage() does (deliberately — starting a class and
+     * attesting attendance are the assigned teacher's own acts), so the
+     * sole teacher of a live, paying-student batch being archived or
+     * suspended could silently make every class in it unstartable and its
+     * attendance unmarkable, with nothing surfacing that until someone
+     * noticed the blank teacher field.
+     */
+    protected function assertArchivingDoesNotOrphanABatch(User $user): void
+    {
+        $orphaned = Batch::query()
+            ->whereIn('status', [BatchStatus::Open->value, BatchStatus::Ongoing->value])
+            ->whereHas('teachers', fn ($query) => $query->where('users.id', $user->getKey()))
+            ->whereDoesntHave('teachers', fn ($query) => $query
+                ->where('users.id', '!=', $user->getKey())
+                ->where('users.status', UserStatus::Active->value))
+            ->first();
+
+        if ($orphaned !== null) {
+            throw DomainException::conflict(
+                'This is the only active teacher on "'.$orphaned->title.'". Assign another teacher to that batch first, so its classes stay startable.',
+                'user_is_sole_batch_teacher',
+            );
+        }
     }
 
     protected function sendPasswordReset(User $user): string
