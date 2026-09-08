@@ -13,6 +13,7 @@ use App\Services\AuditLogger;
 use App\Services\FeatureGate;
 use App\Services\Integrations\EsewaClient;
 use App\Services\PaymentDecisionService;
+use App\Services\PaymentSubmissionService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,7 @@ class EsewaController extends Controller
         protected EsewaClient $esewa,
         protected FeatureGate $features,
         protected PaymentDecisionService $decisions,
+        protected PaymentSubmissionService $submissions,
         protected AuditLogger $audit,
     ) {}
 
@@ -43,43 +45,48 @@ class EsewaController extends Controller
 
         $data = $request->validate(['batch_id' => ['required', 'string']]);
 
-        $batch = Batch::with('course')->findOrFail($data['batch_id']);
         $student = $request->user();
 
-        if (! in_array($batch->status->value, ['open', 'ongoing'], true)) {
-            throw DomainException::conflict('This batch is not accepting enrollments.', 'batch_closed');
-        }
+        // Locked and re-checked against the full, shared enrollability
+        // rules (not just "already enrolled") for the duration of the
+        // check-and-create — previously unlocked and eSewa-specific, so a
+        // student with a manual payment already pending review, or a batch
+        // that had since filled up, could still start (and independently
+        // complete) a second, gateway-verified payment for the same seat.
+        $payment = DB::transaction(function () use ($data, $student) {
+            $batch = Batch::with('course')->whereKey($data['batch_id'])->lockForUpdate()->firstOrFail();
 
-        if ($student->enrollments()->where('batch_id', $batch->getKey())->accessible()->exists()) {
-            throw DomainException::conflict('You are already enrolled in this batch.', 'already_enrolled');
-        }
+            $this->submissions->assertEnrollable($student, $batch);
 
-        $expected = (int) ($batch->price_npr ?: $batch->course?->price_npr ?? 0);
+            $expected = (int) ($batch->price_npr ?: $batch->course?->price_npr ?? 0);
 
-        if ($expected <= 0) {
-            throw DomainException::unprocessable('This batch has no price set.', 'no_price');
-        }
+            if ($expected <= 0) {
+                throw DomainException::unprocessable('This batch has no price set.', 'no_price');
+            }
 
-        $method = PaymentMethod::where('key', 'esewa')->firstOrFail();
+            $method = PaymentMethod::where('key', 'esewa')->firstOrFail();
 
-        // Reuse a pending gateway attempt rather than stacking rows each time
-        // the student reopens the checkout page.
-        $payment = Payment::firstOrCreate(
-            [
-                'user_id' => $student->getKey(),
-                'batch_id' => $batch->getKey(),
-                'status' => PaymentStatus::Draft->value,
-            ],
-            [
-                'course_id' => $batch->course_id,
-                'payment_method_id' => $method->getKey(),
-                'expected_amount_npr' => $expected,
-                'submitted_amount_npr' => $expected,
-                'payer_name' => $student->name,
-                'submitted_by' => $student->getKey(),
-                'note' => 'eSewa checkout',
-            ],
-        );
+            // Reuse a pending gateway attempt rather than stacking rows each
+            // time the student reopens the checkout page. assertEnrollable()
+            // only rejects a Submitted/UnderReview payment, so re-finding
+            // this same Draft row here is never blocked by its own presence.
+            return Payment::firstOrCreate(
+                [
+                    'user_id' => $student->getKey(),
+                    'batch_id' => $batch->getKey(),
+                    'status' => PaymentStatus::Draft->value,
+                ],
+                [
+                    'course_id' => $batch->course_id,
+                    'payment_method_id' => $method->getKey(),
+                    'expected_amount_npr' => $expected,
+                    'submitted_amount_npr' => $expected,
+                    'payer_name' => $student->name,
+                    'submitted_by' => $student->getKey(),
+                    'note' => 'eSewa checkout',
+                ],
+            );
+        });
 
         return ApiResponse::item($this->esewa->checkout($payment));
     }
