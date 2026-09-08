@@ -34,7 +34,24 @@ const POLL_MS = 60_000;
  * only way anything created after the page first loaded is ever noticed for
  * the rest of the session.
  */
-export function NotificationBell({ href, endpoint = "/api/v1/student/notifications" }: { href: string; endpoint?: string }) {
+export function NotificationBell({
+  href,
+  endpoint = "/api/v1/student/notifications",
+  markReadPath,
+}: {
+  href: string;
+  endpoint?: string;
+  /**
+   * Builds the URL to POST when an item is seen, persisting it server-side —
+   * only the student feed has a real per-item "read" concept backing this
+   * (an announcement_reads row) today. Without this, dismissedIds below was
+   * the *only* record that a notification had been seen: purely in-memory,
+   * so it evaporated on every full page reload, fresh tab, or re-login, and
+   * the exact same notification came back as unread every time, forever,
+   * even though the student had already opened it.
+   */
+  markReadPath?: (id: string) => string;
+}) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<Notification[] | null>(null);
   const [busy, setBusy] = useState(false);
@@ -42,24 +59,47 @@ export function NotificationBell({ href, endpoint = "/api/v1/student/notificatio
   // Teacher/staff/admin feeds surface outstanding work rather than dismissible
   // messages, so the API always reports `read: false` for them — otherwise
   // the badge would never clear even after the panel was opened and looked at.
+  // For those roles this Set is the only record a notification was seen, so
+  // it's still purely session-local — there is no markReadPath to persist it.
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Read from inside load(), which is called from a mount effect and a
-  // setInterval callback — both close over whatever `open` was when they
-  // were created unless this is a ref, so a background poll would otherwise
-  // never know the panel had since been opened.
+  // setInterval callback — both close over whatever `open`/`dismissedIds`
+  // were when they were created unless these are refs, so a background poll
+  // would otherwise never know the panel had since been opened, and would
+  // always see dismissedIds as empty (re-POSTing every already-read item on
+  // every 60s poll instead of only genuinely new ones).
   const openRef = useRef(open);
   useEffect(() => {
     openRef.current = open;
   }, [open]);
 
+  const dismissedRef = useRef(dismissedIds);
+  useEffect(() => {
+    dismissedRef.current = dismissedIds;
+  }, [dismissedIds]);
+
   const unread = items?.filter((item) => !item.read && !dismissedIds.has(item.id)).length ?? 0;
 
-  function markSeen(list: Notification[]) {
+  const markSeen = useCallback((list: Notification[]) => {
     if (!list.length) return;
+
+    if (markReadPath) {
+      // Only the ones genuinely new — never already flagged read by the
+      // server, and not already POSTed once this panel session, so opening
+      // the panel repeatedly doesn't re-fire a request per item every time.
+      for (const item of list) {
+        if (item.read || dismissedRef.current.has(item.id)) continue;
+        void browserRequest({ url: markReadPath(item.id), method: "POST" }).catch(() => {
+          // Best-effort: worst case it shows as unread again next load,
+          // exactly like today, rather than blocking the UI on this.
+        });
+      }
+    }
+
     setDismissedIds((current) => new Set([...current, ...list.map((item) => item.id)]));
-  }
+  }, [markReadPath]);
 
   const load = useCallback(async (options?: { silent?: boolean }) => {
     if (!options?.silent) {
@@ -92,7 +132,7 @@ export function NotificationBell({ href, endpoint = "/api/v1/student/notificatio
     } finally {
       if (!options?.silent) setBusy(false);
     }
-  }, [endpoint]);
+  }, [endpoint, markSeen]);
 
   useEffect(() => {
     // The standard fetch-on-mount pattern: setBusy(true) runs synchronously

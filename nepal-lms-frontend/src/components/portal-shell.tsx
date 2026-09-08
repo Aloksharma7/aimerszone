@@ -184,8 +184,11 @@ const searchPlaceholder: Record<PortalRole, string> = {
  * "accounting" shares staff's backend role and feed; there is no separate
  * accounting notification endpoint.
  */
-const notificationRouteByRole: Record<PortalRole, { href: string; endpoint: string }> = {
-  student: { href: "/student/notifications", endpoint: "/api/v1/student/notifications" },
+const notificationRouteByRole: Record<PortalRole, { href: string; endpoint: string; markReadPath?: (id: string) => string }> = {
+  // The only feed backed by a real per-item read record (announcement_reads)
+  // today — teacher/staff/admin feeds surface outstanding work items with no
+  // such concept, so they have nothing to persist a "seen" state to.
+  student: { href: "/student/notifications", endpoint: "/api/v1/student/notifications", markReadPath: (id) => `/api/v1/student/announcements/${id}/read` },
   teacher: { href: "/teacher/notifications", endpoint: "/api/v1/teacher/notifications" },
   staff: { href: "/staff/notifications", endpoint: "/api/v1/staff/notifications" },
   accounting: { href: "/staff/notifications", endpoint: "/api/v1/staff/notifications" },
@@ -427,7 +430,7 @@ export function PortalShell({
           </div>
           <div className="flex items-center gap-2">
             {mockMode ? <Badge tone="blue" className="hidden sm:inline-flex">Preview data</Badge> : null}
-            <NotificationBell href={notificationRouteByRole[role].href} endpoint={notificationRouteByRole[role].endpoint} />
+            <NotificationBell href={notificationRouteByRole[role].href} endpoint={notificationRouteByRole[role].endpoint} markReadPath={notificationRouteByRole[role].markReadPath} />
             <div className="relative" ref={profileMenuRef}>
               <button type="button" onClick={() => setProfileOpen((value) => !value)} className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-slate-100" aria-expanded={profileOpen} aria-haspopup="menu">
                 <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-xs font-bold text-brand-900">{initials(user.name)}</span>
