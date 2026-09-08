@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
     },
     description: settings.tagline,
 
-    // Falls back to the bundled icon.svg (app/icon.svg) when no administrator
+    // Falls back to the bundled icon.png (app/icon.png) when no administrator
     // favicon is set — omitting `icons` entirely here lets that static file
     // convention apply instead of overriding it with nothing.
     icons: settings.faviconUrl ? { icon: settings.faviconUrl } : undefined,

@@ -3,14 +3,23 @@
 @theme {
   --font-sans: Inter, "Noto Sans Devanagari", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  --color-brand-950: #0b1739;
-  --color-brand-900: #172554;
-  --color-brand-800: #1e3a8a;
-  --color-brand-700: #1d4ed8;
-  --color-brand-600: #2563eb;
-  --color-brand-500: #3b82f6;
-  --color-brand-100: #dbeafe;
-  --color-brand-50: #eff6ff;
+  /* Aimers Zone brand blue, sampled directly from the logo mark (#00ADEF). */
+  --color-brand-950: #072f46;
+  --color-brand-900: #08567d;
+  --color-brand-800: #0084c2;
+  --color-brand-700: #00adef;
+  --color-brand-600: #05b4ff;
+  --color-brand-500: #1fbcff;
+  --color-brand-100: #ceeffd;
+  --color-brand-50: #ebf9ff;
+
+  /* Aimers Zone brand crimson, the laurel-wreath/wordmark red from the logo. */
+  --color-crimson-900: #62181c;
+  --color-crimson-800: #972026;
+  --color-crimson-700: #c22931;
+  --color-crimson-600: #d4353d;
+  --color-crimson-100: #f7d4d6;
+  --color-crimson-50: #fcedee;
 
   --color-accent-700: #b45309;
   --color-accent-600: #d97706;
@@ -65,8 +74,8 @@ body {
 }
 
 ::selection {
-  background: #dbeafe;
-  color: #172554;
+  background: #ceeffd;
+  color: #072f46;
 }
 
 a,
@@ -82,7 +91,7 @@ button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 3px solid rgba(37, 99, 235, 0.35);
+  outline: 3px solid rgba(0, 173, 239, 0.35);
   outline-offset: 2px;
 }
 
@@ -101,14 +110,14 @@ button:disabled {
 
 .hero-grid {
   background-image:
-    linear-gradient(rgba(37, 99, 235, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(37, 99, 235, 0.045) 1px, transparent 1px);
+    linear-gradient(rgba(0, 173, 239, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 173, 239, 0.06) 1px, transparent 1px);
   background-size: 32px 32px;
   mask-image: linear-gradient(to bottom, black, transparent 95%);
 }
 
 .dot-pattern {
-  background-image: radial-gradient(rgba(37, 99, 235, 0.18) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(0, 173, 239, 0.22) 1px, transparent 1px);
   background-size: 16px 16px;
 }
 

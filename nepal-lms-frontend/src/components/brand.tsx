@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BookOpenCheck } from "lucide-react";
 import { siteConfig } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -28,14 +27,16 @@ export function Brand({
     <Link href={href} className={cn("inline-flex min-w-0 items-center gap-3", className)} aria-label={`${displayName} home`}>
       <span
         className={cn(
-          "flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border shadow-sm",
-          light ? "border-white/15 bg-white/10 text-white" : "border-brand-800 bg-brand-900 text-white",
+          "flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border bg-white shadow-sm",
+          light ? "border-white/15" : "border-slate-200",
         )}
       >
         {logoUrl ? (
           <Image src={logoUrl} alt="" width={40} height={40} className="h-full w-full object-cover" unoptimized />
         ) : (
-          <BookOpenCheck className="h-5 w-5" aria-hidden="true" />
+          // The bundled mark: falls back here until an administrator uploads
+          // a logo through Settings, at which point logoUrl takes over.
+          <Image src="/images/brand/logo-192.png" alt="" width={40} height={40} className="h-full w-full object-contain p-0.5" />
         )}
       </span>
       {!compact ? (

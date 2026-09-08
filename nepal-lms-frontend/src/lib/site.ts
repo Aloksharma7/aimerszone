@@ -1,6 +1,6 @@
 export const siteConfig = {
-  name: process.env.NEXT_PUBLIC_APP_NAME || "Institution LMS",
-  shortName: process.env.NEXT_PUBLIC_APP_SHORT_NAME || "IL",
+  name: process.env.NEXT_PUBLIC_APP_NAME || "Aimers Zone",
+  shortName: process.env.NEXT_PUBLIC_APP_SHORT_NAME || "Aimers Zone",
   tagline:
     process.env.NEXT_PUBLIC_APP_TAGLINE ||
     "Live classes, recordings, tests and support in one clear place.",

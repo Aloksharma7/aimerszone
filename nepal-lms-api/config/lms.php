@@ -44,12 +44,12 @@ return [
      */
     'settings' => [
         'institution' => [
-            'name' => 'Institution LMS',
-            'short_name' => 'IL',
+            'name' => 'Aimers Zone',
+            'short_name' => 'Aimers Zone',
             'primary_phone' => '+977 9800000000',
             'support_email' => 'support@example.com',
             'whatsapp' => '9779800000000',
-            'website' => 'https://lms.example.com',
+            'website' => 'https://aimerszone.edu.np',
             'address' => 'Kathmandu, Nepal',
             'logo_path' => null,
             'favicon_path' => null,
