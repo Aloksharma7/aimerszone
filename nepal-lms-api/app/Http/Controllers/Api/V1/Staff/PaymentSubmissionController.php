@@ -144,6 +144,11 @@ class PaymentSubmissionController extends Controller
 
         abort_unless($payment->hasProof(), 404);
 
+        // Accounting\PaymentController and Student\PaymentController both log
+        // this same action on their identical proof() endpoints; this one was
+        // the only one of the three evidence ever went un-logged through.
+        $this->audit->log('payment.proof_viewed', $payment, $request->user());
+
         $destination = $this->links->forPaymentProof($payment);
 
         return ApiResponse::destination($destination['url'], $destination['expires_at']);
