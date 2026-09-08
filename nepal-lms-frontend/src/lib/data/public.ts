@@ -89,9 +89,9 @@ export async function getPublicFaqs(): Promise<Faq[]> {
 }
 
 const previewPaymentMethods: PaymentMethodOption[] = [
-  { id: "esewa", name: "eSewa", instructions: "The institution publishes the approved account or QR through Laravel." },
-  { id: "khalti", name: "Khalti", instructions: "The institution publishes the approved account or QR through Laravel." },
-  { id: "bank-transfer", name: "Bank transfer", instructions: "The institution publishes the approved bank details through Laravel." },
+  { id: "esewa", name: "eSewa", instructions: "Send the exact amount to the published eSewa account and upload your payment screenshot." },
+  { id: "khalti", name: "Khalti", instructions: "Send the exact amount to the published Khalti account and upload your payment screenshot." },
+  { id: "bank-transfer", name: "Bank transfer", instructions: "Transfer the exact amount to the published bank account and upload your deposit slip or transaction screenshot." },
 ];
 
 export async function getPublicPaymentMethods(): Promise<PaymentMethodOption[]> {

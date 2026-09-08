@@ -218,7 +218,7 @@ export async function getAdminDashboard(): Promise<AdminDashboardData> {
       { id: "zoom-warning", title: "2 Zoom sync warnings", detail: "Manual fallback available", href: "/admin/integrations/zoom", tone: "red" },
       { id: "draft-batches", title: "4 draft batches", detail: "Missing launch information", href: "/admin/batches", tone: "violet" },
     ],
-    services: [{ name: "Web application", value: 100, status: "Operational" }, { name: "Laravel API", value: 100, status: "Operational" }, { name: "Zoom integration", value: 78, status: "Degraded" }, { name: "Email delivery", value: 100, status: "Operational" }],
+    services: [{ name: "Web application", value: 100, status: "Operational" }, { name: "API", value: 100, status: "Operational" }, { name: "Zoom integration", value: 78, status: "Degraded" }, { name: "Email delivery", value: 100, status: "Operational" }],
     audit: auditEntries,
     readiness: { brand: 72, launchData: 64, policies: 48, technical: 82 },
   };

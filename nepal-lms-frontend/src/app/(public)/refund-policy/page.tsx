@@ -1,10 +1,10 @@
 import { PolicyPage } from "@/components/public-page";
 
 export default function RefundPolicyPage() {
-  return <PolicyPage title="Refund policy" intro="Refund eligibility, decisions and financial adjustments must be explicit and auditable." sections={[
-    { heading: "Eligibility", body: "Replace this section with institution-approved eligibility rules, request windows and exclusions before accepting production payments." },
-    { heading: "How to request", body: "A student should submit the payment reference, batch, reason and supporting information through the approved support channel." },
-    { heading: "Review and outcome", body: "Authorized accounting staff review the request. Approval, rejection, refund and adjustment actions require a recorded reason." },
-    { heading: "Access after refund", body: "Any effect on course access must follow the approved policy and be applied through an audited enrollment action." },
+  return <PolicyPage title="Refund Policy" intro="We want every student to feel confident before enrolling. This policy explains when a refund is possible and how to request one." sections={[
+    { heading: "Eligibility", body: "A refund may be considered if you request it before your batch's classes begin, or in the case of a genuine payment error, such as a duplicate payment. Refunds are not available once you have started attending live classes or accessing recordings for a batch, except at Aimers Zone's discretion." },
+    { heading: "How to request a refund", body: "Contact us at info.aimerszone@gmail.com or +977 984-4445200 with your payment reference, the batch name, and the reason for your request." },
+    { heading: "Review and decision", body: "Our team reviews every refund request individually and will let you know the outcome, along with the reason, within a few working days." },
+    { heading: "Access after a refund", body: "If a refund is approved, access to the related batch or course is removed as part of processing the refund." },
   ]} />;
 }

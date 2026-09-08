@@ -1,10 +1,10 @@
 import { PolicyPage } from "@/components/public-page";
 
 export default function TermsPage() {
-  return <PolicyPage title="Terms of use" intro="These terms describe the expected rules for account, learning and platform use." sections={[
-    { heading: "Account responsibility", body: "Keep login details private, provide accurate information and use only the access assigned to your own account." },
-    { heading: "Learning access", body: "Course and batch access follows the approved enrollment status, release schedule and access-expiry policy shown in the platform." },
-    { heading: "Acceptable use", body: "Do not attempt to bypass access rules, copy protected account information, disrupt classes or misuse tests, recordings and resources." },
-    { heading: "Service changes", body: "The institution may reschedule classes, replace teachers or adjust content when necessary, while communicating material changes clearly." },
+  return <PolicyPage title="Terms of Service" intro="By using Aimers Zone, you agree to the terms below, which explain your responsibilities as a student and what you can expect from us." sections={[
+    { heading: "Your account", body: "Keep your login details private, give us accurate information when you register, and use only the access assigned to your own account. Please do not share your login with anyone else." },
+    { heading: "Course and batch access", body: "Your access to a course or batch follows your enrollment status and the schedule and validity period shown on your batch page. Access is not available outside an active, approved enrollment." },
+    { heading: "Acceptable use", body: "Do not try to bypass access rules, copy or share protected recordings and materials, disrupt live classes, or misuse tests and resources meant for enrolled students only." },
+    { heading: "Changes to classes or content", body: "We may occasionally reschedule a class, change a teacher, or update course content when needed. We will always let you know about any change that affects your batch." },
   ]} />;
 }
