@@ -111,6 +111,7 @@ trait ResolvesTeacherScope
             // endpoint will now refuse.
             'can_start' => (bool) Auth::user()?->can('start', $session),
             'can_finalize_attendance' => (bool) Auth::user()?->can('finalizeAttendance', $session),
+            'can_reopen_attendance' => (bool) Auth::user()?->can('reopenAttendance', $session),
         ];
     }
 

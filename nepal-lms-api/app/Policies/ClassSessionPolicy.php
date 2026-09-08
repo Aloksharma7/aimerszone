@@ -44,4 +44,16 @@ class ClassSessionPolicy
     {
         return $user->hasPermission('attendance.finalize') && $this->guard->teachesBatch($user, $session->batch_id);
     }
+
+    /**
+     * Reopening a finalized register is a deliberate administrative
+     * override, not the teacher's own act — the same asymmetry as
+     * start()/manage(): finalizing is what the assigned teacher does;
+     * undoing that decision belongs to whoever administers the platform,
+     * with the reason recorded in the audit trail.
+     */
+    public function reopenAttendance(User $user, ClassSession $session): bool
+    {
+        return $user->isAdmin() && $user->hasPermission('attendance.reopen');
+    }
 }

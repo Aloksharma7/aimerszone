@@ -223,6 +223,43 @@ class AttendanceController extends Controller
         ]);
     }
 
+    /**
+     * Reopens a finalized register so save()/finalize() become available
+     * again — an administrative override, not something the teacher who
+     * finalized it can do to their own record.
+     *
+     * Previously there was no way to do this anywhere in the app: the error
+     * shown for a finalized register, and the admin/teacher attendance page
+     * itself, both told the user this existed ("Ask an administrator to
+     * reopen it" / "Reopening requires a separate permission and audited
+     * reason") — a genuine, permanently stuck mistake for any teacher who
+     * finalized too early or with a wrong mark, since there was no way to
+     * fix it once it was locked.
+     */
+    public function reopen(Request $request, string $sessionId): JsonResponse
+    {
+        $session = $this->resolveSession($sessionId, $request->user());
+
+        $this->authorize('reopenAttendance', $session);
+
+        if (! $session->attendanceFinalized()) {
+            throw DomainException::conflict('This register is not finalized.', 'attendance_not_finalized');
+        }
+
+        $data = $request->validate([
+            'reason' => ['required', 'string', 'min:10', 'max:500'],
+        ]);
+
+        $session->forceFill([
+            'attendance_finalized_at' => null,
+            'attendance_finalized_by' => null,
+        ])->save();
+
+        $this->audit->log('attendance.reopened', $session, $request->user(), $data['reason']);
+
+        return ApiResponse::item(['reopened' => true]);
+    }
+
     /* ----------------------------------------------------------------
      | Helpers
      | ---------------------------------------------------------------- */

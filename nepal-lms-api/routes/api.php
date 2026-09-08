@@ -231,6 +231,8 @@ Route::prefix('v1')->group(function () {
             ->middleware(['permission:attendance.finalize', 'idempotent']);
         Route::post('classes/{sessionId}/attendance/import', [Teacher\AttendanceController::class, 'import'])
             ->middleware(['permission:attendance.view', 'idempotent', 'throttle:10,1']);
+        Route::post('classes/{sessionId}/attendance/reopen', [Teacher\AttendanceController::class, 'reopen'])
+            ->middleware(['permission:attendance.reopen', 'idempotent']);
 
         Route::get('tests', [Teacher\TestController::class, 'index']);
         Route::post('tests', [Teacher\TestController::class, 'store'])
