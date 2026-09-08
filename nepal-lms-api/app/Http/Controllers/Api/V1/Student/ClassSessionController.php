@@ -89,10 +89,27 @@ class ClassSessionController extends Controller
     /**
      * Records the join as provisional attendance. The teacher's finalized
      * register always overrides this, so an opened link is evidence, not a mark.
+     *
+     * This is the weakest of the three sources (join_link < zoom_import <
+     * manual) — it must never overwrite a teacher's manual decision or the
+     * Zoom import's own record, the same priority AttendanceImportService
+     * already enforces on its side. Without this, a teacher could mark a
+     * student absent with a reason, and the student opening the join link
+     * afterward (still inside the join window, possibly while the class is
+     * still live) would silently flip that back to Present with no signal
+     * that anything changed underneath the teacher's saved decision.
      */
     protected function markPresence(ClassSession $session, Request $request): void
     {
         if ($session->attendanceFinalized()) {
+            return;
+        }
+
+        $existingSource = Attendance::where('class_session_id', $session->getKey())
+            ->where('user_id', $request->user()->getKey())
+            ->value('source');
+
+        if (in_array($existingSource, ['manual', 'zoom_import'], true)) {
             return;
         }
 
