@@ -245,6 +245,8 @@ Route::prefix('v1')->group(function () {
             ->middleware(['permission:tests.manage', 'idempotent']);
         Route::post('tests/{test}/publish', [Teacher\TestController::class, 'publish'])
             ->middleware(['permission:tests.manage', 'idempotent']);
+        Route::post('tests/{test}/release-results', [Teacher\TestController::class, 'releaseResults'])
+            ->middleware(['permission:tests.manage', 'idempotent']);
 
         Route::get('announcements', [Teacher\AnnouncementController::class, 'index']);
         Route::post('announcements', [Teacher\AnnouncementController::class, 'store'])

@@ -217,6 +217,37 @@ class TestController extends Controller
         ]);
     }
 
+    /**
+     * Fires a "manual" release policy — the only release strategy that has no
+     * other trigger anywhere in the app. "immediate" and "after_close" both
+     * compute resultsAreReleased() straight from the test's own fields, but
+     * "manual" falls back to comparing against results_released_at, and
+     * nothing ever wrote to that column: a teacher who picked "Manual
+     * release" in the builder had chosen a setting that could never actually
+     * release anything, permanently withholding every student's score.
+     */
+    public function releaseResults(Request $request, Test $test): JsonResponse
+    {
+        $this->authorize('manage', $test);
+
+        if ($test->result_release !== 'manual') {
+            throw DomainException::conflict(
+                'This test releases results automatically and does not need a manual trigger.',
+                'not_manual_release',
+            );
+        }
+
+        if ($test->results_released_at !== null) {
+            throw DomainException::conflict('Results were already released.', 'already_released');
+        }
+
+        $test->forceFill(['results_released_at' => now()])->save();
+
+        $this->audit->log('test.results_released', $test, $request->user());
+
+        return ApiResponse::item(['results_released_at' => $test->results_released_at->toIso8601String()]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $data = $this->validated($request, creating: true);
@@ -250,6 +281,21 @@ class TestController extends Controller
         if ($test->attempts()->exists() && isset($data['questions'])) {
             throw DomainException::conflict(
                 'This test already has attempts, so its questions can no longer be changed.',
+                'test_has_attempts',
+            );
+        }
+
+        // A grader attempt's `passed` flag is computed once, at grading time,
+        // against whatever pass_mark was live then, and never revisited. A
+        // pass_mark edit after attempts exist left every already-graded
+        // attempt's frozen pass/fail verdict silently contradicting the new
+        // number shown right next to it on the results page. Checked against
+        // the stored value, not mere presence in the payload, since the
+        // frontend resubmits the full form for edits (like the schedule)
+        // that must stay allowed even with attempts already recorded.
+        if ($test->attempts()->exists() && isset($data['pass_mark']) && (int) $data['pass_mark'] !== (int) $test->pass_mark) {
+            throw DomainException::conflict(
+                'This test already has attempts, so its pass mark can no longer be changed.',
                 'test_has_attempts',
             );
         }
