@@ -38,12 +38,25 @@ class EnsureAccountIsUsable
             );
         }
 
+        $devices = app(DeviceGuard::class);
+
+        // A device slot freed by staff (lost phone) or by the student signing
+        // out must actually stop that device, not just allow a new one to
+        // register — otherwise the old phone keeps working forever.
+        if ($devices->currentDeviceRevoked($user, $request)) {
+            return ApiResponse::error(
+                'This device was signed out remotely. Please sign in again.',
+                'device_revoked',
+                401,
+            );
+        }
+
         // Cheap presence signal for the admin user list; avoids a write per request.
         if ($user->last_seen_at === null || $user->last_seen_at->lt(now()->subMinutes(5))) {
             $user->forceFill(['last_seen_at' => now()])->saveQuietly();
         }
 
-        app(DeviceGuard::class)->touch($user, $request);
+        $devices->touch($user, $request);
 
         return $next($request);
     }

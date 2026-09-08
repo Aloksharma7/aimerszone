@@ -128,6 +128,35 @@ class DeviceGuard
             ->update(['last_active_at' => now()]);
     }
 
+    /**
+     * Whether the device making this request has had its slot freed by
+     * releaseCurrent()/releaseAll() — e.g. a lost phone an officer reset so
+     * the student could sign in on a new one.
+     *
+     * register()/releaseAll() only ever governed whether a *new* sign-in was
+     * accepted; nothing previously checked an *already-authenticated*
+     * request's device against that state, so a token or session issued
+     * before the reset kept working forever — exactly the case "student's
+     * phone was lost, staff reset their device slot" is supposed to close.
+     * Only a row that actually exists and is explicitly revoked blocks the
+     * request; no matching row at all is treated as unrestricted, so a
+     * session established before device tracking existed for this user
+     * (or with the feature switched off) is never caught by this.
+     */
+    public function currentDeviceRevoked(User $user, Request $request): bool
+    {
+        if (! $this->appliesTo($user)) {
+            return false;
+        }
+
+        $device = DeviceSession::query()
+            ->where('user_id', $user->getKey())
+            ->where('device_hash', $this->fingerprint($request))
+            ->first();
+
+        return $device !== null && ! $device->isActive();
+    }
+
     /** @return array<int, array<string, mixed>> */
     public function listFor(User $user): array
     {
