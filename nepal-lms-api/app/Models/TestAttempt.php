@@ -45,6 +45,11 @@ class TestAttempt extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function enrollment(): BelongsTo
+    {
+        return $this->belongsTo(Enrollment::class);
+    }
+
     public function responses(): HasMany
     {
         return $this->hasMany(TestResponse::class);

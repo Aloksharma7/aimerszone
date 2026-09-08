@@ -133,6 +133,15 @@ class AttemptController extends Controller
             // Grade what was saved rather than discarding the student's work.
             $this->grader->submit($attempt, autoSubmitted: true);
 
+            // Mirrors submit()'s own explicit path below — without this, a
+            // student who ran out of time while still typing (arguably the
+            // most common way a timed test ends) had their dashboard
+            // test/overall percentage frozen at its pre-test value until some
+            // unrelated action happened to touch the same enrollment.
+            if ($attempt->enrollment !== null) {
+                $this->progress->recalculate($attempt->enrollment);
+            }
+
             throw DomainException::conflict('Time is up — this attempt was submitted automatically.', 'attempt_expired');
         }
 
