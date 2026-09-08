@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AuthMeResource;
 use App\Services\AuditLogger;
+use App\Services\AuthenticationRevoker;
 use App\Services\SettingsRepository;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +23,7 @@ class ChangePasswordController extends Controller
     public function __construct(
         protected SettingsRepository $settings,
         protected AuditLogger $audit,
+        protected AuthenticationRevoker $revoker,
     ) {}
 
     public function __invoke(Request $request): JsonResponse
@@ -54,8 +56,22 @@ class ChangePasswordController extends Controller
         ])->save();
 
         // Keep the current browser signed in, drop every other session.
-        $request->session()->regenerate();
-        $this->audit->log('auth.password_changed', $user, $user);
+        //
+        // session()->regenerate() alone only protects this one browser
+        // against session-fixation — it does nothing to a different
+        // browser's session or a mobile device's bearer token, both of
+        // which kept working fully after a password change that was
+        // specifically meant to lock something out (a stolen device, a
+        // shared/leaked password). revokeOthers() is the same mechanism the
+        // explicit "sign out everywhere else" account action uses, and
+        // correctly leaves this request's own session/token untouched.
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
+
+        $revoked = $this->revoker->revokeOthers($request, $user);
+
+        $this->audit->log('auth.password_changed', $user, $user, properties: ['sessions_revoked' => $revoked]);
 
         return ApiResponse::item(new AuthMeResource($user->fresh()));
     }

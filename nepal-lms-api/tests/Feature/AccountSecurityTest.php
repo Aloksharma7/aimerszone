@@ -134,6 +134,67 @@ class AccountSecurityTest extends TestCase
             ->assertJsonPath('data.sessions.0.current', false);
     }
 
+    /**
+     * Regression: the required "change your temporary password" flow had its
+     * own separate implementation of "keep this device, drop the rest" that
+     * only ever called session()->regenerate() — which does nothing to a
+     * different browser's session or, as here, another device's bearer
+     * token. Account\PasswordController (the voluntary change) already got
+     * this right; Auth\ChangePasswordController (this required one) silently
+     * didn't, so a leaked temporary password stayed usable on every other
+     * device even after the real recipient completed the forced change.
+     */
+    public function test_a_forced_password_change_revokes_other_tokens_too(): void
+    {
+        $staff = $this->makeUser(RoleKey::Staff, [
+            'password' => 'password123',
+            'must_change_password' => true,
+        ]);
+        $currentToken = $staff->createToken('this-device')->plainTextToken;
+        $otherToken = $staff->createToken('other-device')->plainTextToken;
+
+        $this->withHeader('Authorization', "Bearer {$currentToken}")
+            ->postJson('/api/v1/auth/change-password', [
+                'current_password' => 'password123',
+                'password' => 'BrandNewPass99',
+                'password_confirmation' => 'BrandNewPass99',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.required_action', null);
+
+        Auth::forgetGuards();
+        $this->withHeader('Authorization', "Bearer {$currentToken}")->getJson('/api/v1/auth/me')->assertOk();
+        Auth::forgetGuards();
+        $this->withHeader('Authorization', "Bearer {$otherToken}")->getJson('/api/v1/auth/me')->assertStatus(401);
+    }
+
+    /**
+     * Regression: completing a "forgot password" reset only ever deleted
+     * database session rows, never Sanctum tokens — so resetting a password
+     * specifically because an account was compromised left a mobile app's
+     * token (or any other token-authenticated session) fully working
+     * afterward, on the very credential the reset was meant to invalidate.
+     */
+    public function test_a_password_reset_revokes_every_existing_token(): void
+    {
+        $student = $this->makeUser(RoleKey::Student, ['password' => 'old-password-123']);
+        $compromisedToken = $student->createToken('attacker-device')->plainTextToken;
+
+        $resetToken = \Illuminate\Support\Facades\Password::createToken($student);
+
+        $this->postJson('/api/v1/auth/reset-password', [
+            'token' => $resetToken,
+            'email' => $student->email,
+            'password' => 'brand-new-password-1',
+            'password_confirmation' => 'brand-new-password-1',
+        ])->assertOk();
+
+        $this->assertTrue(Hash::check('brand-new-password-1', $student->fresh()->password));
+
+        Auth::forgetGuards();
+        $this->withHeader('Authorization', "Bearer {$compromisedToken}")->getJson('/api/v1/auth/me')->assertStatus(401);
+    }
+
     public function test_a_token_authenticated_request_can_revoke_other_sessions(): void
     {
         $student = $this->makeUser(RoleKey::Student, ['password' => 'correct-password']);

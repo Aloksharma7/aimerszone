@@ -5,12 +5,12 @@ namespace App\Http\Controllers\Api\V1\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AuditLogger;
+use App\Services\AuthenticationRevoker;
 use App\Services\SettingsRepository;
 use App\Support\ApiResponse;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
@@ -21,6 +21,7 @@ class PasswordResetController extends Controller
     public function __construct(
         protected SettingsRepository $settings,
         protected AuditLogger $audit,
+        protected AuthenticationRevoker $revoker,
     ) {}
 
     /**
@@ -67,7 +68,7 @@ class PasswordResetController extends Controller
 
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user, string $password) {
+            function (User $user, string $password) use ($request) {
                 $user->forceFill([
                     'password' => $password,
                     'remember_token' => Str::random(60),
@@ -77,8 +78,15 @@ class PasswordResetController extends Controller
                     'locked_until' => null,
                 ])->save();
 
-                // Any session opened with the old password is no longer trusted.
-                $this->revokeSessions($user);
+                // Any session or device token opened with the old password is
+                // no longer trusted — this used to delete only database
+                // session rows, leaving a mobile app's Sanctum token (or any
+                // token-authenticated session) fully working after a reset
+                // specifically meant to lock out whoever had the old
+                // password. There's no "current" session to preserve here
+                // (this request isn't authenticated as the user at all), so
+                // every credential goes.
+                $this->revoker->revokeOthers($request, $user);
 
                 event(new PasswordReset($user));
                 $this->audit->log('auth.password_reset', $user, $user);
@@ -92,12 +100,5 @@ class PasswordResetController extends Controller
         }
 
         return ApiResponse::message('Your password has been reset. You can now sign in.');
-    }
-
-    protected function revokeSessions(User $user): void
-    {
-        if (config('session.driver') === 'database') {
-            DB::table(config('session.table', 'sessions'))->where('user_id', $user->getKey())->delete();
-        }
     }
 }
