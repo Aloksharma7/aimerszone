@@ -54,6 +54,59 @@ class ClassSessionAutomationTest extends TestCase
         $this->assertSame('live', $recent->fresh()->status->value);
     }
 
+    /**
+     * Regression: the fix above only helps once lms:expire-live-classes has
+     * actually run — every 15 minutes at best, or never if the server's cron
+     * was never configured to call schedule:run at all. A student reading
+     * the API in that gap saw "Live now" for a class that plainly ended,
+     * because the resource serialized the stored status column directly.
+     * effectiveStatus() computes it from starts_at/ends_at instead, so this
+     * is correct on every read, independent of whether the cron ever runs.
+     */
+    public function test_an_overdue_live_class_reads_as_completed_before_the_cron_ever_runs(): void
+    {
+        $batch = $this->makeBatch($this->makeCourse());
+        $student = $this->makeUser(RoleKey::Student);
+        $enrollment = $this->enroll($student, $batch);
+
+        $overdue = ClassSession::create([
+            'batch_id' => $batch->getKey(),
+            'topic' => 'Long over, never expired',
+            'status' => 'live',
+            'starts_at' => now()->subHours(3),
+            'ends_at' => now()->subHours(2),
+        ]);
+
+        $neverStarted = ClassSession::create([
+            'batch_id' => $batch->getKey(),
+            'topic' => 'Scheduled, teacher never started it',
+            'status' => 'scheduled',
+            'starts_at' => now()->subHours(3),
+            'ends_at' => now()->subHours(2),
+        ]);
+
+        $stillLive = ClassSession::create([
+            'batch_id' => $batch->getKey(),
+            'topic' => 'Genuinely in progress',
+            'status' => 'live',
+            'starts_at' => now()->subMinutes(10),
+            'ends_at' => now()->addMinutes(20),
+        ]);
+
+        // Confirmed still 'live'/'scheduled' at rest — nothing ran the cron.
+        $this->assertSame('live', $overdue->fresh()->status->value);
+        $this->assertSame('scheduled', $neverStarted->fresh()->status->value);
+
+        $response = $this->actingAs($student)
+            ->getJson('/api/v1/student/courses/'.$enrollment->getKey().'/classes')
+            ->assertOk();
+
+        $byId = collect($response->json('data'))->keyBy('id');
+        $this->assertSame('completed', $byId[$overdue->getKey()]['status']);
+        $this->assertSame('completed', $byId[$neverStarted->getKey()]['status']);
+        $this->assertSame('live', $byId[$stillLive->getKey()]['status']);
+    }
+
     public function test_scheduling_a_class_announces_it_to_enrolled_students(): void
     {
         $teacher = $this->makeUser(RoleKey::Teacher);

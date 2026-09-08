@@ -91,4 +91,25 @@ class ClassSession extends Model
             ->where('ends_at', '>=', now())
             ->orderBy('starts_at');
     }
+
+    /**
+     * The status as it should currently read, not just what is stored.
+     *
+     * Live only ever moves to Completed one of two ways: the teacher manually
+     * finalizing attendance (which can happen hours later, or never), or the
+     * scheduled lms:expire-live-classes job catching up (every 15 minutes,
+     * and only if the server's cron is actually configured to run it at
+     * all). Neither is guaranteed to have happened by the time a student
+     * reads this — without this, a class that plainly ended kept reading
+     * "Live now" indefinitely, the same way a Scheduled class the teacher
+     * never started did too.
+     */
+    public function effectiveStatus(): ClassSessionStatus
+    {
+        if (in_array($this->status, [ClassSessionStatus::Live, ClassSessionStatus::Scheduled], true) && $this->ends_at->isPast()) {
+            return ClassSessionStatus::Completed;
+        }
+
+        return $this->status;
+    }
 }

@@ -23,7 +23,7 @@ class ClassSessionResource extends JsonResource
             'course_title' => $this->batch?->course?->title,
             'batch_title' => $this->batch?->title,
             'teacher_name' => $this->teacher?->name,
-            'status' => $this->status->value,
+            'status' => $this->effectiveStatus()->value,
             'starts_at' => $this->starts_at->toIso8601String(),
             'ends_at' => $this->ends_at->toIso8601String(),
             'join_available' => (bool) ($this->additional['join_available'] ?? false),
