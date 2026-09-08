@@ -34,15 +34,21 @@ class RecheckProcessingRecordings extends Command
                 foreach ($recordings as $recording) {
                     $result = $sync->verify($recording->youtube_video_id);
 
-                    if (! ($result['verified'] ?? false)) {
-                        // Not found / unreachable / not connected — leave it
-                        // as-is, the next run tries again.
-                        $stillProcessing++;
+                    if (! ($result['verified'] ?? false) || ($result['state'] ?? null) !== 'processed') {
+                        // Still not ready, or unreachable/not connected — the
+                        // state itself is left as-is, the next run tries
+                        // again. The diagnostic message is still refreshed
+                        // (previously it wasn't, only the manual "Re-check"
+                        // path ever updated it) so a teacher looking at a
+                        // recording stuck in processing for days sees why —
+                        // e.g. "no video was found for that id" — instead of
+                        // whatever message happened to be set when it was
+                        // first uploaded.
+                        $recording->fill([
+                            'sync_message' => $result['message'] ?? $recording->sync_message,
+                            'synced_at' => now(),
+                        ])->save();
 
-                        continue;
-                    }
-
-                    if (($result['state'] ?? null) !== 'processed') {
                         $stillProcessing++;
 
                         continue;
