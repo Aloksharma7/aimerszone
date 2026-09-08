@@ -223,6 +223,7 @@ export function mapRecording(value: ApiRecording): Recording {
     state,
     syncMessage: value.sync_message,
     thumbnailUrl: value.thumbnail_url,
+    orientation: value.orientation || "landscape",
     videoId: value.youtube_video_id,
     isPublicWarning: value.is_public_warning,
     syllabusLessonId: value.syllabus_lesson_id,

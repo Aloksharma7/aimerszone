@@ -117,7 +117,7 @@ export function SecureDownloadButton({ resourceId, label = "Download", className
   );
 }
 
-export function SecureRecordingPlayer({ recordingId, title }: { recordingId: string; title: string }) {
+export function SecureRecordingPlayer({ recordingId, title, orientation = "landscape" }: { recordingId: string; title: string; orientation?: "landscape" | "portrait" }) {
   // Starts true: the mount effect below fires the load immediately, and
   // starting false would flash the manual "Load recording" button for one
   // frame before that kicks in.
@@ -179,8 +179,13 @@ export function SecureRecordingPlayer({ recordingId, title }: { recordingId: str
   }, [recordingId]);
 
   return (
-    // `relative` anchors the watermark overlay to the player.
-    <div className="relative aspect-video overflow-hidden rounded-2xl bg-slate-950 shadow-card">
+    // `relative` anchors the watermark overlay to the player. Landscape (the
+    // default — a normal Zoom capture) fills the width like before. Portrait
+    // (a vertically-shot clip) previously still got forced into that same
+    // wide 16:9 box, so the actual video played as a narrow strip in the
+    // middle of a lot of empty black space — this caps the width and uses a
+    // tall, narrow box sized for that shape instead.
+    <div className={cn("relative overflow-hidden rounded-2xl bg-slate-950 shadow-card", orientation === "portrait" ? "mx-auto aspect-9/16 max-w-sm" : "aspect-video")}>
       <DevToolsDeterrent />
       {videoId ? <VideoWatermark watermark={watermark} /> : null}
       {videoId ? (

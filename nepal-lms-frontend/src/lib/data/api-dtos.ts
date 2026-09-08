@@ -112,6 +112,7 @@ export type ApiRecording = {
   state?: "available" | "processing" | "unavailable";
   sync_message?: string | null;
   thumbnail_url?: string | null;
+  orientation?: "landscape" | "portrait";
   youtube_video_id?: string | null;
 
   // Teacher-only: absent from the shared resource on student-facing endpoints.

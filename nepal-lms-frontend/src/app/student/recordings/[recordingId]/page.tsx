@@ -19,7 +19,7 @@ export default async function GlobalRecordingPlayerPage({ params }: { params: Pr
   return (
     <>
       <PageHeader back={{ href: "/student/recordings", label: "All recordings" }} eyebrow={recording.course || "Recorded class"} title={recording.title} description={`${recording.module} · ${recording.teacher} · ${recording.duration}`} actions={<ButtonLink href="/student/recordings" variant="outline">Back to recordings</ButtonLink>} />
-      <SecureRecordingPlayer recordingId={recording.id} title={recording.title} />
+      <SecureRecordingPlayer recordingId={recording.id} title={recording.title} orientation={recording.orientation} />
       <Panel className="mt-5"><ProgressBar value={recording.progress} label="Watching progress" /><div className="mt-5 flex gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900"><Info className="mt-0.5 h-5 w-5 shrink-0" />Playback is released only after the API confirms your enrollment and access expiry.</div></Panel>
       <div className="mt-6"><ResourceLibrary resources={resources.slice(0, 3)} global /></div>
     </>

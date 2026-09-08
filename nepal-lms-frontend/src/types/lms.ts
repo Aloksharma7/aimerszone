@@ -169,6 +169,7 @@ export type Recording = {
   state: "In progress" | "Not started" | "Completed" | "Available" | "Processing";
   syncMessage?: string | null;
   thumbnailUrl?: string | null;
+  orientation: "landscape" | "portrait";
   videoId?: string | null;
   isPublicWarning?: boolean;
   syllabusLessonId?: string | null;

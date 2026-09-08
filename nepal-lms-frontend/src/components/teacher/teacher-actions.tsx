@@ -312,6 +312,7 @@ export function TeacherRecordingForm({ batchId, sessionOptions = [], syllabusOut
           youtube_video_id: videoId,
           syllabus_lesson_id: String(form.get("syllabus_lesson_id") || "") || null,
           release_at: String(form.get("release_at") || "") || null,
+          orientation: String(form.get("orientation") || "landscape"),
         },
         headers: { "Idempotency-Key": createIdempotencyKey("recording-create") },
       });
@@ -336,6 +337,7 @@ export function TeacherRecordingForm({ batchId, sessionOptions = [], syllabusOut
       <label className="block text-sm font-semibold text-slate-700">Title<input name="title" required maxLength={150} className="mt-2 h-10 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" /></label>
       <label className="block text-sm font-semibold text-slate-700">Syllabus lesson <span className="font-normal text-slate-400">(optional)</span><select name="syllabus_lesson_id" className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100"><option value="">Not tied to a lesson</option>{syllabusOutline.map((module) => <optgroup key={module.id} label={module.title}>{module.lessons.map((lesson) => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}</optgroup>)}</select></label>
       <label className="block text-sm font-semibold text-slate-700">YouTube link or video ID<input name="youtube_video_id" required className="mt-2 h-10 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" placeholder="Paste the video's YouTube link" autoComplete="off" /></label>
+      <label className="block text-sm font-semibold text-slate-700">Orientation <span className="font-normal text-slate-400">(how the video was recorded)</span><select name="orientation" defaultValue="landscape" className="mt-2 h-10 w-full rounded-lg border border-slate-300 bg-white px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100"><option value="landscape">Landscape (normal Zoom recording)</option><option value="portrait">Portrait (vertically recorded, e.g. on a phone)</option></select></label>
       <label className="block text-sm font-semibold text-slate-700">Release date<input name="release_at" type="datetime-local" defaultValue={defaultReleaseAt} className="mt-2 h-10 w-full rounded-lg border border-slate-300 px-3 font-normal outline-none transition focus:border-brand-600 focus:ring-2 focus:ring-brand-100" /></label>
       <ErrorNotice error={error} /><SuccessNotice message={success} /><WarningNotice message={warning} />
       <Button type="submit" className="w-full" disabled={loading}><UploadCloud className="h-4 w-4" />{loading ? "Saving…" : "Save recording"}</Button>
