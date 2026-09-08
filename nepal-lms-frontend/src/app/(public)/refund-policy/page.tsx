@@ -1,4 +1,10 @@
 import { PolicyPage } from "@/components/public-page";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata({
+  title: "Refund Policy",
+  description: "Aimers Zone's policy on refunds for course and batch payments.",
+});
 
 export default function RefundPolicyPage() {
   return <PolicyPage title="Refund Policy" intro="We want every student to feel confident before enrolling. This policy explains when a refund is possible and how to request one." sections={[

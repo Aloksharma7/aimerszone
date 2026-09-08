@@ -3,6 +3,12 @@ import { ArrowRight, BookOpen, CheckCircle2 } from "lucide-react";
 import { PublicPageHero } from "@/components/public-page";
 import { Badge, Panel } from "@/components/ui";
 import { getPublicTeachers } from "@/lib/data/public";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata({
+  title: "Our Teachers",
+  description: "Meet the expert Physics and Chemistry teachers at Aimers Zone guiding students through live batches with practical, result-oriented instruction.",
+});
 
 export default async function TeachersPage() {
   const teachers = await getPublicTeachers();

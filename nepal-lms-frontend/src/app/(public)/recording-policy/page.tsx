@@ -1,4 +1,10 @@
 import { PolicyPage } from "@/components/public-page";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata({
+  title: "Recording Policy",
+  description: "How Aimers Zone records, stores and shares class recordings with enrolled students.",
+});
 
 export default function RecordingPolicyPage() {
   return <PolicyPage title="Recording Policy" intro="Class recordings are provided so you can revise at your own pace. This policy explains how they can be used." sections={[

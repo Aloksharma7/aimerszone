@@ -2,12 +2,18 @@ import { FaqList } from "@/components/faq-list";
 import { PublicPageHero } from "@/components/public-page";
 import { ButtonLink, Panel } from "@/components/ui";
 import { getPublicFaqs } from "@/lib/data/public";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata({
+  title: "Frequently Asked Questions",
+  description: "Answers to common questions about enrolling, payments, live classes, recordings and support at Aimers Zone.",
+});
 
 const extra = [
-  { question: "When can I join a live class?", answer: "The Join button appears only inside the authorised window defined by the institution, commonly a few minutes before the scheduled class. The page shows Nepal time clearly." },
-  { question: "Does an unlisted recording mean it cannot be shared?", answer: "No. Unlisted hosting reduces discovery but is not DRM. Students must follow the recording and account-sharing policy." },
-  { question: "Can staff see my complete financial information?", answer: "The interface should show only the information needed to verify the submitted payment. Sensitive proof access remains permission-controlled and audited." },
-  { question: "What happens after a batch ends?", answer: "The batch page and student workspace show the approved access-expiry rule. Recording access may continue for a defined period or end with the batch, depending on institution policy." },
+  { question: "When can I join a live class?", answer: "The Join button appears only inside the authorised window before your scheduled class, commonly a few minutes early. The page shows Nepal time clearly." },
+  { question: "Does an unlisted recording mean it cannot be shared?", answer: "No. Unlisted hosting reduces discovery but is not DRM. Please follow our recording and account-sharing policy." },
+  { question: "Can staff see my complete financial information?", answer: "Only what's needed to verify your submitted payment. Access to sensitive proof is permission-controlled and audited." },
+  { question: "What happens after a batch ends?", answer: "Your batch page and student workspace show your access-expiry date. Recording access may continue for a defined period or end with the batch, depending on the course." },
 ];
 
 export default async function FaqPage() {

@@ -8,12 +8,14 @@ import { FreeEnrollButton } from "@/components/student/enrollment-actions";
 import { Badge, ButtonLink, Panel, SectionHeading, StatusBadge } from "@/components/ui";
 import { getSessionUser } from "@/lib/auth/server";
 import { getPublicCourse, getPublicCourses } from "@/lib/data/public";
+import { getPublicSettings } from "@/lib/data/settings";
+import { pageMetadata } from "@/lib/metadata";
 import { formatNpr } from "@/lib/utils";
 
 export async function generateMetadata({ params }: { params: Promise<{ courseSlug: string }> }): Promise<Metadata> {
   const { courseSlug } = await params;
   const course = await getPublicCourse(courseSlug);
-  return course ? { title: course.title, description: course.description } : { title: "Course not found" };
+  return course ? pageMetadata({ title: course.title, description: course.description }) : { title: "Course not found" };
 }
 
 export default async function CourseDetailPage({ params }: { params: Promise<{ courseSlug: string }> }) {
@@ -21,10 +23,26 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ c
 
   // A signed-in student is sent to the batch page rather than the sign-up form,
   // which the guest guard would only bounce back to their dashboard.
-  const [viewer, course, courses] = await Promise.all([getSessionUser(), getPublicCourse(courseSlug), getPublicCourses()]);
+  const [viewer, course, courses, settings] = await Promise.all([getSessionUser(), getPublicCourse(courseSlug), getPublicCourses(), getPublicSettings()]);
   const isStudent = Boolean(viewer?.roles.includes("student"));
   if (!course) notFound();
   const related = courses.filter((item) => item.slug !== course.slug && item.category === course.category).slice(0, 3);
+
+  // Course structured data — lets Google show price/provider directly in
+  // search results instead of just a plain blue link.
+  const courseJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Course",
+    name: course.title,
+    description: course.description,
+    provider: { "@type": "EducationalOrganization", name: settings.name, sameAs: settings.website || undefined },
+    offers: {
+      "@type": "Offer",
+      price: course.isFree ? "0" : String(course.price),
+      priceCurrency: "NPR",
+      category: course.isFree ? "Free" : "Paid",
+    },
+  };
   const featureDetails = [
     { icon: MonitorPlay, label: "Live classes", detail: course.features.includes("Live") ? "Scheduled Zoom classes with one clear join action." : "Not included in this course." },
     { icon: PlayCircle, label: "Recordings", detail: course.features.includes("Recordings") ? "Released class recordings available during access." : "Not included in this course." },
@@ -34,6 +52,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ c
 
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }} />
       <section className="border-b border-slate-200 bg-canvas py-10 sm:py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <Link href="/courses" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-brand-700"><ArrowLeft className="h-4 w-4" />Back to courses</Link>

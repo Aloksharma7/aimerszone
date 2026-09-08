@@ -1,6 +1,12 @@
 import { ClipboardCheck, CreditCard, Headphones, MonitorPlay, PlayCircle, Users } from "lucide-react";
 import { PublicPageHero } from "@/components/public-page";
 import { ButtonLink, Panel, SectionHeading } from "@/components/ui";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata({
+  title: "Our Services",
+  description: "Live batch classes, recordings, focused tests, manual and online payment options, and dedicated student support — everything Aimers Zone offers to help you prepare with confidence.",
+});
 
 export default function ServicesPage() {
   const services = [

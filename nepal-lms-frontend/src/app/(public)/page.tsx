@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -24,6 +25,19 @@ import { Badge, Button, ButtonLink, SectionHeading } from "@/components/ui";
 import { getPublicCategories, getPublicCourses, getPublicFaqs, getPublicTeachers } from "@/lib/data/public";
 
 const categoryIcons = { BriefcaseBusiness: GraduationCap, Target, Landmark, School, Gift };
+
+// Only a description here — no title — so the root layout's own default
+// title ("Aimers Zone — Start with an Aim, Finish with Success.") applies
+// unwrapped, instead of the %s | Aimers Zone template doubling the brand
+// name on the one page that already is the brand's own title.
+export const metadata: Metadata = {
+  description:
+    "Aimers Zone is a Birgunj-based learning institute offering live Physics and Chemistry classes, recordings, focused tests and real human support for exam preparation and entrance coaching.",
+  openGraph: {
+    description:
+      "Aimers Zone is a Birgunj-based learning institute offering live Physics and Chemistry classes, recordings, focused tests and real human support for exam preparation and entrance coaching.",
+  },
+};
 
 export default async function HomePage() {
   const [categories, courses, faqs, teachers] = await Promise.all([getPublicCategories(), getPublicCourses(), getPublicFaqs(), getPublicTeachers()]);

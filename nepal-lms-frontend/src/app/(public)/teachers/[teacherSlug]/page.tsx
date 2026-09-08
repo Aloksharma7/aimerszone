@@ -1,9 +1,21 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, BookOpen, CalendarDays, CheckCircle2 } from "lucide-react";
 import { CourseCard } from "@/components/course-card";
 import { Badge, Panel, SectionHeading } from "@/components/ui";
 import { getPublicCourses, getPublicTeacher } from "@/lib/data/public";
+import { pageMetadata } from "@/lib/metadata";
+
+export async function generateMetadata({ params }: { params: Promise<{ teacherSlug: string }> }): Promise<Metadata> {
+  const { teacherSlug } = await params;
+  const teacher = await getPublicTeacher(teacherSlug);
+  if (!teacher) return { title: "Teacher not found" };
+  return pageMetadata({
+    title: teacher.name,
+    description: `${teacher.name}, ${teacher.role} at Aimers Zone, teaching ${teacher.subjects.join(" and ")}. ${teacher.bio}`,
+  });
+}
 
 export default async function TeacherProfilePage({ params }: { params: Promise<{ teacherSlug: string }> }) {
   const { teacherSlug } = await params;

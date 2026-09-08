@@ -1,6 +1,12 @@
 import { BookOpenCheck, CheckCircle2, HeartHandshake, Smartphone, Target } from "lucide-react";
 import { PublicPageHero } from "@/components/public-page";
 import { ButtonLink, Panel, SectionHeading } from "@/components/ui";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata({
+  title: "About Us",
+  description: "Learn about Aimers Zone's mission to build strong concepts, boost confidence and help every student in Birgunj achieve exam success through expert Physics and Chemistry guidance.",
+});
 
 export default function AboutPage() {
   return (

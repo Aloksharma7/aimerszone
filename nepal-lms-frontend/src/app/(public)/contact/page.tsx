@@ -3,6 +3,12 @@ import { PublicPageHero } from "@/components/public-page";
 import { PublicSupportRequestForm } from "@/components/support/support-forms";
 import { Panel } from "@/components/ui";
 import { getPublicSettings, type PublicSettings } from "@/lib/data/settings";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata({
+  title: "Contact Us",
+  description: "Get in touch with Aimers Zone in Birgunj by phone, WhatsApp or email for help with courses, enrollment and payments.",
+});
 
 function buildSupportCards(settings: PublicSettings) {
   return [

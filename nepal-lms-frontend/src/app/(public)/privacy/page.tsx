@@ -1,4 +1,10 @@
 import { PolicyPage } from "@/components/public-page";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata({
+  title: "Privacy Policy",
+  description: "How Aimers Zone collects, uses and protects your personal information.",
+});
 
 export default function PrivacyPage() {
   return <PolicyPage title="Privacy Policy" intro="This policy explains what information Aimers Zone collects from students, how it is used, and how you can review or correct it." sections={[

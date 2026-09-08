@@ -1,9 +1,12 @@
-import type { Metadata } from "next";
 import { CourseExplorer } from "@/components/course-explorer";
 import { getPublicCategories, getPublicCourses } from "@/lib/data/public";
+import { pageMetadata } from "@/lib/metadata";
 import { firstParam, type PageSearchParams } from "@/lib/search-params";
 
-export const metadata: Metadata = { title: "Courses", description: "Browse published courses and batches with clear schedules, access periods and prices." };
+export const metadata = pageMetadata({
+  title: "Courses",
+  description: "Browse Aimers Zone's published Physics and Chemistry courses and batches, with clear schedules, access periods and prices.",
+});
 
 export default async function CoursesPage({ searchParams }: { searchParams: PageSearchParams }) {
   const raw = await searchParams;

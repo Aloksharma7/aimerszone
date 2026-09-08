@@ -2,6 +2,12 @@ import { Banknote, CheckCircle2, Clock3, FileUp, QrCode, ShieldCheck } from "luc
 import { PublicPageHero } from "@/components/public-page";
 import { AlertBox, ButtonLink, Panel, SectionHeading } from "@/components/ui";
 import { getPublicPaymentMethods } from "@/lib/data/public";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata({
+  title: "Payment Instructions",
+  description: "Step-by-step instructions for paying for your Aimers Zone batch via eSewa, Khalti or bank transfer.",
+});
 
 export default async function PaymentInstructionsPage() {
   const methods = await getPublicPaymentMethods();

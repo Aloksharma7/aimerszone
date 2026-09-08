@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, CheckCircle2, Clock3, CreditCard, FileUp, MessageCircle, ShieldCheck, UserRound } from "lucide-react";
@@ -6,7 +7,19 @@ import { CheckList } from "@/components/portal-components";
 import { getSessionUser } from "@/lib/auth/server";
 import { getPublicCourses } from "@/lib/data/public";
 import { getPublicSettings } from "@/lib/data/settings";
+import { pageMetadata } from "@/lib/metadata";
 import { formatNpr } from "@/lib/utils";
+
+export async function generateMetadata({ params }: { params: Promise<{ batchPublicId: string }> }): Promise<Metadata> {
+  const { batchPublicId } = await params;
+  const courses = await getPublicCourses();
+  const course = courses.find((item) => item.batchId === batchPublicId);
+  if (!course) return { title: "Batch not found" };
+  return pageMetadata({
+    title: `${course.batch} — ${course.title}`,
+    description: `${course.title} (${course.batch}) at Aimers Zone. ${course.schedule}, ${course.access}, taught by ${course.teacher}.`,
+  });
+}
 
 /**
  * The pre-filled message for "Buy via WhatsApp" — a second purchase path

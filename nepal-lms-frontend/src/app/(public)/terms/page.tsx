@@ -1,4 +1,10 @@
 import { PolicyPage } from "@/components/public-page";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata({
+  title: "Terms of Service",
+  description: "The terms and conditions for using Aimers Zone's learning platform.",
+});
 
 export default function TermsPage() {
   return <PolicyPage title="Terms of Service" intro="By using Aimers Zone, you agree to the terms below, which explain your responsibilities as a student and what you can expect from us." sections={[

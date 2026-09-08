@@ -3,6 +3,12 @@ import { CourseCard } from "@/components/course-card";
 import { ButtonLink, Panel, SectionHeading } from "@/components/ui";
 import { getSessionUser } from "@/lib/auth/server";
 import { getPublicCourses } from "@/lib/data/public";
+import { pageMetadata } from "@/lib/metadata";
+
+export const metadata = pageMetadata({
+  title: "Free Learning",
+  description: "Start learning with Aimers Zone's free orientation content and diagnostic tests before enrolling in a paid Physics or Chemistry batch.",
+});
 
 export default async function FreeLearningPage() {
   const [viewer, courses] = await Promise.all([getSessionUser(), getPublicCourses()]);
