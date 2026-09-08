@@ -227,12 +227,19 @@ Route::prefix('v1')->group(function () {
 
         Route::get('attendance', [Teacher\AttendanceController::class, 'index']);
         Route::get('classes/{sessionId}/attendance', [Teacher\AttendanceController::class, 'show']);
+        // save()/import() are actually gated by ClassSessionPolicy::manage(),
+        // which checks sessions.manage — not attendance.view ("View
+        // attendance"), which is what these previously named here. Every
+        // role that has one today has the other, so this changed nothing
+        // observable; it only matters for a future custom role that holds
+        // just one of the two, which the old label would have blocked (or
+        // let through) inconsistently with what the policy actually decides.
         Route::put('classes/{sessionId}/attendance', [Teacher\AttendanceController::class, 'save'])
-            ->middleware(['permission:attendance.view', 'idempotent']);
+            ->middleware(['permission:sessions.manage', 'idempotent']);
         Route::post('classes/{sessionId}/attendance/finalize', [Teacher\AttendanceController::class, 'finalize'])
             ->middleware(['permission:attendance.finalize', 'idempotent']);
         Route::post('classes/{sessionId}/attendance/import', [Teacher\AttendanceController::class, 'import'])
-            ->middleware(['permission:attendance.view', 'idempotent', 'throttle:10,1']);
+            ->middleware(['permission:sessions.manage', 'idempotent', 'throttle:10,1']);
         Route::post('classes/{sessionId}/attendance/reopen', [Teacher\AttendanceController::class, 'reopen'])
             ->middleware(['permission:attendance.reopen', 'idempotent']);
 
