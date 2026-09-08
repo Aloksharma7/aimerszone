@@ -11,7 +11,11 @@ trait SharesPaymentPayload
     {
         return [
             'id' => $payment->id,
-            'student_name' => $payment->user?->name,
+            // $payment->user applies User's soft-delete scope, so an
+            // archived payer's row rendered blank here — with no fallback
+            // at all, unlike the single-record show() view — in the exact
+            // list an accountant scans to decide what to review next.
+            'student_name' => $payment->user?->name ?? 'Removed account',
             'status' => $payment->status->value,
             'expected_amount_npr' => (int) $payment->expected_amount_npr,
             'submitted_amount_npr' => (int) $payment->submitted_amount_npr,

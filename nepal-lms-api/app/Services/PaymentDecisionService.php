@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\EnrollmentStatus;
 use App\Enums\PaymentStatus;
+use App\Enums\UserStatus;
 use App\Exceptions\DomainException;
 use App\Models\Enrollment;
 use App\Models\Payment;
@@ -278,6 +279,25 @@ class PaymentDecisionService
      */
     protected function activateEnrollment(Payment $payment, User $reviewer): Enrollment
     {
+        // Nothing previously checked the payer's own account status before
+        // granting a seat. A student could be archived/suspended (e.g. for
+        // a policy issue, or simply by an admin who hadn't noticed a
+        // payment was still in the review queue) and their payment still
+        // approved later — creating a real, capacity-consuming Enrollment
+        // for an account that EnsureAccountIsUsable blocks at every request,
+        // permanently. That phantom seat then made a capacity-limited batch
+        // read as full to a genuine paying student, and (since Payment's
+        // `user` relation applies the same soft-delete scope) the review
+        // queue and receipt both silently lost the real payer's name.
+        $payer = User::withTrashed()->find($payment->user_id);
+
+        if ($payer === null || $payer->trashed() || $payer->status !== UserStatus::Active) {
+            throw DomainException::conflict(
+                'This payment belongs to an archived or suspended account. Reactivate the account first, or reject this payment.',
+                'payer_account_unusable',
+            );
+        }
+
         $enrollment = Enrollment::query()
             ->where('user_id', $payment->user_id)
             ->where('batch_id', $payment->batch_id)
