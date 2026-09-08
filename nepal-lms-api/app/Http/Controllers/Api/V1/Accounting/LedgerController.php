@@ -140,29 +140,58 @@ class LedgerController extends Controller
             'authorization_reference' => ['required', 'string', 'min:3', 'max:120'],
         ]);
 
-        $payment = Payment::findOrFail($data['payment_id']);
-
-        // Credits to the student are stored negative so the ledger sums cleanly.
         $type = $this->normalizeType($data['type']);
-        $signed = in_array($type, [AdjustmentType::Discount, AdjustmentType::Waiver], true)
-            ? -abs($data['amount_npr'])
-            : abs($data['amount_npr']);
+        $isCredit = in_array($type, [AdjustmentType::Discount, AdjustmentType::Waiver], true);
 
-        $adjustment = LedgerAdjustment::create([
-            'user_id' => $payment->user_id,
-            'enrollment_id' => $payment->enrollment_id,
-            'payment_id' => $payment->getKey(),
-            'type' => $type->value,
-            'amount_npr' => $signed,
-            'reason' => $data['reason'],
-            'reference' => $data['authorization_reference'],
-            'effective_at' => now(),
-            'created_by' => $request->user()->getKey(),
-        ]);
+        $adjustment = DB::transaction(function () use ($data, $type, $isCredit, $request) {
+            // Locked and re-validated here, the same as refunds: state can
+            // change between page load and click, and this is where the
+            // decision is actually serialized.
+            $payment = Payment::whereKey($data['payment_id'])->lockForUpdate()->firstOrFail();
+
+            if ($payment->status !== PaymentStatus::Approved) {
+                throw DomainException::conflict(
+                    'Only an approved payment can be adjusted.',
+                    'payment_not_approved',
+                );
+            }
+
+            // Credits to the student are stored negative so the ledger sums
+            // cleanly. A discount/waiver can only reduce what was actually
+            // paid, never past zero — previously nothing stopped posting a
+            // waiver far larger than the payment itself, or the same waiver
+            // repeated indefinitely against one payment.
+            $signed = $isCredit ? -abs($data['amount_npr']) : abs($data['amount_npr']);
+
+            if ($isCredit) {
+                $existingCredits = (int) LedgerAdjustment::where('payment_id', $payment->getKey())
+                    ->where('amount_npr', '<', 0)
+                    ->sum('amount_npr');
+
+                if (abs($existingCredits) + abs($signed) > $payment->submitted_amount_npr) {
+                    throw DomainException::conflict(
+                        'This would discount or waive more than was actually paid.',
+                        'adjustment_exceeds_payment',
+                    );
+                }
+            }
+
+            return LedgerAdjustment::create([
+                'user_id' => $payment->user_id,
+                'enrollment_id' => $payment->enrollment_id,
+                'payment_id' => $payment->getKey(),
+                'type' => $type->value,
+                'amount_npr' => $signed,
+                'reason' => $data['reason'],
+                'reference' => $data['authorization_reference'],
+                'effective_at' => now(),
+                'created_by' => $request->user()->getKey(),
+            ]);
+        });
 
         $this->audit->log('adjustment.created', $adjustment, $request->user(), $data['reason'], [
-            'payment_id' => $payment->getKey(),
-            'amount' => $signed,
+            'payment_id' => $adjustment->payment_id,
+            'amount' => $adjustment->amount_npr,
             'authorization' => $data['authorization_reference'],
         ]);
 
