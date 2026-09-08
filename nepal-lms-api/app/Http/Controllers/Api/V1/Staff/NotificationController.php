@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Api\V1\Staff;
 
 use App\Http\Controllers\Controller;
+use App\Enums\SupportTicketStatus;
 use App\Models\Announcement;
 use App\Models\Payment;
+use App\Models\SupportTicket;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 
@@ -33,6 +35,27 @@ class NotificationController extends Controller
                 'published_at' => null,
                 'read' => false,
                 'href' => '/staff/payments?status=pending',
+            ];
+        }
+
+        // "Open" specifically means the ball is in staff's court — set on
+        // creation and put back here by a student's own reply (see
+        // Support\TicketController::reply()). Until now nothing surfaced
+        // that anywhere staff would actually see it: a student replying, or
+        // opening a brand new ticket, produced no notification of any kind,
+        // the mirror image of the (already fixed) gap on the student side.
+        $openTickets = SupportTicket::query()->where('status', SupportTicketStatus::Open->value)->count();
+
+        if ($openTickets > 0) {
+            $oldestTicket = SupportTicket::query()->where('status', SupportTicketStatus::Open->value)->min('updated_at');
+
+            $items[] = [
+                'id' => 'tickets-awaiting-reply',
+                'title' => $openTickets.' support ticket'.($openTickets === 1 ? '' : 's').' awaiting a reply',
+                'summary' => $oldestTicket ? 'Oldest waiting since '.now()->parse($oldestTicket)->diffForHumans() : null,
+                'published_at' => null,
+                'read' => false,
+                'href' => '/staff/support?status=open',
             ];
         }
 
