@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\Api\V1\Accounting;
 
 use App\Enums\AdjustmentType;
+use App\Enums\EnrollmentStatus;
 use App\Enums\PaymentStatus;
 use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
+use App\Models\Enrollment;
 use App\Models\LedgerAdjustment;
 use App\Models\Payment;
 use App\Models\Receipt;
 use App\Models\Refund;
+use App\Models\User;
 use App\Services\AuditLogger;
 use App\Services\MediaLinkService;
+use App\Services\NotificationDispatcher;
 use App\Support\ApiResponse;
 use App\Support\CsvStream;
 use Illuminate\Http\JsonResponse;
@@ -31,6 +35,7 @@ class LedgerController extends Controller
     public function __construct(
         protected MediaLinkService $links,
         protected AuditLogger $audit,
+        protected NotificationDispatcher $notifications,
     ) {}
 
     /* ---------------------------- Receipts ---------------------------- */
@@ -297,7 +302,60 @@ class LedgerController extends Controller
             'amount' => $refund->amount_npr,
         ]);
 
+        $this->revokeAccessIfFullyRefunded($refund, $request->user());
+
         return ApiResponse::item(['status' => $refund->status]);
+    }
+
+    /**
+     * Closes the seat a payment paid for once it has been refunded in full.
+     *
+     * Processing a refund used to touch only the Refund row — the payment's
+     * enrollment stayed Active with its original access_end_at untouched, so a
+     * fully refunded student kept live classes, recordings, tests and
+     * resources for the rest of the access window the refunded money was
+     * supposed to have ended. A partial refund (a goodwill gesture, a pricing
+     * correction) deliberately does not touch access — only a refund that
+     * reaches the full paid amount does.
+     */
+    protected function revokeAccessIfFullyRefunded(Refund $refund, User $reviewer): void
+    {
+        $payment = $refund->payment;
+
+        if ($payment === null || $payment->enrollment_id === null) {
+            return;
+        }
+
+        $totalRefunded = (int) Refund::where('payment_id', $payment->getKey())
+            ->where('status', 'processed')
+            ->sum('amount_npr');
+
+        if ($totalRefunded < $payment->submitted_amount_npr) {
+            return;
+        }
+
+        DB::transaction(function () use ($payment, $reviewer) {
+            $enrollment = Enrollment::whereKey($payment->enrollment_id)->lockForUpdate()->first();
+
+            if ($enrollment === null || $enrollment->status !== EnrollmentStatus::Active) {
+                return;
+            }
+
+            $enrollment->forceFill([
+                'status' => EnrollmentStatus::Cancelled->value,
+                'access_end_at' => now(),
+                'cancelled_at' => now(),
+                'cancellation_reason' => 'Payment fully refunded',
+            ])->save();
+
+            $this->audit->log('enrollment.revoked_by_refund', $enrollment, $reviewer, 'Payment fully refunded', [
+                'payment_id' => $payment->getKey(),
+            ]);
+
+            DB::afterCommit(function () use ($enrollment) {
+                $this->notifications->enrollmentRevoked($enrollment->fresh()->load(['user', 'course']));
+            });
+        });
     }
 
     protected function normalizeType(string $value): AdjustmentType

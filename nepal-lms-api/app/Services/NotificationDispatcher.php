@@ -145,6 +145,40 @@ class NotificationDispatcher
     }
 
     /**
+     * A full refund just closed the seat it paid for.
+     *
+     * Reuses the payment-decision toggle: from the student's side this is the
+     * same kind of event as an approval or rejection — a money decision that
+     * changed what they can reach — not a separate notification category.
+     */
+    public function enrollmentRevoked(Enrollment $enrollment): void
+    {
+        $student = $enrollment->user;
+
+        if ($this->wants('sms.notify_payment_decision') && $student !== null && filled($student->mobile)) {
+            $this->sms->send(
+                $student->mobile,
+                sprintf(
+                    '%s: your payment for %s was refunded, so access to that course has ended. Contact us with any questions.',
+                    $this->institution(),
+                    $enrollment->course?->title ?? 'your course',
+                ),
+                'enrollment.revoked',
+            );
+        }
+
+        if ($student !== null && $this->wantsPush('sms.notify_payment_decision')) {
+            $this->push->sendToUser(
+                $student,
+                'Access ended',
+                sprintf('Your payment for %s was refunded, so access has ended.', $enrollment->course?->title ?? 'your course'),
+                ['type' => 'enrollment.revoked', 'enrollment_id' => $enrollment->id],
+                'enrollment.revoked',
+            );
+        }
+    }
+
+    /**
      * Sent when the teacher actually starts, not on a schedule — a message that
      * arrives before the class is genuinely live trains students to ignore it.
      */
