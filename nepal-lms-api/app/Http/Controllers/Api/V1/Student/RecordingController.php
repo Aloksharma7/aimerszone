@@ -7,6 +7,7 @@ use App\Http\Resources\RecordingResource;
 use App\Models\LessonCompletion;
 use App\Models\Recording;
 use App\Models\RecordingProgress;
+use App\Models\User;
 use App\Services\AccessGuard;
 use App\Services\EnrollmentProgressService;
 use App\Services\MediaLinkService;
@@ -95,39 +96,7 @@ class RecordingController extends Controller
             'position_seconds' => ['nullable', 'integer', 'min:0'],
         ]);
 
-        $existing = RecordingProgress::firstOrNew([
-            'recording_id' => $recording->getKey(),
-            'user_id' => $request->user()->getKey(),
-        ]);
-
-        $percent = max((int) ($existing->progress_percent ?? 0), (int) ($data['progress_percent'] ?? 0));
-
-        $existing->fill([
-            'progress_percent' => $percent,
-            'last_position_seconds' => $data['position_seconds'] ?? $existing->last_position_seconds ?? 0,
-            'last_watched_at' => now(),
-            'completed_at' => $percent >= 95 ? ($existing->completed_at ?? now()) : $existing->completed_at,
-        ])->save();
-
-        if ($percent >= 95) {
-            $enrollment = $this->guard->enrollmentFor($request->user(), $recording->batch_id);
-
-            // Watching a lesson's video to the end is completing that
-            // lesson — the two used to be entirely separate signals, so a
-            // student could watch every recording and still show 0%
-            // syllabus progress until they also went and manually ticked
-            // every matching checkbox by hand.
-            if ($enrollment !== null && filled($recording->syllabus_lesson_id)) {
-                LessonCompletion::updateOrCreate(
-                    ['user_id' => $request->user()->getKey(), 'syllabus_lesson_id' => $recording->syllabus_lesson_id],
-                    ['enrollment_id' => $enrollment->getKey(), 'completed_at' => now()],
-                );
-            }
-
-            if ($enrollment !== null) {
-                $this->progress->recalculate($enrollment);
-            }
-        }
+        $existing = $this->recordProgress($recording, $request->user(), $data);
 
         $destination = $this->links->forRecording($recording);
 
@@ -139,5 +108,78 @@ class RecordingController extends Controller
             // and it names the account a leaked capture came from.
             'watermark' => $this->watermark->forViewer($request->user()),
         ]);
+    }
+
+    /**
+     * Periodic watch-progress check-in from an already-loaded player.
+     *
+     * Split out from playback() rather than having the player re-call that:
+     * playback() re-authorizes, mints a fresh signed destination and a new
+     * watermark payload every time, all of which is pointless overhead for
+     * "the student is still watching" pinged every ~15s. This still
+     * re-authorizes on every call for the same reason playback() does —
+     * access revoked mid-viewing (a refund, an expired enrollment) stops
+     * being able to update progress immediately, not just on next load —
+     * it just skips regenerating a destination nobody asked for.
+     */
+    public function progress(Request $request, Recording $recording): JsonResponse
+    {
+        $this->authorize('play', $recording);
+
+        $data = $request->validate([
+            'progress_percent' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'position_seconds' => ['nullable', 'integer', 'min:0'],
+        ]);
+
+        $existing = $this->recordProgress($recording, $request->user(), $data);
+
+        return ApiResponse::item([
+            'progress_percent' => (int) $existing->progress_percent,
+            'completed' => $existing->completed_at !== null,
+        ]);
+    }
+
+    /**
+     * @param  array{progress_percent?: int, position_seconds?: int}  $data
+     */
+    protected function recordProgress(Recording $recording, User $user, array $data): RecordingProgress
+    {
+        $existing = RecordingProgress::firstOrNew([
+            'recording_id' => $recording->getKey(),
+            'user_id' => $user->getKey(),
+        ]);
+
+        // A one-way high-water mark: re-watching or seeking backward must
+        // never regress an already-reached percentage.
+        $percent = max((int) ($existing->progress_percent ?? 0), (int) ($data['progress_percent'] ?? 0));
+
+        $existing->fill([
+            'progress_percent' => $percent,
+            'last_position_seconds' => $data['position_seconds'] ?? $existing->last_position_seconds ?? 0,
+            'last_watched_at' => now(),
+            'completed_at' => $percent >= 95 ? ($existing->completed_at ?? now()) : $existing->completed_at,
+        ])->save();
+
+        if ($percent >= 95) {
+            $enrollment = $this->guard->enrollmentFor($user, $recording->batch_id);
+
+            // Watching a lesson's video to the end is completing that
+            // lesson — the two used to be entirely separate signals, so a
+            // student could watch every recording and still show 0%
+            // syllabus progress until they also went and manually ticked
+            // every matching checkbox by hand.
+            if ($enrollment !== null && filled($recording->syllabus_lesson_id)) {
+                LessonCompletion::updateOrCreate(
+                    ['user_id' => $user->getKey(), 'syllabus_lesson_id' => $recording->syllabus_lesson_id],
+                    ['enrollment_id' => $enrollment->getKey(), 'completed_at' => now()],
+                );
+            }
+
+            if ($enrollment !== null) {
+                $this->progress->recalculate($enrollment);
+            }
+        }
+
+        return $existing;
     }
 }

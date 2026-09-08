@@ -6,7 +6,7 @@ import { Button } from "@/components/ui";
 import { browserRequest, createIdempotencyKey, type NormalizedApiError } from "@/lib/api/browser-client";
 import type { ApiResponse } from "@/lib/api/contracts";
 import { trustedDestination, trustedYoutubeVideoId } from "@/lib/security/trusted-destination";
-import { CustomYoutubePlayer } from "@/components/student/custom-youtube-player";
+import { CustomYoutubePlayer, type PlayerProgress } from "@/components/student/custom-youtube-player";
 import { DevToolsDeterrent } from "@/components/student/devtools-deterrent";
 import { VideoWatermark, type WatermarkPayload } from "@/components/student/video-watermark";
 import { cn } from "@/lib/utils";
@@ -152,6 +152,19 @@ export function SecureRecordingPlayer({ recordingId, title }: { recordingId: str
     }
   }
 
+  // Fire-and-forget: a dropped progress ping must never interrupt playback
+  // with an error the student can't do anything about. mockMode is skipped
+  // entirely since there's no real enrollment behind it to record against.
+  function reportProgress({ seconds, duration, ended }: PlayerProgress) {
+    if (mockMode || duration <= 0) return;
+    const percent = ended ? 100 : Math.min(99, Math.round((seconds / duration) * 100));
+    browserRequest({
+      url: `/api/v1/student/recordings/${encodeURIComponent(recordingId)}/progress`,
+      method: "PATCH",
+      data: { progress_percent: percent, position_seconds: Math.round(seconds) },
+    }).catch(() => {});
+  }
+
   useEffect(() => {
     // This page exists only to show this one recording — landing on it is
     // already the deliberate action a "Load recording" button used to make
@@ -171,7 +184,7 @@ export function SecureRecordingPlayer({ recordingId, title }: { recordingId: str
       <DevToolsDeterrent />
       {videoId ? <VideoWatermark watermark={watermark} /> : null}
       {videoId ? (
-        <CustomYoutubePlayer videoId={videoId} title={title} />
+        <CustomYoutubePlayer videoId={videoId} title={title} onProgress={reportProgress} />
       ) : (
         <div className="flex h-full flex-col items-center justify-center px-6 text-center text-white">
           <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10">{busy ? <LoaderCircle className="h-8 w-8 animate-spin" /> : <PlayCircle className="h-8 w-8" />}</div>

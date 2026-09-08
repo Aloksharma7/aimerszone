@@ -16,6 +16,11 @@ function formatClock(totalSeconds: number): string {
   return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
 }
 
+/** Reported at most this often while playing — frequent enough to feel live, not so often it hammers the server. */
+const PROGRESS_REPORT_MS = 15_000;
+
+export type PlayerProgress = { seconds: number; duration: number; ended: boolean };
+
 /**
  * Site-branded playback controls in place of YouTube's own control bar.
  *
@@ -25,7 +30,7 @@ function formatClock(totalSeconds: number): string {
  * here makes the video harder to reach outside this page than before;
  * that gap is closed only by not hosting on YouTube at all.
  */
-export function CustomYoutubePlayer({ videoId, title }: { videoId: string; title: string }) {
+export function CustomYoutubePlayer({ videoId, title, onProgress }: { videoId: string; title: string; onProgress?: (progress: PlayerProgress) => void }) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<YTPlayer | null>(null);
@@ -38,6 +43,15 @@ export function CustomYoutubePlayer({ videoId, title }: { videoId: string; title
   const [volume, setVolume] = useState(100);
   const [fullscreen, setFullscreen] = useState(false);
   const [seeking, setSeeking] = useState(false);
+
+  // A ref, not state: read from interval callbacks and the unmount cleanup
+  // without either going stale inside a closure or re-running those effects
+  // on every tick.
+  const latest = useRef({ seconds: 0, duration: 0 });
+  const onProgressRef = useRef(onProgress);
+  useEffect(() => {
+    onProgressRef.current = onProgress;
+  }, [onProgress]);
 
   useEffect(() => {
     let cancelled = false;
@@ -63,6 +77,12 @@ export function CustomYoutubePlayer({ videoId, title }: { videoId: string; title
             setPlaying(event.data === PLAYER_STATE.PLAYING);
             setBuffering(event.data === PLAYER_STATE.BUFFERING);
             if (event.data === PLAYER_STATE.PLAYING) setDuration(event.target.getDuration());
+
+            // Reaching the end is a definitive, immediate signal — worth its
+            // own report rather than waiting for the next periodic tick.
+            if (event.data === PLAYER_STATE.ENDED) {
+              onProgressRef.current?.({ seconds: latest.current.duration, duration: latest.current.duration, ended: true });
+            }
           },
         },
       });
@@ -72,6 +92,14 @@ export function CustomYoutubePlayer({ videoId, title }: { videoId: string; title
       cancelled = true;
       playerRef.current?.destroy();
       playerRef.current = null;
+
+      // Best-effort final report so navigating away mid-video (a different
+      // recording, back to the course page) doesn't lose whatever was
+      // watched since the last periodic tick. A closed tab/hard reload
+      // doesn't run this — only an in-app navigation does.
+      if (latest.current.seconds > 0) {
+        onProgressRef.current?.({ seconds: latest.current.seconds, duration: latest.current.duration, ended: false });
+      }
     };
   }, [videoId]);
 
@@ -80,10 +108,20 @@ export function CustomYoutubePlayer({ videoId, title }: { videoId: string; title
     const timer = window.setInterval(() => {
       const player = playerRef.current;
       if (!player) return;
-      setCurrentTime(player.getCurrentTime());
+      const seconds = player.getCurrentTime();
+      setCurrentTime(seconds);
+      latest.current = { seconds, duration: player.getDuration() || latest.current.duration };
     }, 250);
     return () => window.clearInterval(timer);
   }, [ready, seeking]);
+
+  useEffect(() => {
+    if (!playing) return;
+    const timer = window.setInterval(() => {
+      onProgressRef.current?.({ seconds: latest.current.seconds, duration: latest.current.duration, ended: false });
+    }, PROGRESS_REPORT_MS);
+    return () => window.clearInterval(timer);
+  }, [playing]);
 
   useEffect(() => {
     function handleFullscreenChange() {

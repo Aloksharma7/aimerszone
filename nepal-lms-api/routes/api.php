@@ -122,6 +122,8 @@ Route::prefix('v1')->group(function () {
         Route::get('recordings', [Student\RecordingController::class, 'index']);
         Route::get('recordings/{recording}', [Student\RecordingController::class, 'show']);
         Route::post('recordings/{recording}/playback', [Student\RecordingController::class, 'playback']);
+        Route::patch('recordings/{recording}/progress', [Student\RecordingController::class, 'progress'])
+            ->middleware('throttle:30,1');
 
         Route::get('resources', [Student\ResourceController::class, 'index']);
         Route::post('resources/{resource}/download', [Student\ResourceController::class, 'download']);

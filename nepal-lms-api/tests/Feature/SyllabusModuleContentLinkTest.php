@@ -158,4 +158,48 @@ class SyllabusModuleContentLinkTest extends TestCase
             ->assertJsonPath('data.0.lessons.0.state', 'Completed')
             ->assertJsonPath('data.0.lessons.0.recording_id', $recording->getKey());
     }
+
+    /**
+     * Regression: the real player only ever called playback() once, on load,
+     * to fetch the video id — nothing in the frontend ever reported ongoing
+     * progress, so watch time and lesson auto-completion were dead in
+     * production despite this backend logic being fully built and tested
+     * (via the direct playback() call above). progress() is the periodic
+     * check-in endpoint the player now actually calls; this proves it drives
+     * the same high-water-mark and lesson-completion behavior as playback().
+     */
+    public function test_periodic_progress_checkins_reach_the_same_completion_as_a_direct_call(): void
+    {
+        $course = $this->makeCourse();
+        $batch = $this->makeBatch($course);
+        $module = SyllabusModule::create(['course_id' => $course->getKey(), 'title' => 'Elasticity', 'order' => 0]);
+        $lesson = SyllabusLesson::create(['syllabus_module_id' => $module->getKey(), 'title' => 'Meaning and scope', 'type' => 'Recording', 'order' => 0]);
+
+        $recording = $this->makeRecording($batch, [
+            'syllabus_lesson_id' => $lesson->getKey(),
+            'released_at' => now()->subMinute(),
+            'state' => 'available',
+        ]);
+
+        $student = $this->makeUser(RoleKey::Student);
+        $enrollment = $this->enroll($student, $batch);
+
+        foreach ([10, 45, 30, 96] as $percent) {
+            $this->actingAs($student)
+                ->patchJson('/api/v1/student/recordings/'.$recording->getKey().'/progress', [
+                    'progress_percent' => $percent,
+                    'position_seconds' => $percent * 3,
+                ])
+                ->assertOk();
+        }
+
+        // The dip to 30 after 45 must never regress the stored high-water mark.
+        $this->assertSame(96, \App\Models\RecordingProgress::where('recording_id', $recording->getKey())->where('user_id', $student->getKey())->value('progress_percent'));
+
+        $this->assertDatabaseHas('lesson_completions', [
+            'user_id' => $student->getKey(),
+            'syllabus_lesson_id' => $lesson->getKey(),
+        ]);
+        $this->assertSame(100, $enrollment->fresh()->syllabus_percent);
+    }
 }
