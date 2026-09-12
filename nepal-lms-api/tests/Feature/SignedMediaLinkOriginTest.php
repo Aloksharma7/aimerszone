@@ -7,6 +7,7 @@ use App\Services\MediaLinkService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use Tests\Concerns\BuildsLmsFixtures;
 use Tests\TestCase;
 
@@ -63,6 +64,45 @@ class SignedMediaLinkOriginTest extends TestCase
 
         $url = app(MediaLinkService::class)->forPaymentProof($payment)['url'];
 
+        $this->actingAs($accountant)
+            ->get($url)
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/jpeg');
+    }
+
+    /**
+     * Regression: the link is minted inside a same-origin /api/... POST and
+     * opened moments later by a same-origin /media/... GET — two separate
+     * requests that each travel through Next's rewrite and then this API's
+     * own nginx site. Nothing guarantees those two hops agree on exactly
+     * what host/scheme they report upstream on any given request, and an
+     * absolute signature (the Laravel default) bakes whatever host was
+     * resolved at *generation* time into the hash — so the moment the second
+     * hop resolves a different one, a perfectly legitimate, unexpired link
+     * fails validation with "Invalid signature.". Relative signing (see
+     * routes/media.php and MediaLinkService::sign()) never looks at host or
+     * scheme at all, so this failure mode cannot happen. Simulated here by
+     * forcing a different root URL at generation time than the one the test
+     * client actually requests against.
+     */
+    public function test_a_payment_proof_link_still_verifies_when_the_generating_and_opening_requests_disagree_on_host(): void
+    {
+        $batch = $this->makeBatch($this->makeCourse());
+        $student = $this->makeUser(RoleKey::Student);
+        $accountant = $this->makeUser(RoleKey::Staff);
+        $payment = $this->makePayment($student, $batch, [
+            'proof_path' => UploadedFile::fake()->image('proof.jpg')->store('payment-proof/test', 'local'),
+            'proof_disk' => 'local',
+            'proof_mime' => 'image/jpeg',
+        ]);
+
+        URL::forceRootUrl('https://api.aimerszone.edu.np');
+        $url = app(MediaLinkService::class)->forPaymentProof($payment)['url'];
+        URL::forceRootUrl(null);
+
+        // The test client's default host (http://localhost) stands in for
+        // whatever this second, independent hop happens to resolve — the
+        // point is only that it differs from the host used above.
         $this->actingAs($accountant)
             ->get($url)
             ->assertOk()

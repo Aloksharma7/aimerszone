@@ -69,23 +69,29 @@ class MediaLinkService
     /**
      * Returned as a path relative to this API, not an absolute URL.
      *
-     * temporarySignedRoute() builds an absolute URL from APP_URL, which is
-     * this backend's own address — a different origin from the frontend the
-     * browser is actually on. The frontend's trustedDestination() check
-     * (deliberately) only opens same-origin or explicitly allow-listed HTTPS
-     * links, so it silently refused every signed link: proof, downloads,
-     * receipts, recordings all failed to open with no visible error.
+     * temporarySignedRoute() would otherwise build an absolute URL from
+     * whatever host this request resolves to — a different origin from the
+     * frontend the browser is actually on. The frontend's
+     * trustedDestination() check (deliberately) only opens same-origin or
+     * explicitly allow-listed HTTPS links, so a host mismatch here silently
+     * refused every signed link: proof, downloads, receipts, recordings all
+     * failed to open with no visible error.
      *
-     * A relative /media/... path resolves against whatever origin the
-     * frontend is actually running on, which next.config.ts already proxies
-     * through to this API — so the signature (computed from the path and
-     * query only) still verifies once the request arrives here.
+     * Signing relative (absolute: false) makes the signature depend only on
+     * the path and query, matching the route's own `signed:relative`
+     * middleware — the request that generates this link and the later
+     * request that opens it travel through two different proxy hops (the
+     * generating call is a same-origin /api/... POST; opening the link is a
+     * same-origin /media/... GET), and each hop is free to disagree on
+     * exactly what host/scheme it reports upstream. An absolute signature
+     * bakes that host into the hash and breaks the moment the two hops
+     * report it differently; a relative one never looks at it at all.
      */
     protected function sign(string $route, array $parameters): array
     {
         $expiresAt = $this->expiresAt();
-        $absolute = URL::temporarySignedRoute($route, $expiresAt, $parameters);
-        $parts = parse_url($absolute);
+        $relative = URL::temporarySignedRoute($route, $expiresAt, $parameters, absolute: false);
+        $parts = parse_url($relative);
 
         return [
             'url' => ($parts['path'] ?? '/').(isset($parts['query']) ? '?'.$parts['query'] : ''),
