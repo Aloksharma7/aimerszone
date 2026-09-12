@@ -43,6 +43,20 @@ class LoginAttemptService
             ]);
         }
 
+        $this->assertSignInAllowed($user);
+
+        return $user;
+    }
+
+    /**
+     * The locked/suspended checks a password check would normally guard —
+     * pulled out so a sign-in that authenticates a different way (Google)
+     * still enforces them instead of skipping straight to a session.
+     *
+     * @throws DomainException locked or suspended account
+     */
+    public function assertSignInAllowed(User $user): void
+    {
         if ($user->isLocked()) {
             throw DomainException::forbidden(
                 'This account is temporarily locked. Try again after '.$user->locked_until->diffForHumans().'.',
@@ -55,8 +69,6 @@ class LoginAttemptService
 
             throw DomainException::forbidden('This account is suspended. Contact the institution office.', 'account_suspended');
         }
-
-        return $user;
     }
 
     public function requiresTwoFactor(User $user): bool

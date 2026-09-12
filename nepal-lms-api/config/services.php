@@ -27,4 +27,14 @@ return [
         'timeout' => (int) env('YOUTUBE_TIMEOUT', 15),
         'upload_timeout' => (int) env('YOUTUBE_UPLOAD_TIMEOUT', 3600),
     ],
+
+    // "Login with Google" (Socialite). The redirect is a fixed, fully-qualified
+    // URL rather than one Socialite derives from the request — the API sits
+    // behind the Next.js rewrite proxy, and deriving it risks the same
+    // request-host mismatch already fixed once for signed media links.
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
 ];

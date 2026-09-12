@@ -49,6 +49,12 @@ Route::prefix('v1')->group(function () {
         // a session cookie. See nepal-lms-mobile/docs/ARCHITECTURE.md.
         Route::post('mobile-login', [Auth\MobileLoginController::class, 'store'])->middleware('throttle:auth');
 
+        // google/redirect and google/callback are NOT registered here — see
+        // routes/web.php. Google's callback arrives via a cross-site redirect
+        // with no Origin/Referer matching this app, so statefulApi()'s
+        // frontend check never activates the session for it, same reason
+        // media links live outside this file too.
+
         Route::middleware('auth')->group(function () {
             Route::get('me', Auth\MeController::class);
             Route::post('logout', [Auth\LoginController::class, 'destroy']);
