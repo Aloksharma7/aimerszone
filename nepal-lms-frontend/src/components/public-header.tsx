@@ -28,7 +28,7 @@ const links = [
  * the header renders the correct state on first paint rather than flashing a
  * Login button to someone who is already signed in.
  */
-export type HeaderSession = { name: string; portalHome: string } | null;
+export type HeaderSession = { name: string; portalHome: string; profilePath: string } | null;
 export type HeaderBranding = { name: string; logoUrl?: string | null } | undefined;
 
 export function PublicHeader({ session = null, branding }: { session?: HeaderSession; branding?: HeaderBranding }) {
@@ -61,7 +61,7 @@ export function PublicHeader({ session = null, branding }: { session?: HeaderSes
             <Search className="h-5 w-5" />
           </Link>
           {session ? (
-            <ButtonLink href={session.portalHome} variant="ghost" size="sm">
+            <ButtonLink href={session.profilePath} variant="ghost" size="sm">
               <span className="max-w-[10rem] truncate">{session.name}</span>
             </ButtonLink>
           ) : (
@@ -95,7 +95,10 @@ export function PublicHeader({ session = null, branding }: { session?: HeaderSes
           </nav>
           <div className="mx-auto mt-4 grid max-w-7xl grid-cols-2 gap-3 border-t border-slate-100 pt-4">
             {session ? (
-              <ButtonLink href={session.portalHome} className="col-span-2 w-full">My workspace</ButtonLink>
+              <>
+                <ButtonLink href={session.profilePath} variant="outline" className="w-full"><span className="truncate">{session.name}</span></ButtonLink>
+                <ButtonLink href={session.portalHome} className="w-full">My workspace</ButtonLink>
+              </>
             ) : (
               <>
                 <ButtonLink href="/login" variant="outline" className="w-full">Login</ButtonLink>

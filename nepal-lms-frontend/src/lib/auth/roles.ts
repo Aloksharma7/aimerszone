@@ -19,6 +19,14 @@ export const portalHomeByMachineRole: Record<MachineRole, string> = {
   super_admin: "/admin/dashboard",
 };
 
+const profilePathByMachineRole: Record<MachineRole, string> = {
+  student: "/student/profile",
+  teacher: "/teacher/profile",
+  staff: "/staff/profile",
+  admin: "/admin/profile",
+  super_admin: "/admin/profile",
+};
+
 /**
  * Administrators reach every portal — both admin tiers, mirroring the
  * Laravel `EnsureRole` middleware, which lets admin and super_admin through
@@ -52,4 +60,15 @@ export function preferredPortalHome(user: Pick<SessionUser, "portalHome" | "role
   const priority: MachineRole[] = ["super_admin", "admin", "staff", "teacher", "student"];
   const role = priority.find((candidate) => user.roles.includes(candidate));
   return role ? portalHomeByMachineRole[role] : "/unauthorized";
+}
+
+/**
+ * Deliberately ignores portalHome (unlike preferredPortalHome above): "go to
+ * my profile" always means the same fixed destination regardless of
+ * whichever page a user last happened to be on.
+ */
+export function preferredProfilePath(user: Pick<SessionUser, "roles">): string {
+  const priority: MachineRole[] = ["super_admin", "admin", "staff", "teacher", "student"];
+  const role = priority.find((candidate) => user.roles.includes(candidate));
+  return role ? profilePathByMachineRole[role] : "/unauthorized";
 }

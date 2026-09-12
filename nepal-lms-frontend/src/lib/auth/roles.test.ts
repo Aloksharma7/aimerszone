@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { can, hasRole, preferredPortalHome } from "@/lib/auth/roles";
+import { can, hasRole, preferredPortalHome, preferredProfilePath } from "@/lib/auth/roles";
 import type { SessionUser } from "@/types/lms";
 
 const user: SessionUser = {
@@ -35,5 +35,15 @@ describe("role helpers", () => {
 
     expect(can(admin, "settings.manage")).toBe(false);
     expect(can(superAdmin, "settings.manage")).toBe(true);
+  });
+
+  it("sends the profile link to the role's own profile page, ignoring portalHome", () => {
+    // portalHome can be any last-visited page — a profile link must not
+    // follow it the way preferredPortalHome deliberately does.
+    const wanderer: SessionUser = { ...user, roles: ["staff"], portalHome: "/staff/payments" };
+
+    expect(preferredProfilePath(wanderer)).toBe("/staff/profile");
+    expect(preferredProfilePath({ ...user, roles: ["teacher"] })).toBe("/teacher/profile");
+    expect(preferredProfilePath({ ...user, roles: ["admin"] })).toBe("/admin/profile");
   });
 });

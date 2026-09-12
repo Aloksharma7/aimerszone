@@ -1,7 +1,7 @@
 import { PublicFooter } from "@/components/public-footer";
 import { PublicHeader } from "@/components/public-header";
 import { WhatsAppButton } from "@/components/whatsapp-button";
-import { preferredPortalHome } from "@/lib/auth/roles";
+import { preferredPortalHome, preferredProfilePath } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/server";
 import { getPublicSettings } from "@/lib/data/settings";
 
@@ -33,7 +33,7 @@ export default async function PublicLayout({ children }: { children: React.React
     <div className="min-h-screen bg-white">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }} />
       <PublicHeader
-        session={user ? { name: user.name, portalHome: preferredPortalHome(user) } : null}
+        session={user ? { name: user.name, portalHome: preferredPortalHome(user), profilePath: preferredProfilePath(user) } : null}
         branding={{ name: settings.name, logoUrl: settings.logoUrl }}
       />
       <main id="main-content">{children}</main>
