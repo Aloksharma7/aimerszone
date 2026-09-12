@@ -125,6 +125,22 @@ class AnnouncementController extends Controller
         return ApiResponse::item(['id' => $announcement->id]);
     }
 
+    /**
+     * Deletes an announcement outright.
+     *
+     * Unlike courses, batches or enrollments, nothing here carries payment or
+     * academic history worth preserving — the only thing referencing an
+     * announcement is its own read-receipt rows, which disappear with it.
+     * So there is no archive step: this removes the row for good.
+     */
+    public function destroy(Request $request, Announcement $announcement): JsonResponse
+    {
+        $this->audit->log('announcement.deleted', $announcement, $request->user(), targetLabel: $announcement->title);
+        $announcement->forceDelete();
+
+        return ApiResponse::message('Announcement deleted.');
+    }
+
     protected function audienceLabel(Announcement $announcement): string
     {
         return match ($announcement->audience) {

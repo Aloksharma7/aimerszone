@@ -348,6 +348,33 @@ class TestController extends Controller
         return ApiResponse::item(['status' => $test->fresh()->status->value]);
     }
 
+    /**
+     * Deletes a test outright — there was previously no way to remove one at
+     * all, published or not.
+     *
+     * Refused the moment a single attempt exists, for the same reason
+     * publish() already refuses to send an attempted test back to Draft:
+     * doing so would erase a student's recorded score. A test nobody has
+     * ever attempted carries no such history, so this removes it for real
+     * (questions and options included) rather than merely hiding it.
+     */
+    public function destroy(Request $request, Test $test): JsonResponse
+    {
+        $this->authorize('manage', $test);
+
+        if ($test->attempts()->exists()) {
+            throw DomainException::conflict(
+                'Students have already attempted this test, so it cannot be deleted. Set it back to Draft instead if it should stop being shown.',
+                'test_has_attempts',
+            );
+        }
+
+        $this->audit->log('test.deleted', $test, $request->user(), targetLabel: $test->title);
+        $test->forceDelete();
+
+        return ApiResponse::message('Test permanently deleted.');
+    }
+
     /* ----------------------------------------------------------------
      | Helpers
      | ---------------------------------------------------------------- */

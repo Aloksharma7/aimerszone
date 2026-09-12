@@ -256,6 +256,8 @@ Route::prefix('v1')->group(function () {
             ->middleware(['permission:tests.manage', 'idempotent']);
         Route::post('tests/{test}/release-results', [Teacher\TestController::class, 'releaseResults'])
             ->middleware(['permission:tests.manage', 'idempotent']);
+        Route::delete('tests/{test}', [Teacher\TestController::class, 'destroy'])
+            ->middleware('permission:tests.manage');
 
         Route::get('announcements', [Teacher\AnnouncementController::class, 'index']);
         Route::post('announcements', [Teacher\AnnouncementController::class, 'store'])
@@ -507,6 +509,7 @@ Route::prefix('v1')->group(function () {
         Route::get('announcements', [Admin\AnnouncementController::class, 'index'])->middleware('permission:announcements.view');
         Route::post('announcements', [Admin\AnnouncementController::class, 'store'])->middleware(['permission:announcements.manage', 'idempotent']);
         Route::patch('announcements/{announcement}', [Admin\AnnouncementController::class, 'update'])->middleware(['permission:announcements.manage', 'idempotent']);
+        Route::delete('announcements/{announcement}', [Admin\AnnouncementController::class, 'destroy'])->middleware('permission:announcements.manage');
 
         Route::get('finance-overview', Admin\FinanceOverviewController::class)->middleware('permission:payments.view');
 

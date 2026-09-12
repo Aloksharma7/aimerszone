@@ -166,4 +166,42 @@ class AdminAnnouncementDeliveryTest extends TestCase
 
         $this->assertTrue(collect($response->json('data'))->firstWhere('id', $created)['read']);
     }
+
+    public function test_an_admin_can_delete_an_announcement(): void
+    {
+        $admin = $this->makeUser(RoleKey::Admin);
+        $announcement = Announcement::create([
+            'title' => 'Old notice',
+            'body' => 'No longer relevant.',
+            'audience' => 'all',
+            'channel' => 'portal',
+            'status' => 'published',
+            'published_at' => now(),
+            'created_by' => $admin->getKey(),
+        ]);
+
+        $this->actingAs($admin)
+            ->deleteJson('/api/v1/admin/announcements/'.$announcement->getKey())
+            ->assertOk();
+
+        $this->assertDatabaseMissing('announcements', ['id' => $announcement->getKey()]);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'announcement.deleted', 'target_id' => $announcement->getKey()]);
+    }
+
+    public function test_a_teacher_cannot_delete_an_announcement(): void
+    {
+        $teacher = $this->makeUser(RoleKey::Teacher);
+        $announcement = Announcement::create([
+            'title' => 'Old notice',
+            'body' => 'No longer relevant.',
+            'audience' => 'all',
+            'channel' => 'portal',
+            'status' => 'published',
+            'published_at' => now(),
+        ]);
+
+        $this->actingAs($teacher)
+            ->deleteJson('/api/v1/admin/announcements/'.$announcement->getKey())
+            ->assertForbidden();
+    }
 }
