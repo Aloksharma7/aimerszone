@@ -10,7 +10,11 @@ use App\Services\LoginAttemptService;
 use App\Services\UserDirectory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\User as SocialiteUser;
 use Throwable;
 
 /**
@@ -73,6 +77,8 @@ class GoogleController extends Controller
             $this->audit->log('auth.registered', $user, $user, 'Registered via Google sign-in');
         }
 
+        $this->importGoogleAvatar($user, $googleUser);
+
         try {
             $this->attempts->assertSignInAllowed($user);
         } catch (DomainException $exception) {
@@ -93,5 +99,47 @@ class GoogleController extends Controller
         }
 
         return redirect('/login');
+    }
+
+    /**
+     * Fills in the account photo from Google on sign-in — but only when
+     * nothing is there yet. A student who later uploads or removes their own
+     * photo through /account/avatar must not have it silently replaced by
+     * Google's on their next login.
+     *
+     * Best-effort: a failed fetch must not break sign-in over a photo.
+     */
+    protected function importGoogleAvatar(User $user, SocialiteUser $googleUser): void
+    {
+        if ($user->avatar_path !== null) {
+            return;
+        }
+
+        $avatarUrl = $googleUser->getAvatar();
+
+        if (blank($avatarUrl)) {
+            return;
+        }
+
+        try {
+            $response = Http::timeout(10)->get($avatarUrl);
+
+            if ($response->failed()) {
+                return;
+            }
+
+            $extension = match ($response->header('Content-Type')) {
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                default => 'jpg',
+            };
+
+            $path = 'avatars/'.Str::random(40).'.'.$extension;
+            Storage::disk('public')->put($path, $response->body());
+
+            $user->forceFill(['avatar_path' => $path])->save();
+        } catch (Throwable) {
+            // Google's photo is a nice-to-have, not a sign-in requirement.
+        }
     }
 }

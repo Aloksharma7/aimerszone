@@ -6,6 +6,8 @@ use App\Enums\RoleKey;
 use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Socialite\Contracts\Provider;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
@@ -33,13 +35,14 @@ class GoogleLoginTest extends TestCase
         config(['services.google.client_id' => 'test-client-id']);
     }
 
-    protected function fakeGoogleUser(?string $email, string $name = 'Ram Sharma', string $id = 'google-123'): void
+    protected function fakeGoogleUser(?string $email, string $name = 'Ram Sharma', string $id = 'google-123', ?string $avatar = null): void
     {
         $socialiteUser = (new SocialiteUser())->map([
             'id' => $id,
             'name' => $name,
             'email' => $email,
             'nickname' => null,
+            'avatar' => $avatar,
         ]);
 
         $provider = Mockery::mock(Provider::class);
@@ -116,5 +119,54 @@ class GoogleLoginTest extends TestCase
         $this->get('/api/v1/auth/google/callback')->assertRedirect('/login?error=google_no_email');
 
         $this->assertGuest();
+    }
+
+    public function test_callback_imports_the_google_photo_for_a_new_account(): void
+    {
+        Storage::fake('public');
+        Http::fake(['https://lh3.googleusercontent.com/fake-photo' => Http::response('fake-image-bytes', 200, ['Content-Type' => 'image/png'])]);
+        $this->fakeGoogleUser('photo.student@example.test', avatar: 'https://lh3.googleusercontent.com/fake-photo');
+
+        $this->get('/api/v1/auth/google/callback')->assertRedirect('/login');
+
+        $user = User::where('email', 'photo.student@example.test')->firstOrFail();
+        $this->assertNotNull($user->avatar_path);
+        $this->assertStringEndsWith('.png', $user->avatar_path);
+        Storage::disk('public')->assertExists($user->avatar_path);
+    }
+
+    public function test_callback_fills_in_the_photo_for_an_existing_account_that_has_none(): void
+    {
+        Storage::fake('public');
+        Http::fake(['https://lh3.googleusercontent.com/fake-photo' => Http::response('fake-image-bytes', 200, ['Content-Type' => 'image/jpeg'])]);
+        $student = $this->makeUser(RoleKey::Student, ['email' => 'nophoto@example.test', 'avatar_path' => null]);
+        $this->fakeGoogleUser('nophoto@example.test', avatar: 'https://lh3.googleusercontent.com/fake-photo');
+
+        $this->get('/api/v1/auth/google/callback')->assertRedirect('/login');
+
+        $this->assertNotNull($student->fresh()->avatar_path);
+    }
+
+    public function test_callback_never_overwrites_a_photo_the_student_already_set(): void
+    {
+        Http::fake(['https://lh3.googleusercontent.com/fake-photo' => Http::response('fake-image-bytes', 200, ['Content-Type' => 'image/jpeg'])]);
+        $student = $this->makeUser(RoleKey::Student, ['email' => 'hasphoto@example.test', 'avatar_path' => 'avatars/already-set.jpg']);
+        $this->fakeGoogleUser('hasphoto@example.test', avatar: 'https://lh3.googleusercontent.com/fake-photo');
+
+        $this->get('/api/v1/auth/google/callback')->assertRedirect('/login');
+
+        $this->assertSame('avatars/already-set.jpg', $student->fresh()->avatar_path);
+    }
+
+    public function test_callback_still_signs_in_when_the_google_photo_fails_to_download(): void
+    {
+        Http::fake(['https://lh3.googleusercontent.com/fake-photo' => Http::response('', 500)]);
+        $this->fakeGoogleUser('brokenphoto@example.test', avatar: 'https://lh3.googleusercontent.com/fake-photo');
+
+        $this->get('/api/v1/auth/google/callback')->assertRedirect('/login');
+
+        $user = User::where('email', 'brokenphoto@example.test')->firstOrFail();
+        $this->assertNull($user->avatar_path);
+        $this->assertAuthenticatedAs($user);
     }
 }
