@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Menu, Search, X } from "lucide-react";
 import { useState } from "react";
 import { Brand } from "@/components/brand";
-import { ButtonLink } from "@/components/ui";
+import { Avatar, ButtonLink } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 const links = [
@@ -28,7 +28,7 @@ const links = [
  * the header renders the correct state on first paint rather than flashing a
  * Login button to someone who is already signed in.
  */
-export type HeaderSession = { name: string; portalHome: string; profilePath: string } | null;
+export type HeaderSession = { name: string; avatarUrl: string | null; portalHome: string } | null;
 export type HeaderBranding = { name: string; logoUrl?: string | null } | undefined;
 
 export function PublicHeader({ session = null, branding }: { session?: HeaderSession; branding?: HeaderBranding }) {
@@ -61,15 +61,15 @@ export function PublicHeader({ session = null, branding }: { session?: HeaderSes
             <Search className="h-5 w-5" />
           </Link>
           {session ? (
-            <ButtonLink href={session.profilePath} variant="ghost" size="sm">
-              <span className="max-w-[10rem] truncate">{session.name}</span>
-            </ButtonLink>
+            <Link href={session.portalHome} className="rounded-lg p-1 hover:bg-slate-100" aria-label={`Open workspace — signed in as ${session.name}`}>
+              <Avatar name={session.name} avatarUrl={session.avatarUrl} className="h-9 w-9" />
+            </Link>
           ) : (
-            <ButtonLink href="/login" variant="ghost" size="sm">Login</ButtonLink>
+            <>
+              <ButtonLink href="/login" variant="ghost" size="sm">Login</ButtonLink>
+              <ButtonLink href="/courses" size="sm">Explore Courses</ButtonLink>
+            </>
           )}
-          <ButtonLink href={session ? session.portalHome : "/courses"} size="sm">
-            {session ? "My workspace" : "Explore Courses"}
-          </ButtonLink>
         </div>
         <button
           type="button"
@@ -93,17 +93,17 @@ export function PublicHeader({ session = null, branding }: { session?: HeaderSes
             ))}
             <Link href="/payment-instructions" onClick={() => setOpen(false)} className="rounded-lg px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">Payment Instructions</Link>
           </nav>
-          <div className="mx-auto mt-4 grid max-w-7xl grid-cols-2 gap-3 border-t border-slate-100 pt-4">
+          <div className="mx-auto mt-4 border-t border-slate-100 pt-4">
             {session ? (
-              <>
-                <ButtonLink href={session.profilePath} variant="outline" className="w-full"><span className="truncate">{session.name}</span></ButtonLink>
-                <ButtonLink href={session.portalHome} className="w-full">My workspace</ButtonLink>
-              </>
+              <Link href={session.portalHome} onClick={() => setOpen(false)} className="flex items-center gap-3 rounded-lg p-2 hover:bg-slate-50">
+                <Avatar name={session.name} avatarUrl={session.avatarUrl} className="h-10 w-10" />
+                <span className="truncate text-sm font-semibold text-slate-900">{session.name}</span>
+              </Link>
             ) : (
-              <>
+              <div className="grid grid-cols-2 gap-3">
                 <ButtonLink href="/login" variant="outline" className="w-full">Login</ButtonLink>
                 <ButtonLink href="/register" className="w-full">Register</ButtonLink>
-              </>
+              </div>
             )}
           </div>
         </div>

@@ -41,10 +41,10 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Brand } from "@/components/brand";
-import { Badge } from "@/components/ui";
+import { Avatar, Badge } from "@/components/ui";
 import { browserRequest } from "@/lib/api/browser-client";
 import { can, portalHomeByMachineRole } from "@/lib/auth/roles";
-import { cn, initials } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { PortalRole, SessionUser } from "@/types/lms";
 
 type NavItem = { label: string; href: string; icon: LucideIcon; permission?: string };
@@ -368,7 +368,7 @@ export function PortalShell({
         <div className="px-5 pt-5">
           <div className="rounded-xl border border-white/10 bg-white/[0.06] p-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-xs font-bold text-brand-900">{initials(user.name)}</div>
+              <Avatar name={user.name} avatarUrl={user.avatarUrl} className="h-9 w-9 bg-white text-brand-900" />
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold text-white">{user.name}</p>
                 <p className="truncate text-xs text-blue-200">{roleLabels[role]}</p>
@@ -445,7 +445,7 @@ export function PortalShell({
             <NotificationBell href={notificationRouteByRole[role].href} endpoint={notificationRouteByRole[role].endpoint} markReadPath={notificationRouteByRole[role].markReadPath} />
             <div className="relative" ref={profileMenuRef}>
               <button type="button" onClick={() => setProfileOpen((value) => !value)} className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-slate-100" aria-expanded={profileOpen} aria-haspopup="menu">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-100 text-xs font-bold text-brand-900">{initials(user.name)}</span>
+                <Avatar name={user.name} avatarUrl={user.avatarUrl} className="h-8 w-8" />
                 <span className="hidden text-left xl:block"><span className="block max-w-36 truncate text-sm font-semibold text-slate-900">{user.name}</span><span className="block max-w-44 truncate text-xs text-slate-500">{userDetail(user, role)}</span></span>
                 <ChevronDown className="hidden h-4 w-4 text-slate-400 sm:block" />
               </button>

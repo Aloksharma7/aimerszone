@@ -7,7 +7,7 @@ import {
   CheckCircle2,
   Inbox,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, initials } from "@/lib/utils";
 
 export function ButtonLink({
   href,
@@ -125,6 +125,17 @@ export function Badge({
       {children}
     </span>
   );
+}
+
+/** The uploaded photo when there is one, else the same initials badge every avatar spot used before it existed. */
+export function Avatar({ name, avatarUrl, className }: { name: string; avatarUrl?: string | null; className?: string }) {
+  const base = "flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-brand-100 text-xs font-bold text-brand-900";
+
+  if (avatarUrl) {
+    return <img src={avatarUrl} alt={name} className={cn(base, "object-cover", className)} />;
+  }
+
+  return <span className={cn(base, className)}>{initials(name)}</span>;
 }
 
 export function StatusBadge({ status }: { status: string }) {
