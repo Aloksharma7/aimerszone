@@ -27,7 +27,7 @@ export default async function AdminCoursesPage({ searchParams }: { searchParams:
   // by category id, which is not available at this level, so this one
   // filter is applied to whatever page of results is currently on screen.
   const filtered = pageCourses.filter((course) => !category || course.category === category);
-  const rows = filtered.map((course) => ({ id: course.id || course.slug, code: course.code, title: course.title, category: course.category, batches: course.batchCount ?? 0, price: course.isFree ? "Free" : formatNpr(course.price), status: course.published ? "Published" : "Draft" }));
+  const rows = filtered.map((course) => ({ id: course.id || course.slug, code: course.code, title: course.title, category: course.category, batches: course.batchCount ?? 0, price: course.isFree ? "Free" : formatNpr(course.price), status: course.published ? "Published" : "Draft", href: archivedView ? undefined : `/admin/courses/${course.id || course.slug}` }));
   const exportQuery = buildQueryString({ q, category, status });
 
   return (
@@ -56,6 +56,7 @@ export default async function AdminCoursesPage({ searchParams }: { searchParams:
         <div className="mt-5">
           <DataTable
             rowKey="id"
+            actions
             rows={rows as unknown as Record<string, unknown>[]}
             columns={[
               { key: "code", label: "Code" },

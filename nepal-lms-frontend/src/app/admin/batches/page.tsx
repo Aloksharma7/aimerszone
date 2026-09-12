@@ -25,7 +25,7 @@ export default async function AdminBatchesPage({ searchParams }: { searchParams:
   // The backend has no text search for this endpoint, so the typed term is
   // matched against whatever page of results is currently on screen.
   const filtered = pageBatches.filter((batch) => matchesQuery(q, batch.id, batch.name, batch.course, batch.teacher, batch.schedule));
-  const rows = filtered.map((batch) => ({ ...batch, capacityUse: `${batch.students}/${batch.capacity}`, capacityPercent: batch.capacity ? Math.round(batch.students / batch.capacity * 100) : 0 }));
+  const rows = filtered.map((batch) => ({ ...batch, capacityUse: `${batch.students}/${batch.capacity}`, capacityPercent: batch.capacity ? Math.round(batch.students / batch.capacity * 100) : 0, href: archivedView ? undefined : `/admin/batches/${batch.id}` }));
   const exportQuery = buildQueryString({ q, status });
 
   return (
@@ -47,6 +47,7 @@ export default async function AdminBatchesPage({ searchParams }: { searchParams:
         <div className="mt-5">
           <DataTable
             rowKey="id"
+            actions
             rows={rows as unknown as Record<string, unknown>[]}
             columns={[
               { key: "name", label: "Batch", render: (row) => <div className="min-w-0"><span className={archivedView ? "block truncate font-bold text-slate-700" : "block truncate"} title={String(row.name)}>{archivedView ? String(row.name) : <Link href={`/admin/batches/${String(row.id)}`} className="font-bold text-brand-700 hover:text-brand-900">{String(row.name)}</Link>}</span><p className="mt-1 truncate text-xs text-slate-500" title={String(row.course)}>{String(row.course)}</p></div> },
