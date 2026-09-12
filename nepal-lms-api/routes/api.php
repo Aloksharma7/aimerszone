@@ -86,6 +86,8 @@ Route::prefix('v1')->group(function () {
     Route::prefix('account')->middleware(['auth', 'account.usable'])->group(function () {
         Route::get('profile', [Account\ProfileController::class, 'show']);
         Route::patch('profile', [Account\ProfileController::class, 'update']);
+        Route::post('avatar', [Account\ProfileController::class, 'uploadAvatar'])->middleware(['idempotent', 'throttle:uploads']);
+        Route::delete('avatar', [Account\ProfileController::class, 'deleteAvatar']);
         Route::put('password', [Account\PasswordController::class, 'update']);
         Route::post('sessions/revoke-others', [Account\SessionController::class, 'revokeOthers']);
         Route::post('two-factor/setup', [Account\TwoFactorController::class, 'setup']);
@@ -505,6 +507,9 @@ Route::prefix('v1')->group(function () {
 
         Route::get('teachers', [Admin\TeacherController::class, 'index'])->middleware('permission:users.view');
         Route::put('teachers/{user}/profile', [Admin\TeacherController::class, 'upsert'])->middleware(['permission:users.manage', 'idempotent']);
+        Route::post('teachers/{user}/photo', [Admin\TeacherController::class, 'uploadPhoto'])
+            ->middleware(['permission:users.manage', 'idempotent', 'throttle:uploads']);
+        Route::delete('teachers/{user}/photo', [Admin\TeacherController::class, 'deletePhoto'])->middleware('permission:users.manage');
 
         Route::get('announcements', [Admin\AnnouncementController::class, 'index'])->middleware('permission:announcements.view');
         Route::post('announcements', [Admin\AnnouncementController::class, 'store'])->middleware(['permission:announcements.manage', 'idempotent']);

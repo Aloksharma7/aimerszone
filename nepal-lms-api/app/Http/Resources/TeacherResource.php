@@ -2,9 +2,9 @@
 
 namespace App\Http\Resources;
 
+use App\Support\PublicAssetUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Illuminate\Support\Facades\Storage;
 
 /** ApiTeacher, used by /teachers and /teachers/{slug}. */
 class TeacherResource extends JsonResource
@@ -31,7 +31,12 @@ class TeacherResource extends JsonResource
             'subjects' => $this->subjects ?? [],
             'experience_summary' => $this->experience_summary,
             'bio' => $this->bio,
-            'avatar_url' => $this->avatar_path ? Storage::disk('public')->url($this->avatar_path) : null,
+            'avatar_url' => PublicAssetUrl::for($this->avatar_path) ?? $this->user?->avatarUrl(),
+
+            // Not shown on the public site itself — only the admin directory
+            // reads these, to prefill the edit form without a second request.
+            'is_public' => $this->is_public ?? true,
+            'sort_order' => $this->sort_order ?? 0,
         ];
     }
 }

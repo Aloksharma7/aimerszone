@@ -12,6 +12,7 @@ use App\Services\UserDirectory;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -57,6 +58,8 @@ class TeacherController extends Controller
                 'experience_summary' => null,
                 'bio' => null,
                 'avatar_url' => $teacher->avatarUrl(),
+                'is_public' => false,
+                'sort_order' => 0,
             ];
         });
     }
@@ -85,5 +88,53 @@ class TeacherController extends Controller
         $this->audit->log('teacher.profile_saved', $profile, $request->user(), targetLabel: $user->name);
 
         return ApiResponse::item(['id' => $profile->id, 'slug' => $profile->slug]);
+    }
+
+    /**
+     * The photo shown on the public /teachers page — deliberately separate
+     * from the teacher's own account avatar (Account\ProfileController), so
+     * an administrator can curate what the public site shows independently
+     * of whatever a teacher personally sets. Falls back to the account
+     * avatar (see TeacherResource) until one of these is uploaded.
+     */
+    public function uploadPhoto(Request $request, User $user): JsonResponse
+    {
+        abort_unless($user->hasRole(RoleKey::Teacher), 422, 'This account does not hold the teacher role.');
+
+        $maxKb = (int) config('lms.uploads.image_max_kb', 2048);
+        $request->validate([
+            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.$maxKb],
+        ]);
+
+        $profile = TeacherProfile::firstOrCreate(
+            ['user_id' => $user->getKey()],
+            ['slug' => Str::slug($user->name)],
+        );
+
+        $previous = $profile->avatar_path;
+        $path = $request->file('photo')->store('teachers/photos', 'public');
+
+        $profile->forceFill(['avatar_path' => $path])->save();
+
+        if ($previous) {
+            Storage::disk('public')->delete($previous);
+        }
+
+        $this->audit->log('teacher.photo_updated', $profile, $request->user(), targetLabel: $user->name);
+
+        return ApiResponse::item(['avatar_url' => (new TeacherResource($profile->setRelation('user', $user)))->toArray($request)['avatar_url']]);
+    }
+
+    public function deletePhoto(Request $request, User $user): JsonResponse
+    {
+        $profile = $user->teacherProfile;
+
+        if ($profile?->avatar_path) {
+            Storage::disk('public')->delete($profile->avatar_path);
+            $profile->forceFill(['avatar_path' => null])->save();
+            $this->audit->log('teacher.photo_removed', $profile, $request->user(), targetLabel: $user->name);
+        }
+
+        return ApiResponse::message('Photo removed.');
     }
 }

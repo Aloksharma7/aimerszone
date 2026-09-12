@@ -9,6 +9,7 @@ use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 /**
@@ -69,6 +70,43 @@ class ProfileController extends Controller
         $this->audit->log('account.profile_updated', $user, $user, properties: ['fields' => array_keys($data)]);
 
         return $this->show($request);
+    }
+
+    /** Every role reaches this through the same /api/v1/account/avatar routes. */
+    public function uploadAvatar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $maxKb = (int) config('lms.uploads.image_max_kb', 2048);
+
+        $request->validate([
+            'avatar' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:'.$maxKb],
+        ]);
+
+        $previous = $user->avatar_path;
+        $path = $request->file('avatar')->store('avatars', 'public');
+
+        $user->forceFill(['avatar_path' => $path])->save();
+
+        if ($previous) {
+            Storage::disk('public')->delete($previous);
+        }
+
+        $this->audit->log('account.avatar_updated', $user, $user);
+
+        return ApiResponse::item(['avatar_url' => $user->avatarUrl()]);
+    }
+
+    public function deleteAvatar(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->avatar_path) {
+            Storage::disk('public')->delete($user->avatar_path);
+            $user->forceFill(['avatar_path' => null])->save();
+            $this->audit->log('account.avatar_removed', $user, $user);
+        }
+
+        return ApiResponse::message('Photo removed.');
     }
 
     /**
