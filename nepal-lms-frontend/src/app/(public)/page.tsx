@@ -150,7 +150,21 @@ export default async function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <SectionHeading eyebrow="Teachers" title="Clear teaching, practical guidance" description="Meet the teachers assigned to currently published courses and batches." action={<ButtonLink href="/teachers" variant="outline">Meet all teachers</ButtonLink>} />
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {teachers.map((teacher) => <Link key={teacher.slug} href={`/teachers/${teacher.slug}`} className="group rounded-2xl border border-slate-200 bg-white p-5 transition hover:border-blue-200 hover:shadow-card"><div className={`flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br ${teacher.accent} text-lg font-bold text-white`}>{teacher.initials}</div><h3 className="mt-5 font-bold text-slate-950 group-hover:text-brand-700">{teacher.name}</h3><p className="mt-1 text-sm font-medium text-brand-700">{teacher.role}</p><p className="mt-3 text-sm leading-6 text-slate-500">{teacher.subjects.join(" · ")}</p></Link>)}
+            {teachers.map((teacher) => (
+              <Link key={teacher.slug} href={`/teachers/${teacher.slug}`} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white transition hover:border-blue-200 hover:shadow-card">
+                {teacher.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded asset, not a Next-optimized asset
+                  <img src={teacher.avatarUrl} alt="" className="aspect-square w-full object-cover" />
+                ) : (
+                  <div className={`flex aspect-square w-full items-center justify-center bg-linear-to-br ${teacher.accent} text-5xl font-bold text-white`}>{teacher.initials}</div>
+                )}
+                <div className="p-5">
+                  <h3 className="font-bold text-slate-950 group-hover:text-brand-700">{teacher.name}</h3>
+                  <p className="mt-1 text-sm font-medium text-brand-700">{teacher.role}</p>
+                  <p className="mt-3 text-sm leading-6 text-slate-500">{teacher.subjects.join(" · ")}</p>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </section>
