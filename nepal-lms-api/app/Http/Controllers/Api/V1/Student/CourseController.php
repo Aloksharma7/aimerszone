@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1\Student;
 
+use App\Enums\AccessType;
+use App\Enums\EnrollmentStatus;
+use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AnnouncementResource;
 use App\Http\Resources\ClassSessionResource;
@@ -10,9 +13,6 @@ use App\Http\Resources\RecordingResource;
 use App\Http\Resources\ResourceFileResource;
 use App\Http\Resources\StudentTestResource;
 use App\Http\Resources\SyllabusModuleResource;
-use App\Enums\AccessType;
-use App\Enums\EnrollmentStatus;
-use App\Exceptions\DomainException;
 use App\Models\Announcement;
 use App\Models\Attendance;
 use App\Models\Batch;
@@ -26,8 +26,8 @@ use App\Models\SyllabusLesson;
 use App\Models\SyllabusModule;
 use App\Models\Test;
 use App\Models\TestAttempt;
-use App\Services\EnrollmentProgressService;
 use App\Services\AuditLogger;
+use App\Services\EnrollmentProgressService;
 use App\Services\FeatureGate;
 use App\Services\NotificationDispatcher;
 use App\Services\SettingsRepository;
@@ -377,7 +377,7 @@ class CourseController extends Controller
         }
 
         if (! in_array($batch->status->value, ['open', 'ongoing'], true)) {
-            throw DomainException::conflict('This batch is not accepting enrollments.', 'batch_closed');
+            throw DomainException::conflict('This batch is not yet open for enrollment. Please check back soon or contact the institute.', 'batch_closed');
         }
 
         if ($batch->isFull()) {

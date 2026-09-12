@@ -31,11 +31,17 @@ class CourseController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        // "archived" here means soft-deleted (see destroy()), not the unused
+        // CourseStatus::Archived status value — reusing that word is what
+        // lets the admin UI surface a filter for it without a new query param.
+        $archived = $request->string('status')->value() === 'archived';
+
         $courses = Course::query()
+            ->when($archived, fn ($query) => $query->onlyTrashed())
             ->with(['category', 'batches.teachers.teacherProfile'])
             ->withCount('modules')
             ->search($request->string('q')->value())
-            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')->value()))
+            ->when($request->filled('status') && ! $archived, fn ($query) => $query->where('status', $request->string('status')->value()))
             ->when($request->filled('category_id'), fn ($query) => $query->where('category_id', $request->string('category_id')->value()))
             ->orderByDesc('updated_at')
             ->paginate($this->perPage(100));
@@ -179,10 +185,68 @@ class CourseController extends Controller
         return ApiResponse::message('Course archived. Enrolment history and receipts are unaffected.');
     }
 
+    /** Brings an archived course back — it reappears in every list exactly as it was. */
+    public function restore(Request $request, string $course): JsonResponse
+    {
+        $model = $this->resolveAny($course);
+        $model->restore();
+
+        $this->audit->log('course.restored', $model, $request->user());
+
+        return ApiResponse::message('Course restored.');
+    }
+
+    /**
+     * Permanently deletes a course — the "proper delete" an archive can't
+     * give you, for the courses that genuinely never went anywhere.
+     *
+     * Only allowed once the course has zero enrolments and zero batches,
+     * ever (not just active ones): the FK on both tables cascades on delete,
+     * so anything short of that would silently wipe payment and attendance
+     * rows a hard delete has no business touching. A course with any history
+     * stays archive-only, same as before.
+     */
+    public function forceDestroy(Request $request, string $course): JsonResponse
+    {
+        $model = $this->resolveAny($course);
+
+        $everEnrolled = Enrollment::query()->where('course_id', $model->getKey())->count();
+
+        if ($everEnrolled > 0) {
+            throw DomainException::conflict(
+                "This course has {$everEnrolled} enrolment".($everEnrolled === 1 ? '' : 's').' on record and can only be archived, not deleted, so that payment and attendance history is kept.',
+                'course_has_history',
+            );
+        }
+
+        $everHadBatch = Batch::withTrashed()->where('course_id', $model->getKey())->count();
+
+        if ($everHadBatch > 0) {
+            throw DomainException::conflict(
+                'This course has batches on record (including archived ones) and can only be archived, not deleted. Permanently delete those batches first.',
+                'course_has_batches',
+            );
+        }
+
+        $this->audit->log('course.deleted', $model, $request->user(), targetLabel: $model->title);
+        $model->forceDelete();
+
+        return ApiResponse::message('Course permanently deleted.');
+    }
+
     /** Slug or id, so admin links keep working after a slug change. */
     protected function resolve(string $identifier): Course
     {
         return Course::query()
+            ->where('id', $identifier)
+            ->orWhere('slug', $identifier)
+            ->firstOrFail();
+    }
+
+    /** Same as resolve(), but reaches archived courses too — needed to restore or permanently delete one. */
+    protected function resolveAny(string $identifier): Course
+    {
+        return Course::withTrashed()
             ->where('id', $identifier)
             ->orWhere('slug', $identifier)
             ->firstOrFail();

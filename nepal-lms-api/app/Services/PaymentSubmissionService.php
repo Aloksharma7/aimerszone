@@ -111,7 +111,12 @@ class PaymentSubmissionService
         }
 
         if (! in_array($batch->status->value, ['open', 'ongoing'], true)) {
-            throw DomainException::conflict('This batch is not accepting enrollments.', 'batch_closed');
+            throw DomainException::conflict(
+                $batch->status->value === 'draft'
+                    ? 'This batch is still in Draft status. Open it for enrollment from the batch page, then try again.'
+                    : "This batch is {$batch->status->label()} and is not accepting enrollments.",
+                'batch_closed',
+            );
         }
 
         if ($batch->isFull()) {

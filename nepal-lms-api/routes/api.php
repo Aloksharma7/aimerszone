@@ -5,9 +5,9 @@ use App\Http\Controllers\Api\V1\Accounting;
 use App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Api\V1\Auth;
 use App\Http\Controllers\Api\V1\PublicSite;
+use App\Http\Controllers\Api\V1\Staff;
 use App\Http\Controllers\Api\V1\Student;
 use App\Http\Controllers\Api\V1\Support;
-use App\Http\Controllers\Api\V1\Staff;
 use App\Http\Controllers\Api\V1\Teacher;
 use App\Http\Controllers\Api\V1\Webhooks;
 use Illuminate\Support\Facades\Route;
@@ -486,12 +486,16 @@ Route::prefix('v1')->group(function () {
         Route::delete('courses/{course}/thumbnail', [Admin\CourseController::class, 'deleteThumbnail'])
             ->middleware('permission:courses.update');
         Route::delete('courses/{course}', [Admin\CourseController::class, 'destroy'])->middleware('permission:courses.delete');
+        Route::post('courses/{course}/restore', [Admin\CourseController::class, 'restore'])->middleware('permission:courses.delete');
+        Route::delete('courses/{course}/permanent', [Admin\CourseController::class, 'forceDestroy'])->middleware('permission:courses.delete');
 
         Route::get('batches', [Admin\BatchController::class, 'index'])->middleware('permission:batches.view');
         Route::get('batches/{batch}', [Admin\BatchController::class, 'show'])->middleware('permission:batches.view');
         Route::post('batches', [Admin\BatchController::class, 'store'])->middleware(['permission:batches.manage', 'idempotent']);
         Route::patch('batches/{batch}', [Admin\BatchController::class, 'update'])->middleware(['permission:batches.manage', 'idempotent']);
         Route::delete('batches/{batch}', [Admin\BatchController::class, 'destroy'])->middleware('permission:batches.delete');
+        Route::post('batches/{batch}/restore', [Admin\BatchController::class, 'restore'])->middleware('permission:batches.delete');
+        Route::delete('batches/{batch}/permanent', [Admin\BatchController::class, 'forceDestroy'])->middleware('permission:batches.delete');
 
         Route::get('teachers', [Admin\TeacherController::class, 'index'])->middleware('permission:users.view');
         Route::put('teachers/{user}/profile', [Admin\TeacherController::class, 'upsert'])->middleware(['permission:users.manage', 'idempotent']);

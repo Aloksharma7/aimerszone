@@ -6,6 +6,7 @@ use App\Enums\BatchStatus;
 use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
 use App\Models\Batch;
+use App\Models\Enrollment;
 use App\Models\Payment;
 use App\Models\User;
 use App\Services\AuditLogger;
@@ -21,10 +22,15 @@ class BatchController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        // "archived" means soft-deleted (see destroy()) — BatchStatus has no
+        // such case, so this value only ever means "show the trash".
+        $archived = $request->string('status')->value() === 'archived';
+
         $batches = Batch::query()
+            ->when($archived, fn ($query) => $query->onlyTrashed())
             ->with(['course:id,title', 'teachers:id,name'])
             ->withCount(['enrollments as students_count' => fn ($query) => $query->accessible()])
-            ->when($request->filled('status'), fn ($query) => $query->where('status', $request->string('status')->value()))
+            ->when($request->filled('status') && ! $archived, fn ($query) => $query->where('status', $request->string('status')->value()))
             ->when($request->filled('course_id'), fn ($query) => $query->where('course_id', $request->string('course_id')->value()))
             ->orderByDesc('start_at')
             ->paginate($this->perPage(100));
@@ -153,6 +159,55 @@ class BatchController extends Controller
         $batch->delete();
 
         return ApiResponse::message('Batch archived. Payment and attendance history are unaffected.');
+    }
+
+    /** Brings an archived batch back — it reappears in every list exactly as it was. */
+    public function restore(Request $request, string $batch): JsonResponse
+    {
+        $model = Batch::withTrashed()->findOrFail($batch);
+        $model->restore();
+
+        $this->audit->log('batch.restored', $model, $request->user());
+
+        return ApiResponse::message('Batch restored.');
+    }
+
+    /**
+     * Permanently deletes a batch — the "proper delete" an archive can't
+     * give you, for batches that genuinely never had a student in them.
+     *
+     * Only allowed once the batch has zero enrolments and zero payments,
+     * ever (not just active ones): its foreign keys cascade on delete, so
+     * anything short of that would silently wipe payment and attendance
+     * rows a hard delete has no business touching. A batch with any history
+     * stays archive-only, same as before.
+     */
+    public function forceDestroy(Request $request, string $batch): JsonResponse
+    {
+        $model = Batch::withTrashed()->findOrFail($batch);
+
+        $everEnrolled = Enrollment::query()->where('batch_id', $model->getKey())->count();
+
+        if ($everEnrolled > 0) {
+            throw DomainException::conflict(
+                "This batch has {$everEnrolled} enrolment".($everEnrolled === 1 ? '' : 's').' on record and can only be archived, not deleted, so that payment and attendance history is kept.',
+                'batch_has_history',
+            );
+        }
+
+        $everPaid = Payment::query()->where('batch_id', $model->getKey())->count();
+
+        if ($everPaid > 0) {
+            throw DomainException::conflict(
+                'This batch has payment records on file and can only be archived, not deleted, so that history is kept.',
+                'batch_has_payments',
+            );
+        }
+
+        $this->audit->log('batch.deleted', $model, $request->user(), targetLabel: $model->title);
+        $model->forceDelete();
+
+        return ApiResponse::message('Batch permanently deleted.');
     }
 
     protected function syncTeachers(Batch $batch, ?array $teacherIds): void
