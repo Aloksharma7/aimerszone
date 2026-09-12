@@ -39,7 +39,7 @@ export default async function StaffStudentsPage({ searchParams }: { searchParams
           resetHref={base}
           fields={[{ name: "status", label: "Student status", value: status, options: [{ value: "", label: "All statuses" }, { value: "Active", label: "Active" }, { value: "Pending", label: "Pending" }, { value: "Suspended", label: "Suspended" }] }]}
         />
-        <div className="mt-5"><DataTable rowKey="id" rows={items as unknown as Record<string, unknown>[]} columns={[{ key: "id", label: "Student ID" }, { key: "name", label: "Student", render: (row) => <Link href={`${base}/${encodeURIComponent(String(row.id))}`} className="font-bold text-brand-700 hover:text-brand-900">{String(row.name)}</Link> }, { key: "phone", label: "Phone" }, { key: "course", label: "Current / Intended Course" }, { key: "joined", label: "Created" }, { key: "status", label: "Status", render: (row) => <StatusBadge status={String(row.status)} /> }]} /></div>
+        <div className="mt-5"><DataTable rowKey="id" rows={items as unknown as Record<string, unknown>[]} columns={[{ key: "id", label: "Student ID", render: (row) => String(row.studentCode || row.id) }, { key: "name", label: "Student", render: (row) => <Link href={`${base}/${encodeURIComponent(String(row.id))}`} className="font-bold text-brand-700 hover:text-brand-900">{String(row.name)}</Link> }, { key: "phone", label: "Phone" }, { key: "course", label: "Current / Intended Course" }, { key: "joined", label: "Created" }, { key: "status", label: "Status", render: (row) => <StatusBadge status={String(row.status)} /> }]} /></div>
         <Pagination meta={meta} buildHref={(target) => `${base}${buildQueryString({ search: q, status, page: String(target) })}`} />
       </Panel>
     </>

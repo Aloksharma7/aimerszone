@@ -335,7 +335,12 @@ export function mapPayment(value: ApiPayment): Payment {
 
 export function mapStaffStudent(value: ApiStaffStudent): StaffStudent {
   return {
-    id: value.student_code || value.id,
+    // The real id — used to build the detail-page link and every API call
+    // that follows from it. student_code is a human-readable label only;
+    // sending it as if it were the id 404s (route-model binding looks the
+    // record up by id) or silently mismatches every student it's used for.
+    id: value.id,
+    studentCode: value.student_code,
     name: value.name,
     phone: value.mobile,
     email: value.email,

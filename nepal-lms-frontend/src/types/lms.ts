@@ -316,6 +316,8 @@ export type TeacherBatch = {
 
 export type StaffStudent = {
   id: string;
+  /** Human-readable code (e.g. "STD-2083-1001") shown to staff — id is the real identifier used for routing and API lookups, and the two are not interchangeable. */
+  studentCode?: string | null;
   name: string;
   phone: string;
   email?: string | null;
