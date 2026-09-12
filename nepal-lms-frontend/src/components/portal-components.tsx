@@ -208,7 +208,11 @@ export function DataTable({
   emptyTitle?: string;
   emptyDescription?: string;
 }) {
-  const showActions = actions && rows.some((row) => typeof row.href === "string" && String(row.href).startsWith("/"));
+  // "actions" used to render a separate "Open" button column — a small,
+  // precise target when the whole row is the same click. Rows with an href
+  // are now clickable in full instead; `actions` still gates it (a few
+  // tables set row.href for something other than "click to open details").
+  const linkable = actions && rows.some((row) => typeof row.href === "string" && String(row.href).startsWith("/"));
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       {rows.length === 0 ? (
@@ -233,8 +237,10 @@ export function DataTable({
             {rows.map((row) => {
               const attention = needsAttention?.(row) ?? false;
               const [primary, ...rest] = columns;
+              const href = linkable && typeof row.href === "string" && row.href.startsWith("/") ? row.href : null;
               return (
-                <div key={String(row[rowKey])} className={cn("p-4", attention && "bg-amber-50/70")}>
+                <div key={String(row[rowKey])} className={cn("relative p-4", attention && "bg-amber-50/70", href && "active:bg-slate-50")}>
+                  {href ? <Link href={href} className="absolute inset-0" aria-label="Open details"><span className="sr-only">Open details</span></Link> : null}
                   <div className="flex items-start gap-2 font-semibold text-slate-900">
                     {attention ? <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden="true" title="Needs a decision" /> : null}
                     <div className="min-w-0 flex-1">{primary.render ? primary.render(row) : String(row[primary.key] ?? "—")}</div>
@@ -246,9 +252,6 @@ export function DataTable({
                         <dd className="min-w-0 truncate text-right text-slate-700">{column.render ? column.render(row) : String(row[column.key] ?? "—")}</dd>
                       </div>
                     ))}
-                    {showActions && typeof row.href === "string" && row.href.startsWith("/") ? (
-                      <div className="pt-1"><ButtonLink href={row.href} variant="outline" size="sm" className="w-full">Open</ButtonLink></div>
-                    ) : null}
                   </dl>
                 </div>
               );
@@ -259,17 +262,18 @@ export function DataTable({
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                 <tr>
                   {columns.map((column) => <th key={column.key} className="border-b border-slate-200 px-4 py-3 font-bold">{column.label}</th>)}
-                  {showActions ? <th className="border-b border-slate-200 px-4 py-3 text-right font-bold">Actions</th> : null}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {rows.map((row) => {
                   const attention = needsAttention?.(row) ?? false;
+                  const href = linkable && typeof row.href === "string" && row.href.startsWith("/") ? row.href : null;
                   return (
-                    <tr key={String(row[rowKey])} className={attention ? "bg-amber-50/70 hover:bg-amber-50" : "hover:bg-slate-50/70"}>
+                    <tr key={String(row[rowKey])} className={cn("relative", attention ? "bg-amber-50/70 hover:bg-amber-50" : "hover:bg-slate-50/70")}>
                       {columns.map((column, index) => (
                         <td key={column.key} className="max-w-70 px-4 py-3.5 align-middle text-slate-700">
                           {index === 0 && attention ? <span className="mr-2 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden="true" title="Needs a decision" /> : null}
+                          {index === 0 && href ? <Link href={href} className="absolute inset-0" aria-label="Open details"><span className="sr-only">Open details</span></Link> : null}
                           {column.render ? (
                             column.render(row)
                           ) : (
@@ -279,7 +283,6 @@ export function DataTable({
                           )}
                         </td>
                       ))}
-                      {showActions ? <td className="px-4 py-3.5 text-right">{typeof row.href === "string" && row.href.startsWith("/") ? <ButtonLink href={row.href} variant="outline" size="sm">Open</ButtonLink> : null}</td> : null}
                     </tr>
                   );
                 })}
