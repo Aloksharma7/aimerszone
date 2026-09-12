@@ -80,10 +80,22 @@ class ZoomClient
     }
 
     /**
+     * Zoom's own error code for "this meeting id has no report and never will"
+     * (deleted, never happened, or wrong id) — distinct from a plain 404 for a
+     * report that just hasn't been generated yet, which Zoom returns the exact
+     * same HTTP status for. Without checking this, a permanently-missing
+     * meeting looked identical to "check back later" and got retried for the
+     * full 48-hour window instead of failing once and asking for manual entry.
+     */
+    protected const MEETING_NOT_FOUND_CODE = '3001';
+
+    /**
      * Participant report for attendance import.
      *
      * Only available after a meeting has ended, and only on paid Zoom plans;
-     * a 404 here means "no report yet", not a failure.
+     * a plain 404 here means "no report yet", not a failure — but see
+     * MEETING_NOT_FOUND_CODE above for the one 404 that is a real, permanent
+     * failure and must not be swallowed the same way.
      *
      * @return array<int, array{name: string, email: ?string, duration: int}>
      */
@@ -92,6 +104,10 @@ class ZoomClient
         try {
             $response = $this->call('get', "/report/meetings/{$meetingId}/participants?page_size=300", [], 'meeting.participants', $meetingId);
         } catch (IntegrationException $exception) {
+            if ($exception->status() === 404 && $exception->reason() === self::MEETING_NOT_FOUND_CODE) {
+                throw $exception;
+            }
+
             if ($exception->status() === 404) {
                 return [];
             }
@@ -221,6 +237,7 @@ class ZoomClient
                 'zoom',
                 retryable: $response->serverError() || $response->status() === 429,
                 status: $response->status(),
+                reason: $response->json('code') !== null ? (string) $response->json('code') : null,
             );
         }
 

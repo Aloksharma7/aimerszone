@@ -32,7 +32,10 @@ class AttendanceImportService
      * $status is 'ok' once Zoom actually returned a report (even if 0 rows
      * matched an enrollment), or one of 'no_meeting' | 'api_error' |
      * 'no_report_yet' when nothing could be imported — callers branch on
-     * this rather than guessing from imported/reported alone.
+     * this rather than guessing from imported/reported alone. 'no_meeting'
+     * also covers Zoom telling us the meeting itself is permanently gone —
+     * that is treated the same as never having had one: stop immediately,
+     * do not keep retrying a report that will never exist.
      *
      * @return array{status: string, imported: int, reported: int, message: ?string}
      */
@@ -45,6 +48,10 @@ class AttendanceImportService
         try {
             $participants = $this->zoom->participants($session->zoom_meeting_id);
         } catch (IntegrationException $exception) {
+            if ($exception->status() === 404) {
+                return ['status' => 'no_meeting', 'imported' => 0, 'reported' => 0, 'message' => 'Zoom no longer has a record of this meeting, so attendance cannot be imported automatically. Enter it manually.'];
+            }
+
             return ['status' => 'api_error', 'imported' => 0, 'reported' => 0, 'message' => 'Zoom could not return the participant report: '.$exception->getMessage()];
         }
 
