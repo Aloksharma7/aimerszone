@@ -37,17 +37,4 @@ class PublicAssetUrl
 
         return ($parts['path'] ?? '/').(isset($parts['query']) ? '?'.$parts['query'] : '');
     }
-
-    /**
-     * For consumers with no "current origin" to resolve a relative path
-     * against — an email client, an SMS link, a PDF — unlike for().
-     * Prefixed with the public frontend domain, the same one the reset-
-     * password link itself already points at.
-     */
-    public static function absolute(?string $path): ?string
-    {
-        $relative = self::for($path);
-
-        return $relative ? rtrim(config('app.frontend_url'), '/').$relative : null;
-    }
 }
