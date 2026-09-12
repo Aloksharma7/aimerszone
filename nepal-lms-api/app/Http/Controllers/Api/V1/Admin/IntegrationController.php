@@ -180,7 +180,7 @@ class IntegrationController extends Controller
     {
         return ClassSession::query()
             ->where('provider', 'zoom')
-            ->with('batch:id,title')
+            ->with(['batch:id,title', 'teacher:id,name'])
             ->orderByDesc('starts_at')
             ->limit(100)
             ->get()
@@ -188,6 +188,7 @@ class IntegrationController extends Controller
                 'id' => $session->id,
                 'topic' => $session->topic,
                 'batch' => $session->batch?->title ?? 'Batch removed',
+                'host' => $session->teacher?->name ?? 'Not assigned',
                 'meeting_id' => $session->zoom_meeting_id ?? 'Not created',
                 'starts_at' => $session->starts_at->toIso8601String(),
                 'sync_status' => $session->zoom_sync_status,
@@ -209,7 +210,15 @@ class IntegrationController extends Controller
                 'batch' => $recording->batch?->title ?? 'Batch removed',
                 'video_id' => $recording->youtube_video_id ?? 'Not uploaded',
                 'state' => $recording->state->value,
-                'released_at' => $recording->released_at?->toIso8601String() ?? 'Not released',
+
+                // Uploads default to Unlisted; a Public one is flagged rather
+                // than rejected (see RecordingSyncService), so this is what
+                // lets an administrator actually find and fix one.
+                'is_public' => $recording->is_youtube_public,
+                'access' => $recording->released_at?->isPast() && $recording->state->value === 'available'
+                    ? 'Enrolled students'
+                    : 'Not yet released',
+                'released_at' => $recording->released_at?->toIso8601String(),
             ]);
     }
 
