@@ -677,10 +677,54 @@ export async function getAdminIntegrationStatus(provider: "zoom" | "youtube"): P
   return response.data;
 }
 
+type ApiZoomRow = { id: string; topic: string; batch: string; host: string; meeting_id: string; starts_at: string; sync_status: string; fallback: string };
+type ApiYoutubeRow = { id: string; title: string; batch: string; video_id: string; state: string; is_public: boolean; access: string; released_at: string | null };
+
+const zoomSyncLabel: Record<string, string> = { pending: "Pending", synced: "Synced", failed: "Failed", cancelled: "Cancelled" };
+const recordingStateLabel: Record<string, string> = { processing: "Processing", available: "Available", unavailable: "Unavailable" };
+
+function mapZoomRow(value: ApiZoomRow): IntegrationRow {
+  return {
+    id: value.id,
+    topic: value.topic,
+    batch: value.batch,
+    host: value.host,
+    scheduled: formatDateTime(value.starts_at),
+    providerState: zoomSyncLabel[value.sync_status] || value.sync_status,
+    localState: value.fallback === "Active" ? "Fallback configured" : "Ready",
+  };
+}
+
+function mapYoutubeRow(value: ApiYoutubeRow): IntegrationRow {
+  return {
+    id: value.id,
+    title: value.title,
+    batch: value.batch,
+    videoId: value.video_id,
+    privacy: value.is_public ? "Public" : "Unlisted",
+    access: value.access,
+    published: value.released_at ? formatDate(value.released_at) : "Not released",
+    state: recordingStateLabel[value.state] || value.state,
+  };
+}
+
+/**
+ * Field names here match this page's own mock fixtures exactly
+ * (zoomMeetings / youtubeRecordings in @/data/admin) — the real endpoint
+ * returns a different, snake_case shape (starts_at, sync_status, fallback,
+ * video_id, …) that never lined up with what the Zoom/YouTube integration
+ * pages actually read. IntegrationRow's Record<string, string> typing
+ * caught none of it, so every real row rendered "—"/"Unknown" regardless of
+ * its actual state.
+ */
 export async function getAdminIntegrationRows(provider: "zoom" | "youtube"): Promise<IntegrationRow[]> {
   if (isMockDataEnabled()) return (provider === "zoom" ? zoomMeetings : youtubeRecordings) as unknown as IntegrationRow[];
-  const response = await serverApiFetch<ApiResponse<IntegrationRow[]> | PaginatedResponse<IntegrationRow>>(`/api/v1/admin/integrations/${provider}/records?per_page=100`);
-  return response.data;
+  if (provider === "zoom") {
+    const response = await serverApiFetch<ApiResponse<ApiZoomRow[]> | PaginatedResponse<ApiZoomRow>>(`/api/v1/admin/integrations/zoom/records?per_page=100`);
+    return response.data.map(mapZoomRow);
+  }
+  const response = await serverApiFetch<ApiResponse<ApiYoutubeRow[]> | PaginatedResponse<ApiYoutubeRow>>(`/api/v1/admin/integrations/youtube/records?per_page=100`);
+  return response.data.map(mapYoutubeRow);
 }
 
 
