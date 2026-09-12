@@ -281,6 +281,10 @@ Route::prefix('v1')->group(function () {
             ->middleware(['permission:students.manage', 'idempotent']);
 
         Route::get('enrollments', [Staff\EnrollmentController::class, 'index'])->middleware('permission:enrollments.view');
+        Route::get('enrollments/{enrollment}', [Staff\EnrollmentController::class, 'show'])->middleware('permission:enrollments.view');
+        Route::post('enrollments/{enrollment}/cancel', [Staff\EnrollmentController::class, 'cancel'])
+            ->middleware(['permission:enrollments.manage', 'idempotent']);
+        Route::delete('enrollments/{enrollment}', [Staff\EnrollmentController::class, 'destroy'])->middleware('permission:enrollments.manage');
 
         Route::get('courses', [Staff\CourseController::class, 'index'])->middleware('permission:courses.view');
         Route::get('courses/{course}', [Staff\CourseController::class, 'show'])->middleware('permission:courses.view');
