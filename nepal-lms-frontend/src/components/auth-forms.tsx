@@ -10,6 +10,51 @@ import type { ApiResponse, AuthenticatedUser } from "@/lib/api/contracts";
 import { safeInternalPath } from "@/lib/auth/safe-return";
 import { cn } from "@/lib/utils";
 
+/**
+ * The Google OAuth round trip ends in a full-page redirect back to /login
+ * (Laravel has no JSON response to give at that point), so failures arrive
+ * as a query param instead of a normal API error.
+ */
+const googleErrorMessages: Record<string, string> = {
+  google_failed: "Google sign-in did not complete. Please try again.",
+  google_no_email: "Your Google account does not share an email address, which is required to sign in here.",
+  google_not_configured: "Google sign-in is not available yet.",
+  account_locked: "This account is temporarily locked from too many failed attempts. Try again later.",
+  account_suspended: "This account is suspended. Contact the institution office.",
+};
+
+function useGoogleCallbackError(): NormalizedApiError | null {
+  const searchParams = useSearchParams();
+  const code = searchParams.get("error");
+  if (!code) return null;
+  return { status: 0, code, message: googleErrorMessages[code] || "Google sign-in failed. Please try again.", retryable: true };
+}
+
+function GoogleButton({ label }: { label: string }) {
+  return (
+    <a
+      href="/api/v1/auth/google/redirect"
+      className="flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-slate-300 bg-white text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+    >
+      <svg viewBox="0 0 48 48" className="h-5 w-5" aria-hidden="true">
+        <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z" />
+        <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.5 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.1 29.6 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+        <path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.6C29.6 34.9 27 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.6 5.1C9.6 39.6 16.3 44 24 44z" />
+        <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.6 5.6C41.6 35.9 44 30.4 44 24c0-1.3-.1-2.7-.4-3.5z" />
+      </svg>
+      {label}
+    </a>
+  );
+}
+
+function Divider() {
+  return (
+    <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+      <span className="h-px flex-1 bg-slate-200" />or<span className="h-px flex-1 bg-slate-200" />
+    </div>
+  );
+}
+
 const previewRoles = [
   { label: "Student", path: "/student/dashboard" },
   { label: "Teacher", path: "/teacher/dashboard" },
@@ -77,9 +122,10 @@ function ErrorMessage({ error }: { error: NormalizedApiError | null }) {
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const googleError = useGoogleCallbackError();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<NormalizedApiError | null>(null);
+  const [error, setError] = useState<NormalizedApiError | null>(googleError);
   const [selectedRole, setSelectedRole] = useState(previewRoles[0].path);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -113,6 +159,12 @@ export function LoginForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-7 space-y-5" noValidate>
+      {!mockMode ? (
+        <>
+          <GoogleButton label="Continue with Google" />
+          <Divider />
+        </>
+      ) : null}
       <label className="block text-sm font-semibold text-slate-700">
         Phone number or email
         <span className="relative mt-2 flex items-center">
@@ -211,6 +263,12 @@ export function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-7 grid gap-5 sm:grid-cols-2">
+      {!mockMode ? (
+        <div className="space-y-5 sm:col-span-2">
+          <GoogleButton label="Sign up with Google" />
+          <Divider />
+        </div>
+      ) : null}
       <label className="text-sm font-semibold text-slate-700 sm:col-span-2">Full name<span className="text-red-600"> *</span><span className="relative mt-2 flex"><UserRound className="pointer-events-none absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input name="name" className={cn("h-12 w-full rounded-lg border pl-11 pr-3 font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100", fieldErrors.name ? "border-red-400" : "border-slate-300")} placeholder="Your full name" minLength={2} maxLength={120} autoComplete="name" required /></span><FieldError message={fieldErrors.name} /></label>
       <label className="text-sm font-semibold text-slate-700">Mobile number<span className="text-red-600"> *</span><span className="relative mt-2 flex"><Phone className="pointer-events-none absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input name="mobile" className={cn("h-12 w-full rounded-lg border pl-11 pr-3 font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100", fieldErrors.mobile ? "border-red-400" : "border-slate-300")} placeholder="98XXXXXXXX" pattern="[0-9+\-\s]+" title="Digits only — + and - are allowed." minLength={7} maxLength={20} autoComplete="tel" required /></span>{fieldErrors.mobile ? <FieldError message={fieldErrors.mobile} /> : <p className="mt-1.5 text-xs text-slate-400">Digits only, e.g. 98XXXXXXXX.</p>}</label>
       <label className="text-sm font-semibold text-slate-700">Email<span className="text-red-600"> *</span><span className="relative mt-2 flex"><Mail className="pointer-events-none absolute left-3 top-3.5 h-5 w-5 text-slate-400" /><input name="email" type="email" className={cn("h-12 w-full rounded-lg border pl-11 pr-3 font-normal outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-100", fieldErrors.email ? "border-red-400" : "border-slate-300")} placeholder="name@example.com" autoComplete="email" required /></span>{fieldErrors.email ? <FieldError message={fieldErrors.email} /> : <p className="mt-1.5 text-xs text-slate-400">Used to sign in and to recover your account.</p>}</label>
