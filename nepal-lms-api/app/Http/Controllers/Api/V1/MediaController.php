@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
 use App\Models\Receipt;
@@ -40,16 +41,28 @@ class MediaController extends Controller
     {
         $this->authorize('play', $recording);
 
-        abort_unless(filled($recording->storage_path), 404);
+        if (blank($recording->storage_path)) {
+            throw DomainException::notFound('This recording has no uploaded video file on record.', 'no_recording_file');
+        }
 
-        return $this->stream($recording->storage_disk ?? 'local', $recording->storage_path, $recording->title, 'video/mp4', inline: true);
+        return $this->stream(
+            $recording->storage_disk ?? 'local',
+            $recording->storage_path,
+            $recording->title,
+            'video/mp4',
+            inline: true,
+            missingMessage: 'This recording has a recorded video file, but it could not be found in storage. It may have been moved, deleted, or lost during a server change.',
+            missingCode: 'recording_file_missing',
+        );
     }
 
     public function paymentProof(Request $request, Payment $payment): StreamedResponse
     {
         $this->authorize('viewProof', $payment);
 
-        abort_unless($payment->hasProof(), 404);
+        if (! $payment->hasProof()) {
+            throw DomainException::notFound('No payment evidence was ever recorded for this payment.', 'no_proof_recorded');
+        }
 
         return $this->stream(
             $payment->proof_disk ?? 'local',
@@ -57,6 +70,8 @@ class MediaController extends Controller
             'payment-evidence-'.$payment->getKey(),
             $payment->proof_mime,
             inline: true,
+            missingMessage: 'This payment has a recorded evidence file, but it could not be found in storage. It may have been moved, deleted, or lost during a server change — this is an infrastructure problem, not something the payment record itself is missing.',
+            missingCode: 'proof_file_missing',
         );
     }
 
@@ -64,16 +79,31 @@ class MediaController extends Controller
     {
         $this->authorize('view', $receipt->payment);
 
-        abort_unless(filled($receipt->pdf_path), 404);
+        if (blank($receipt->pdf_path)) {
+            throw DomainException::notFound('No receipt PDF was ever generated for this payment.', 'no_receipt_recorded');
+        }
 
-        return $this->stream('local', $receipt->pdf_path, 'receipt-'.$receipt->number, 'application/pdf', inline: true);
+        return $this->stream(
+            'local',
+            $receipt->pdf_path,
+            'receipt-'.$receipt->number,
+            'application/pdf',
+            inline: true,
+            missingMessage: 'This receipt has a recorded PDF, but it could not be found in storage. It may have been moved, deleted, or lost during a server change.',
+            missingCode: 'receipt_file_missing',
+        );
     }
 
-    protected function stream(string $disk, string $path, string $filename, ?string $mime, bool $inline = false): StreamedResponse
+    protected function stream(string $disk, string $path, string $filename, ?string $mime, bool $inline = false, ?string $missingMessage = null, string $missingCode = 'file_missing'): StreamedResponse
     {
         $storage = Storage::disk($disk);
 
-        abort_unless($storage->exists($path), 404);
+        if (! $storage->exists($path)) {
+            throw DomainException::notFound(
+                $missingMessage ?? 'The stored file could not be found. It may have been moved, deleted, or lost during a server change.',
+                $missingCode,
+            );
+        }
 
         $extension = pathinfo($path, PATHINFO_EXTENSION);
         $name = trim($filename).($extension ? '.'.$extension : '');

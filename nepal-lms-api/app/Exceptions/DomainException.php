@@ -39,6 +39,19 @@ class DomainException extends Exception
         return new self($message, $code, 410);
     }
 
+    /**
+     * Distinct from letting a bare abort(404) fall through: that renders as
+     * the exact same generic "The requested record was not found." for
+     * every 404 in the app (a missing model, a missing file, a route that
+     * plain doesn't exist), which is exactly the ambiguity that made a
+     * payment with no proof on disk indistinguishable from one whose proof
+     * was simply never uploaded.
+     */
+    public static function notFound(string $message, string $code = 'not_found'): self
+    {
+        return new self($message, $code, 404);
+    }
+
     public function code(): string
     {
         return $this->errorCode;
