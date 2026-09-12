@@ -3,12 +3,12 @@ import "server-only";
 import type { ApiResponse, PageMeta, PaginatedResponse } from "@/lib/api/contracts";
 import { pageMetaFrom } from "@/lib/api/contracts";
 import { serverApiFetch } from "@/lib/api/server-client";
-import { mapCourse, mapStaffStudent } from "@/lib/data/adapters";
-import type { ApiCourseDetail, ApiCourseSummary, ApiPaymentQueueItem, ApiStaffEnrollment, ApiStaffStudent } from "@/lib/data/api-dtos";
+import { mapCourse, mapStaffEnrollmentDetail, mapStaffStudent } from "@/lib/data/adapters";
+import type { ApiCourseDetail, ApiCourseSummary, ApiPaymentQueueItem, ApiStaffEnrollment, ApiStaffEnrollmentDetail, ApiStaffStudent } from "@/lib/data/api-dtos";
 import { formatDate, formatDateTime } from "@/lib/data/format";
 import { isMockDataEnabled } from "@/lib/data/config";
 import { activeEnrollments, courses, paymentQueue, staffStudents } from "@/data/mock";
-import type { Enrollment, PaymentQueueItem, StaffCourse, StaffEnrollment, StaffStudent } from "@/types/lms";
+import type { Enrollment, PaymentQueueItem, StaffCourse, StaffEnrollment, StaffEnrollmentDetail, StaffStudent } from "@/types/lms";
 
 function mapPaymentQueue(value: ApiPaymentQueueItem): PaymentQueueItem {
   return {
@@ -193,6 +193,46 @@ export async function getStaffEnrollmentsPage(params: { page?: number; status?: 
   if (params.status) query.set("status", params.status);
   const response = await serverApiFetch<PaginatedResponse<ApiStaffEnrollment>>(`/api/v1/staff/enrollments?${query.toString()}`);
   return { items: response.data.map(mapStaffEnrollment), meta: pageMetaFrom(response.meta) };
+}
+
+export async function getStaffEnrollment(enrollmentId: string): Promise<StaffEnrollmentDetail | null> {
+  if (isMockDataEnabled()) {
+    const summary = mockStaffEnrollments().find((item) => item.id === enrollmentId);
+    if (!summary) return null;
+    const student = staffStudents.find((item) => item.name === summary.student);
+    return {
+      id: summary.id,
+      studentId: student?.id ?? null,
+      studentName: summary.student,
+      studentCode: student?.id ?? null,
+      studentMobile: student?.phone ?? null,
+      studentEmail: null,
+      courseId: null,
+      courseTitle: summary.course,
+      batchId: null,
+      batchTitle: summary.batch,
+      status: summary.status,
+      source: "self",
+      accessStartAt: null,
+      accessEndAt: summary.accessUntil,
+      activatedAt: null,
+      cancelledAt: null,
+      cancellationReason: null,
+      hasPayment: true,
+      attendancePercent: 0,
+      recordingPercent: 0,
+      testPercent: 0,
+      overallPercent: 0,
+      createdAt: null,
+    };
+  }
+  try {
+    const response = await serverApiFetch<ApiResponse<ApiStaffEnrollmentDetail>>(`/api/v1/staff/enrollments/${encodeURIComponent(enrollmentId)}`);
+    return mapStaffEnrollmentDetail(response.data);
+  } catch (error) {
+    if (typeof error === "object" && error && "status" in error && Number(error.status) === 404) return null;
+    throw error;
+  }
 }
 
 export async function getStaffCourses(): Promise<StaffCourse[]> {

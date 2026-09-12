@@ -259,3 +259,29 @@ export type ApiStaffEnrollment = {
   access_end_at: string;
   status: string;
 };
+
+export type ApiStaffEnrollmentDetail = {
+  id: string;
+  student_id: string | null;
+  student_name: string;
+  student_code: string | null;
+  student_mobile: string | null;
+  student_email: string | null;
+  course_id: string | null;
+  course_title: string;
+  batch_id: string | null;
+  batch_title: string;
+  status: string;
+  source: string;
+  access_start_at: string | null;
+  access_end_at: string | null;
+  activated_at: string | null;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
+  has_payment: boolean;
+  attendance_percent: number;
+  recording_percent: number;
+  test_percent: number;
+  overall_percent: number;
+  created_at: string | null;
+};

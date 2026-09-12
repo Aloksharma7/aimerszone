@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { GraduationCap, Plus, Search } from "lucide-react";
 import { ApiExportLink } from "@/components/api-actions";
 import { ListFilters } from "@/components/list-filters";
@@ -37,7 +38,19 @@ export default async function StaffEnrollmentsPage({ searchParams }: { searchPar
           resetHref={enrollmentsBase}
           fields={[{ name: "status", label: "Enrollment status", value: status, options: [{ value: "", label: "All statuses" }, { value: "Active", label: "Active" }, { value: "Pending", label: "Pending" }, { value: "Paused", label: "Paused" }, { value: "Expired", label: "Expired" }] }]}
         />
-        <div className="mt-5"><DataTable rowKey="id" rows={items.map((item) => ({ ...item, access: item.accessUntil })) as unknown as Record<string, unknown>[]} columns={[{ key: "id", label: "Enrollment" }, { key: "student", label: "Student" }, { key: "course", label: "Course" }, { key: "batch", label: "Batch" }, { key: "access", label: "Access until" }, { key: "status", label: "Status", render: (row) => <StatusBadge status={String(row.status)} /> }]} /></div>
+        <div className="mt-5">
+          <DataTable
+            rowKey="id"
+            rows={items.map((item) => ({ ...item, access: item.accessUntil })) as unknown as Record<string, unknown>[]}
+            columns={[
+              { key: "student", label: "Student", render: (row) => <Link href={`${enrollmentsBase}/${encodeURIComponent(String(row.id))}`} className="font-bold text-brand-700 hover:text-brand-900">{String(row.student)}</Link> },
+              { key: "course", label: "Course" },
+              { key: "batch", label: "Batch" },
+              { key: "access", label: "Access until" },
+              { key: "status", label: "Status", render: (row) => <StatusBadge status={String(row.status)} /> },
+            ]}
+          />
+        </div>
         <Pagination meta={meta} buildHref={(target) => `${enrollmentsBase}${buildQueryString({ q, status, page: String(target) })}`} />
       </Panel>
     </>

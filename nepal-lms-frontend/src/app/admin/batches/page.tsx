@@ -49,7 +49,7 @@ export default async function AdminBatchesPage({ searchParams }: { searchParams:
             rowKey="id"
             rows={rows as unknown as Record<string, unknown>[]}
             columns={[
-              { key: "name", label: "Batch", render: (row) => <div><span className={archivedView ? "font-bold text-slate-700" : ""}>{archivedView ? String(row.name) : <Link href={`/admin/batches/${String(row.id)}`} className="font-bold text-brand-700 hover:text-brand-900">{String(row.name)}</Link>}</span><p className="mt-1 text-xs text-slate-500">{String(row.course)}</p></div> },
+              { key: "name", label: "Batch", render: (row) => <div className="min-w-0"><span className={archivedView ? "block truncate font-bold text-slate-700" : "block truncate"} title={String(row.name)}>{archivedView ? String(row.name) : <Link href={`/admin/batches/${String(row.id)}`} className="font-bold text-brand-700 hover:text-brand-900">{String(row.name)}</Link>}</span><p className="mt-1 truncate text-xs text-slate-500" title={String(row.course)}>{String(row.course)}</p></div> },
               { key: "teacher", label: "Teacher" },
               { key: "schedule", label: "Schedule" },
               { key: "capacityUse", label: "Capacity", render: (row) => <div className="min-w-28"><p className="mb-2 text-xs font-semibold text-slate-700">{String(row.capacityUse)}</p><ProgressBar value={Number(row.capacityPercent)} showValue={false} compact /></div> },

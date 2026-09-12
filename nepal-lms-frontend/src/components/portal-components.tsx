@@ -221,8 +221,41 @@ export function DataTable({
         </div>
       ) : (
         <>
-          <div className="soft-scrollbar overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+          {/*
+           * Below sm, a wide table forced a horizontal scroll that cut most
+           * columns off-screen with no visible hint they were there. Every
+           * row instead becomes a card: the first column (almost always the
+           * name/title, usually a link) as the heading, every other column
+           * as a label/value line beneath it — nothing is hidden, nothing
+           * needs to scroll sideways.
+           */}
+          <div className="divide-y divide-slate-100 sm:hidden">
+            {rows.map((row) => {
+              const attention = needsAttention?.(row) ?? false;
+              const [primary, ...rest] = columns;
+              return (
+                <div key={String(row[rowKey])} className={cn("p-4", attention && "bg-amber-50/70")}>
+                  <div className="flex items-start gap-2 font-semibold text-slate-900">
+                    {attention ? <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden="true" title="Needs a decision" /> : null}
+                    <div className="min-w-0 flex-1">{primary.render ? primary.render(row) : String(row[primary.key] ?? "—")}</div>
+                  </div>
+                  <dl className="mt-2 space-y-1.5">
+                    {rest.map((column) => (
+                      <div key={column.key} className="flex items-start justify-between gap-3 text-sm">
+                        <dt className="shrink-0 text-slate-500">{column.label}</dt>
+                        <dd className="min-w-0 truncate text-right text-slate-700">{column.render ? column.render(row) : String(row[column.key] ?? "—")}</dd>
+                      </div>
+                    ))}
+                    {showActions && typeof row.href === "string" && row.href.startsWith("/") ? (
+                      <div className="pt-1"><ButtonLink href={row.href} variant="outline" size="sm" className="w-full">Open</ButtonLink></div>
+                    ) : null}
+                  </dl>
+                </div>
+              );
+            })}
+          </div>
+          <div className="soft-scrollbar hidden overflow-x-auto sm:block">
+            <table className="w-full min-w-190 border-collapse text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wider text-slate-500">
                 <tr>
                   {columns.map((column) => <th key={column.key} className="border-b border-slate-200 px-4 py-3 font-bold">{column.label}</th>)}
@@ -235,9 +268,15 @@ export function DataTable({
                   return (
                     <tr key={String(row[rowKey])} className={attention ? "bg-amber-50/70 hover:bg-amber-50" : "hover:bg-slate-50/70"}>
                       {columns.map((column, index) => (
-                        <td key={column.key} className="px-4 py-3.5 align-middle text-slate-700">
+                        <td key={column.key} className="max-w-70 px-4 py-3.5 align-middle text-slate-700">
                           {index === 0 && attention ? <span className="mr-2 inline-block h-2 w-2 shrink-0 rounded-full bg-amber-500" aria-hidden="true" title="Needs a decision" /> : null}
-                          {column.render ? column.render(row) : String(row[column.key] ?? "—")}
+                          {column.render ? (
+                            column.render(row)
+                          ) : (
+                            <span className="block truncate" title={String(row[column.key] ?? "")}>
+                              {String(row[column.key] ?? "—")}
+                            </span>
+                          )}
                         </td>
                       ))}
                       {showActions ? <td className="px-4 py-3.5 text-right">{typeof row.href === "string" && row.href.startsWith("/") ? <ButtonLink href={row.href} variant="outline" size="sm">Open</ButtonLink> : null}</td> : null}

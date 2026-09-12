@@ -335,6 +335,32 @@ export type StaffEnrollment = {
   status: string;
 };
 
+export type StaffEnrollmentDetail = {
+  id: string;
+  studentId: string | null;
+  studentName: string;
+  studentCode: string | null;
+  studentMobile: string | null;
+  studentEmail: string | null;
+  courseId: string | null;
+  courseTitle: string;
+  batchId: string | null;
+  batchTitle: string;
+  status: string;
+  source: string;
+  accessStartAt: string | null;
+  accessEndAt: string | null;
+  activatedAt: string | null;
+  cancelledAt: string | null;
+  cancellationReason: string | null;
+  hasPayment: boolean;
+  attendancePercent: number;
+  recordingPercent: number;
+  testPercent: number;
+  overallPercent: number;
+  createdAt: string | null;
+};
+
 export type PaymentQueueItem = {
   id: string;
   student: string;

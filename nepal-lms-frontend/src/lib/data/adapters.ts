@@ -7,6 +7,7 @@ import type {
   Payment,
   Recording,
   Resource,
+  StaffEnrollmentDetail,
   StaffStudent,
   StudentNotification,
   StudentTest,
@@ -23,6 +24,7 @@ import type {
   ApiPayment,
   ApiRecording,
   ApiResource,
+  ApiStaffEnrollmentDetail,
   ApiStaffStudent,
   ApiSyllabusModule,
   ApiTeacher,
@@ -347,5 +349,33 @@ export function mapStaffStudent(value: ApiStaffStudent): StaffStudent {
     course: value.current_course_title || "No active course",
     status: value.status === "active" ? "Active" : value.status === "suspended" ? "Suspended" : "Pending",
     joined: formatDate(value.joined_at),
+  };
+}
+
+export function mapStaffEnrollmentDetail(value: ApiStaffEnrollmentDetail): StaffEnrollmentDetail {
+  return {
+    id: value.id,
+    studentId: value.student_id,
+    studentName: value.student_name,
+    studentCode: value.student_code,
+    studentMobile: value.student_mobile,
+    studentEmail: value.student_email,
+    courseId: value.course_id,
+    courseTitle: value.course_title,
+    batchId: value.batch_id,
+    batchTitle: value.batch_title,
+    status: value.status.replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase()),
+    source: value.source,
+    accessStartAt: value.access_start_at ? formatDate(value.access_start_at) : null,
+    accessEndAt: value.access_end_at ? formatDate(value.access_end_at) : null,
+    activatedAt: value.activated_at ? formatDate(value.activated_at) : null,
+    cancelledAt: value.cancelled_at ? formatDate(value.cancelled_at) : null,
+    cancellationReason: value.cancellation_reason,
+    hasPayment: value.has_payment,
+    attendancePercent: value.attendance_percent,
+    recordingPercent: value.recording_percent,
+    testPercent: value.test_percent,
+    overallPercent: value.overall_percent,
+    createdAt: value.created_at ? formatDate(value.created_at) : null,
   };
 }
