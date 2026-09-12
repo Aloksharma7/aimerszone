@@ -733,6 +733,29 @@ export async function getAdminIntegrationRows(provider: "zoom" | "youtube"): Pro
   return response.data.map(mapYoutubeRow);
 }
 
+export type IntegrationEventRow = { id: string; action: string; reference: string | null; status: string; message: string | null; occurredAt: string };
+
+type ApiIntegrationEvent = { id: string; action: string; reference: string | null; status: string; message: string | null; occurred_at: string };
+
+/**
+ * The dashboard's "N Zoom sync warnings" card only ever showed a count —
+ * there was nowhere to see *why* any of them failed. This endpoint
+ * (IntegrationController::events()) already recorded a real message per
+ * attempt; it just had no frontend caller.
+ */
+export async function getAdminIntegrationEvents(provider: "zoom" | "youtube"): Promise<IntegrationEventRow[]> {
+  if (isMockDataEnabled()) {
+    return provider === "zoom"
+      ? [
+          { id: "evt-1", action: "meeting.create", reference: "Elasticity of Demand — Numerical Practice", status: "failed", message: "Zoom rejected the configured credentials.", occurredAt: formatDateTime(new Date().toISOString()) },
+          { id: "evt-2", action: "meeting.create", reference: "Simple and Compound Interest", status: "success", message: null, occurredAt: formatDateTime(new Date(Date.now() - 3600_000).toISOString()) },
+        ]
+      : [];
+  }
+  const response = await serverApiFetch<PaginatedResponse<ApiIntegrationEvent>>(`/api/v1/admin/integrations/${provider}/events?per_page=50`);
+  return response.data.map((event) => ({ id: event.id, action: event.action, reference: event.reference, status: event.status, message: event.message, occurredAt: formatDateTime(event.occurred_at) }));
+}
+
 
 export async function getAdminSettings(): Promise<AdminSettingsData> {
   if (isMockDataEnabled()) return {
