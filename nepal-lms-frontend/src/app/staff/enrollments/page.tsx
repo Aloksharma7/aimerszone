@@ -41,7 +41,8 @@ export default async function StaffEnrollmentsPage({ searchParams }: { searchPar
         <div className="mt-5">
           <DataTable
             rowKey="id"
-            rows={items.map((item) => ({ ...item, access: item.accessUntil })) as unknown as Record<string, unknown>[]}
+            actions
+            rows={items.map((item) => ({ ...item, access: item.accessUntil, href: `${enrollmentsBase}/${encodeURIComponent(item.id)}` })) as unknown as Record<string, unknown>[]}
             columns={[
               { key: "student", label: "Student", render: (row) => <Link href={`${enrollmentsBase}/${encodeURIComponent(String(row.id))}`} className="font-bold text-brand-700 hover:text-brand-900">{String(row.student)}</Link> },
               { key: "course", label: "Course" },
