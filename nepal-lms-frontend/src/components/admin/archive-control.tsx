@@ -79,7 +79,7 @@ export function ArchiveControl({
           <p className="mt-1 text-sm leading-6 text-slate-600">
             {kind === "user"
               ? "The account is suspended and hidden from every list. Payment history, receipts and audit entries are kept intact — removing them would break the record of what was paid and by whom."
-              : "It disappears from the catalogue and from every list, and no new enrolment can reference it. Existing payment records, receipts and attendance history are kept intact."}
+              : `It disappears from the catalogue and from every list, and no new enrolment can reference it. Existing payment records, receipts and attendance history are kept intact. Find it again under the "Archived" filter, where it can be restored — or, once it has no history at all, deleted for good.`}
           </p>
 
           {error ? (

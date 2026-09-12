@@ -76,7 +76,12 @@ export function BatchEditor({ mode = "new", courses, teachers, batch }: { mode?:
     accessUntil: batch?.accessUntil || "",
     priceNpr: batch?.priceNpr ?? 0,
     capacity: batch?.capacity || 60,
-    status: batch?.status?.toLowerCase() || "draft",
+    // New batches default to Open rather than Draft: a Draft batch silently
+    // refuses every enrollment attempt ("batch_closed"), which is exactly
+    // the error a staff member hit trying to enrol a student into a batch
+    // they had just created. Draft stays available in the dropdown below
+    // for batches genuinely still being set up.
+    status: batch?.status?.toLowerCase() || "open",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [notice, setNotice] = useState<{ tone: "success" | "danger"; title: string; message: string } | null>(null);

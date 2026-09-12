@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BookOpen, Plus } from "lucide-react";
 import { ApiExportLink } from "@/components/api-actions";
+import { ArchivedRowActions } from "@/components/admin/archived-row-actions";
 import { ListFilters } from "@/components/list-filters";
 import { Pagination } from "@/components/pagination";
 import { DataTable } from "@/components/portal-components";
@@ -15,6 +16,7 @@ export default async function AdminCoursesPage({ searchParams }: { searchParams:
   const category = firstParam(raw.category);
   const status = firstParam(raw.status);
   const page = pageParam(raw);
+  const archivedView = status === "archived";
   const [courses, { items: pageCourses, meta }] = await Promise.all([
     getAdminCourses(),
     getAdminCoursesPage({ page, q, status }),
@@ -43,10 +45,30 @@ export default async function AdminCoursesPage({ searchParams }: { searchParams:
           resetHref="/admin/courses"
           fields={[
             { name: "category", label: "Course category", value: category, options: [{ value: "", label: "All categories" }, ...categories.map((item) => ({ value: item, label: item }))] },
-            { name: "status", label: "Publication status", value: status, options: [{ value: "", label: "All statuses" }, { value: "Published", label: "Published" }, { value: "Draft", label: "Draft" }] },
+            { name: "status", label: "Publication status", value: status, options: [{ value: "", label: "All statuses" }, { value: "Published", label: "Published" }, { value: "Draft", label: "Draft" }, { value: "archived", label: "Archived" }] },
           ]}
         />
-        <div className="mt-5"><DataTable rowKey="id" rows={rows as unknown as Record<string, unknown>[]} columns={[{ key: "code", label: "Code" }, { key: "title", label: "Course", render: (row) => <Link href={`/admin/courses/${String(row.id)}`} className="font-bold text-brand-700 hover:text-brand-900">{String(row.title)}</Link> }, { key: "category", label: "Category" }, { key: "batches", label: "Batches" }, { key: "price", label: "Default price" }, { key: "status", label: "Status", render: (row) => <StatusBadge status={String(row.status)} /> }]} /></div>
+        {archivedView ? (
+          <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            Archived courses are hidden from the catalogue and every other list. Restore one to bring it back, or delete it for good once it has no enrolment or batch history.
+          </p>
+        ) : null}
+        <div className="mt-5">
+          <DataTable
+            rowKey="id"
+            rows={rows as unknown as Record<string, unknown>[]}
+            columns={[
+              { key: "code", label: "Code" },
+              { key: "title", label: "Course", render: (row) => archivedView ? <span className="font-bold text-slate-700">{String(row.title)}</span> : <Link href={`/admin/courses/${String(row.id)}`} className="font-bold text-brand-700 hover:text-brand-900">{String(row.title)}</Link> },
+              { key: "category", label: "Category" },
+              { key: "batches", label: "Batches" },
+              { key: "price", label: "Default price" },
+              ...(archivedView
+                ? [{ key: "actions", label: "", render: (row: Record<string, unknown>) => <ArchivedRowActions kind="course" id={String(row.id)} name={String(row.title)} /> }]
+                : [{ key: "status", label: "Status", render: (row: Record<string, unknown>) => <StatusBadge status={String(row.status)} /> }]),
+            ]}
+          />
+        </div>
         <Pagination meta={meta} buildHref={(target) => `/admin/courses${buildQueryString({ q, category, status, page: String(target) })}`} />
       </Panel>
     </>

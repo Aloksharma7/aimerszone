@@ -110,14 +110,19 @@ const navByRole: Record<PortalRole, NavItem[]> = {
   get accounting() {
     return navByRole.staff;
   },
+  /*
+   * Ordered by how often an administrator actually opens each screen day to
+   * day, most to least — day-to-day operations (students, batches,
+   * enrolments, money, live classes) first, catalogue/content upkeep next,
+   * and rarely-touched system configuration last. Previously this was
+   * roughly alphabetical-by-topic, which buried Students and Batches under
+   * Categories and FAQs.
+   */
   admin: [
     { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-    { label: "Courses", href: "/admin/courses", icon: BookOpen, permission: "courses.view" },
-    { label: "Categories", href: "/admin/categories", icon: FolderTree, permission: "courses.view" },
-    { label: "FAQs", href: "/admin/faqs", icon: CircleHelp, permission: "faqs.manage" },
+    { label: "Students", href: "/admin/students", icon: Users, permission: "students.view" },
     { label: "Batches", href: "/admin/batches", icon: CalendarDays, permission: "batches.view" },
-    { label: "Users & Roles", href: "/admin/users", icon: Users, permission: "users.view" },
-    { label: "Finance Oversight", href: "/admin/finance", icon: WalletCards, permission: "payments.view" },
+    { label: "Enrollments", href: "/admin/enrollments", icon: GraduationCap, permission: "enrollments.view" },
 
     /*
      * Payment review and enrolment, under /admin.
@@ -128,10 +133,7 @@ const navByRole: Record<PortalRole, NavItem[]> = {
      * administrators every role gate, so hiding these enforced nothing.
      */
     { label: "Payment Review", href: "/admin/payments", icon: CreditCard, permission: "payments.view" },
-    { label: "Enrollments", href: "/admin/enrollments", icon: GraduationCap, permission: "enrollments.view" },
-    { label: "Announcements", href: "/admin/announcements", icon: MessageSquare, permission: "announcements.manage" },
-    { label: "Reports", href: "/admin/reports/academic", icon: FileBarChart, permission: "reports.view" },
-    { label: "Platform", href: "/admin/platform", icon: SlidersHorizontal, permission: "settings.manage" },
+    { label: "Finance Oversight", href: "/admin/finance", icon: WalletCards, permission: "payments.view" },
     /*
      * Oversight screens, served under /admin so an administrator never leaves
      * their own portal. These used to point at /teacher/... and /staff/...,
@@ -139,9 +141,15 @@ const navByRole: Record<PortalRole, NavItem[]> = {
      */
     { label: "Classes", href: "/admin/classes", icon: Video, permission: "sessions.view" },
     { label: "Attendance", href: "/admin/attendance", icon: ClipboardCheck, permission: "attendance.view" },
+    { label: "Announcements", href: "/admin/announcements", icon: MessageSquare, permission: "announcements.manage" },
+    { label: "Courses", href: "/admin/courses", icon: BookOpen, permission: "courses.view" },
     { label: "Content & PDFs", href: "/admin/content", icon: FileText },
-    { label: "Students", href: "/admin/students", icon: Users, permission: "students.view" },
+    { label: "Reports", href: "/admin/reports/academic", icon: FileBarChart, permission: "reports.view" },
     { label: "Support Inbox", href: "/admin/support", icon: Headphones, permission: "support.view" },
+    { label: "Categories", href: "/admin/categories", icon: FolderTree, permission: "courses.view" },
+    { label: "Users & Roles", href: "/admin/users", icon: Users, permission: "users.view" },
+    { label: "FAQs", href: "/admin/faqs", icon: CircleHelp, permission: "faqs.manage" },
+    { label: "Platform", href: "/admin/platform", icon: SlidersHorizontal, permission: "settings.manage" },
     { label: "Integrations", href: "/admin/integrations", icon: ShieldCheck, permission: "settings.manage" },
     { label: "Settings & Audit", href: "/admin/settings", icon: Settings, permission: "settings.manage" },
     { label: "Roles & Permissions", href: "/admin/roles", icon: ShieldCheck, permission: "roles.manage" },
