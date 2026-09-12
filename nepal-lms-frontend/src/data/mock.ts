@@ -202,6 +202,9 @@ export type Teacher = {
   bio: string;
   initials: string;
   accent: string;
+  avatarUrl: string | null;
+  isPublic: boolean;
+  sortOrder: number;
 };
 
 export const teachers: Teacher[] = [
@@ -214,6 +217,9 @@ export const teachers: Teacher[] = [
     bio: "Known for clear explanations, worked numerical examples and structured exam preparation.",
     initials: "AS",
     accent: "from-blue-600 to-blue-800",
+    avatarUrl: null,
+    isPublic: true,
+    sortOrder: 0,
   },
   {
     slug: "maya-gurung",
@@ -224,6 +230,9 @@ export const teachers: Teacher[] = [
     bio: "Helps students build strong chemistry fundamentals and exam confidence through guided practice.",
     initials: "MG",
     accent: "from-amber-500 to-orange-700",
+    avatarUrl: null,
+    isPublic: true,
+    sortOrder: 0,
   },
   {
     slug: "nischal-karki",
@@ -234,6 +243,9 @@ export const teachers: Teacher[] = [
     bio: "Focuses on speed, accuracy and practical problem-solving techniques for physics in competitive examinations.",
     initials: "NK",
     accent: "from-teal-500 to-emerald-800",
+    avatarUrl: null,
+    isPublic: true,
+    sortOrder: 0,
   },
   {
     slug: "srijana-adhikari",
@@ -244,6 +256,9 @@ export const teachers: Teacher[] = [
     bio: "Uses step-by-step demonstrations and frequent practice to strengthen chemistry fundamentals.",
     initials: "SA",
     accent: "from-violet-500 to-indigo-800",
+    avatarUrl: null,
+    isPublic: true,
+    sortOrder: 0,
   },
 ];
 

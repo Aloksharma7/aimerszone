@@ -122,6 +122,9 @@ export type Teacher = {
   bio: string;
   initials: string;
   accent: string;
+  avatarUrl: string | null;
+  isPublic: boolean;
+  sortOrder: number;
 };
 
 export type Faq = { question: string; answer: string };

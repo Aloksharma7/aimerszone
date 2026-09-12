@@ -350,6 +350,12 @@ export async function getAdminTeachers(): Promise<Teacher[]> {
   return response.data.map(mapTeacher);
 }
 
+/** There is no single-teacher GET — the directory list already carries everything the edit form needs. */
+export async function getAdminTeacher(userId: string): Promise<Teacher | null> {
+  const all = await getAdminTeachers();
+  return all.find((teacher) => (teacher.userId || teacher.slug) === userId) ?? null;
+}
+
 export type AdminCategory = {
   id: string;
   name: string;

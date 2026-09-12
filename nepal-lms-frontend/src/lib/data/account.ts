@@ -83,17 +83,17 @@ function mapProfile(value: ApiAccountProfile): AccountProfileData {
   };
 }
 
-function mockProfile(user: SessionUser, role: "student" | "teacher"): AccountProfileData {
+function mockProfile(user: SessionUser, role: "student" | "teacher" | "staff" | "admin"): AccountProfileData {
   return {
     id: user.id,
     name: user.name,
     email: user.email || "",
     mobile: user.mobile || "",
-    identityCode: role === "student" ? user.studentCode : "TCH-2083-0042",
+    identityCode: role === "student" ? user.studentCode : role === "teacher" ? "TCH-2083-0042" : null,
     avatarUrl: user.avatarUrl,
     locale: "en",
     twoFactorEnabled: false,
-    twoFactorRequired: role === "teacher",
+    twoFactorRequired: role !== "student",
     sessions: [
       {
         id: "current-session",
@@ -117,7 +117,7 @@ function mockProfile(user: SessionUser, role: "student" | "teacher"): AccountPro
   };
 }
 
-export async function getAccountProfile(user: SessionUser, role: "student" | "teacher"): Promise<AccountProfileData> {
+export async function getAccountProfile(user: SessionUser, role: "student" | "teacher" | "staff" | "admin"): Promise<AccountProfileData> {
   if (isMockDataEnabled()) return mockProfile(user, role);
   const response = await serverApiFetch<ApiResponse<ApiAccountProfile>>("/api/v1/account/profile");
   return mapProfile(response.data);

@@ -10,6 +10,7 @@ import {
   CheckSquare,
   ChevronDown,
   CircleHelp,
+  Contact,
   ClipboardCheck,
   CreditCard,
   FileBarChart,
@@ -106,6 +107,7 @@ const navByRole: Record<PortalRole, NavItem[]> = {
     { label: "Receipts", href: "/staff/receipts", icon: ReceiptText, permission: "payments.view" },
     { label: "Adjustments", href: "/staff/adjustments", icon: CreditCard, permission: "payments.adjust" },
     { label: "Refunds", href: "/staff/refunds", icon: RotateCcw, permission: "payments.refund" },
+    { label: "Profile & Security", href: "/staff/profile", icon: UserRound },
   ],
   get accounting() {
     return navByRole.staff;
@@ -147,12 +149,14 @@ const navByRole: Record<PortalRole, NavItem[]> = {
     { label: "Reports", href: "/admin/reports/academic", icon: FileBarChart, permission: "reports.view" },
     { label: "Support Inbox", href: "/admin/support", icon: Headphones, permission: "support.view" },
     { label: "Categories", href: "/admin/categories", icon: FolderTree, permission: "courses.view" },
+    { label: "Teachers", href: "/admin/teachers", icon: Contact, permission: "users.view" },
     { label: "Users & Roles", href: "/admin/users", icon: Users, permission: "users.view" },
     { label: "FAQs", href: "/admin/faqs", icon: CircleHelp, permission: "faqs.manage" },
     { label: "Platform", href: "/admin/platform", icon: SlidersHorizontal, permission: "settings.manage" },
     { label: "Integrations", href: "/admin/integrations", icon: ShieldCheck, permission: "settings.manage" },
     { label: "Settings & Audit", href: "/admin/settings", icon: Settings, permission: "settings.manage" },
     { label: "Roles & Permissions", href: "/admin/roles", icon: ShieldCheck, permission: "roles.manage" },
+    { label: "Profile & Security", href: "/admin/profile", icon: UserRound },
   ],
 };
 

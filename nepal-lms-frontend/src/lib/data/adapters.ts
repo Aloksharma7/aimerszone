@@ -147,6 +147,9 @@ export function mapTeacher(value: ApiTeacher): Teacher {
     bio: value.bio || "Faculty profile details will be available soon.",
     initials,
     accent: "from-blue-600 to-blue-800",
+    avatarUrl: value.avatar_url || null,
+    isPublic: value.is_public ?? true,
+    sortOrder: value.sort_order ?? 0,
   };
 }
 

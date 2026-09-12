@@ -1,12 +1,13 @@
 "use client";
 
-import { KeyRound, Laptop, LoaderCircle, LockKeyhole, LogOut, ShieldCheck, Smartphone, UserRound } from "lucide-react";
+import { ImageUp, KeyRound, Laptop, LoaderCircle, LockKeyhole, LogOut, ShieldCheck, Smartphone, Trash2, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AlertBox, Button, Panel, labelledFieldClass } from "@/components/ui";
 import { browserRequest, createIdempotencyKey, normalizeApiError } from "@/lib/api/browser-client";
 import type { ApiResponse } from "@/lib/api/contracts";
 import { safeInternalPath } from "@/lib/auth/safe-return";
 import type { AccountProfileData } from "@/lib/data/account";
+import { cn } from "@/lib/utils";
 
 type Notice = { tone: "success" | "danger" | "info"; title: string; message: string } | null;
 const mockMode = process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true";
@@ -26,22 +27,68 @@ function errorMessage(error: unknown): string {
   return normalizeApiError(error).message || "The request could not be completed.";
 }
 
+type Role = "student" | "teacher" | "staff" | "admin";
+
+const identityLabels: Record<Role, string> = { student: "Student ID", teacher: "Teacher ID", staff: "Staff ID", admin: "Admin ID" };
+const roleLabels: Record<Role, string> = { student: "Student", teacher: "Teacher", staff: "Staff", admin: "Admin" };
+
 export function AccountProfileManager({
   initialData,
   role,
 }: {
   initialData: AccountProfileData;
-  role: "student" | "teacher";
+  role: Role;
 }) {
   const [profile, setProfile] = useState(initialData);
   const [profileBusy, setProfileBusy] = useState(false);
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [securityBusy, setSecurityBusy] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
   const [notice, setNotice] = useState<Notice>(null);
   const [sessions, setSessions] = useState(initialData.sessions);
-  const identityLabel = role === "student" ? "Student ID" : "Teacher ID";
-  const roleLabel = role === "student" ? "Student" : "Teacher";
+  const identityLabel = identityLabels[role];
+  const roleLabel = roleLabels[role];
   const nonCurrentSessions = useMemo(() => sessions.filter((session) => !session.current), [sessions]);
+
+  async function uploadAvatar(file: File) {
+    setAvatarBusy(true);
+    setNotice(null);
+    try {
+      if (mockMode) {
+        setProfile((value) => ({ ...value, avatarUrl: URL.createObjectURL(file) }));
+        setNotice({ tone: "success", title: "Preview validated", message: "Preview mode does not save the upload." });
+        return;
+      }
+      const data = new FormData();
+      data.append("avatar", file);
+      const response = await browserRequest<ApiResponse<{ avatar_url: string }>>({
+        url: "/api/v1/account/avatar",
+        method: "POST",
+        data,
+        headers: { "Idempotency-Key": createIdempotencyKey("account-avatar") },
+      });
+      setProfile((value) => ({ ...value, avatarUrl: response.data.avatar_url }));
+      setNotice({ tone: "success", title: "Photo updated", message: "Your profile photo was saved." });
+    } catch (error) {
+      setNotice({ tone: "danger", title: "Photo not uploaded", message: errorMessage(error) });
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
+
+  async function removeAvatar() {
+    setAvatarBusy(true);
+    setNotice(null);
+    try {
+      if (!mockMode) await browserRequest({ url: "/api/v1/account/avatar", method: "DELETE" });
+      setProfile((value) => ({ ...value, avatarUrl: null }));
+      setNotice({ tone: "success", title: mockMode ? "Preview validated" : "Photo removed", message: mockMode ? "Preview mode does not save the change." : "Your profile photo was removed." });
+    } catch (error) {
+      setNotice({ tone: "danger", title: "Photo not removed", message: errorMessage(error) });
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
 
   async function saveProfile(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -163,9 +210,26 @@ export function AccountProfileManager({
       <div className="space-y-6">
         <Result value={notice} />
         <Panel>
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-100 text-lg font-bold text-brand-900">{initials(profile.name)}</div>
-            <div><h2 className="text-xl font-bold text-slate-950">{profile.name}</h2><p className="mt-1 text-sm text-slate-500">{identityLabel} {profile.identityCode || "Not assigned"}</p></div>
+          <div className="flex flex-wrap items-center gap-4">
+            {profile.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- user-uploaded asset, not a Next-optimized asset
+              <img src={profile.avatarUrl} alt="" className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
+            ) : (
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-lg font-bold text-brand-900">{initials(profile.name)}</div>
+            )}
+            <div className="min-w-0 flex-1"><h2 className="text-xl font-bold text-slate-950">{profile.name}</h2><p className="mt-1 text-sm text-slate-500">{identityLabel} {profile.identityCode || "Not assigned"}</p></div>
+            <div className="flex flex-wrap gap-2">
+              <label className={cn("inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50", avatarBusy && "pointer-events-none opacity-50")}>
+                {avatarBusy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : <ImageUp className="h-3.5 w-3.5" />}
+                {profile.avatarUrl ? "Replace photo" : "Upload photo"}
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" disabled={avatarBusy} onChange={(event) => { const file = event.target.files?.[0]; if (file) void uploadAvatar(file); event.target.value = ""; }} />
+              </label>
+              {profile.avatarUrl ? (
+                <button type="button" onClick={() => void removeAvatar()} disabled={avatarBusy} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-red-200 px-3 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-50">
+                  <Trash2 className="h-3.5 w-3.5" />Remove
+                </button>
+              ) : null}
+            </div>
           </div>
           <form onSubmit={saveProfile} className="mt-7 grid gap-5 sm:grid-cols-2" noValidate>
             <label className="text-sm font-semibold text-slate-700">Full name<input name="name" defaultValue={profile.name} minLength={2} maxLength={120} autoComplete="name" required className={inputClass} /></label>

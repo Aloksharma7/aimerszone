@@ -227,6 +227,8 @@ export type ApiTeacher = {
   experience_summary?: string | null;
   bio?: string | null;
   avatar_url?: string | null;
+  is_public?: boolean;
+  sort_order?: number;
 };
 
 export type ApiFaq = {
