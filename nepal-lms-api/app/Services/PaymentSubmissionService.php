@@ -10,6 +10,7 @@ use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use League\Flysystem\FilesystemException;
 
 /**
  * Accepts payment evidence from a student or from staff acting on their behalf.
@@ -149,10 +150,24 @@ class PaymentSubmissionService
     {
         $hash = hash_file('sha256', $proof->getRealPath());
 
-        $path = $proof->store(
-            'payment-proof/'.$student->getKey().'/'.now()->format('Y/m'),
-            ['disk' => 'local'],
-        );
+        // Flysystem throws on a storage failure (e.g. the target directory
+        // cannot be created — a server permissions problem) rather than
+        // returning false; left uncaught, that crashed as a bare 500 with no
+        // indication of what actually went wrong, for either the student or
+        // whoever read the log afterward.
+        try {
+            $path = $proof->store(
+                'payment-proof/'.$student->getKey().'/'.now()->format('Y/m'),
+                ['disk' => 'local'],
+            );
+        } catch (FilesystemException $exception) {
+            report($exception);
+
+            throw DomainException::unprocessable(
+                'The evidence file could not be saved because of a server storage problem. Please try again shortly, or contact support if this keeps happening.',
+                'storage_unavailable',
+            );
+        }
 
         if ($path === false) {
             throw DomainException::unprocessable('The evidence file could not be stored. Try again.', 'upload_failed');
