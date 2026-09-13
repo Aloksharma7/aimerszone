@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\BatchStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -31,9 +32,14 @@ class CourseSummaryResource extends JsonResource
             'starting_price_npr' => $this->startingPrice(),
             'original_price_npr' => $this->original_price_npr,
             'published' => (bool) $this->published,
+            // Batch::status is cast to the BatchStatus enum, so $batch->status
+            // is an enum instance here — comparing it against the raw
+            // strings 'open'/'ongoing' never matched anything (PHP enums
+            // are not loosely equal to their backing value), silently
+            // producing 0 regardless of how many batches were actually open.
             'available_batches' => $this->when(
                 $this->relationLoaded('batches'),
-                fn () => $this->batches->whereIn('status', ['open', 'ongoing'])->count(),
+                fn () => $this->batches->whereIn('status', [BatchStatus::Open, BatchStatus::Ongoing])->count(),
             ),
             'features' => $this->features ?? ['Live', 'Recordings', 'Tests', 'Notes'],
             'modules_count' => $this->countAttribute('modules_count'),
