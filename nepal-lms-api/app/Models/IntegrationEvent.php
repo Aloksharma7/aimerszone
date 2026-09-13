@@ -32,4 +32,22 @@ class IntegrationEvent extends Model
         ];
     }
 
+    /**
+     * Excludes event types that don't actually indicate whether the
+     * provider connection itself is healthy:
+     *
+     * - health_check: its own past verdict would otherwise count as
+     *   evidence against the next check, letting one bad moment keep
+     *   reporting "degraded" indefinitely regardless of the real state.
+     * - meeting.participants: a per-class attendance-report quirk (the
+     *   report isn't ready yet, or the meeting is gone) — not a sign the
+     *   connection is broken. AttendanceImportService already gives up and
+     *   asks for manual entry, surfaced separately as its own
+     *   "attendance register pending" item; counting it again here would
+     *   just be double noise for something already handled.
+     */
+    public function scopeSignalsConnectionHealth($query)
+    {
+        return $query->whereNotIn('action', ['health_check', 'meeting.participants']);
+    }
 }

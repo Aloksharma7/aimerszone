@@ -11,13 +11,13 @@ use Tests\TestCase;
 
 /**
  * Regression: the "Health check" button computed "degraded" from any failed
- * event in the last 24 hours — including its own past health_check results.
- * A single degraded result recorded a failed health_check row, which then
- * sat inside the next check's own lookback window, so one bad moment could
- * keep reporting "degraded" for a full day afterward regardless of whether
- * the provider had actually recovered. health_check rows are now excluded
- * from the lookback — only genuine sync activity (meeting.create,
- * meeting.participants, etc.) should count.
+ * event in the last 24 hours — including its own past health_check results,
+ * and routine per-class meeting.participants quirks (a report not ready
+ * yet, or an old meeting that no longer exists — already handled elsewhere
+ * by AttendanceImportService giving up and asking for manual entry). Both
+ * are now excluded via IntegrationEvent::scopeSignalsConnectionHealth() —
+ * only failures that actually indicate the connection itself is broken
+ * (meeting.create, meeting.update, token errors, etc.) should count.
  */
 class IntegrationHealthCheckTest extends TestCase
 {
@@ -62,7 +62,26 @@ class IntegrationHealthCheckTest extends TestCase
         $response->assertJsonPath('data.status', 'idle');
     }
 
-    public function test_a_genuine_sync_failure_still_reports_degraded(): void
+    public function test_a_genuine_connection_failure_still_reports_degraded(): void
+    {
+        $admin = $this->makeUser(RoleKey::Admin);
+
+        IntegrationEvent::create([
+            'provider' => 'zoom',
+            'action' => 'meeting.create',
+            'status' => 'failed',
+            'message' => 'Zoom rejected the configured credentials.',
+            'occurred_at' => now()->subHours(2),
+        ]);
+
+        $response = $this->actingAs($admin)
+            ->postJson('/api/v1/admin/integrations/zoom/health-check')
+            ->assertOk();
+
+        $response->assertJsonPath('data.status', 'degraded');
+    }
+
+    public function test_an_old_dead_meetings_attendance_failure_does_not_report_degraded(): void
     {
         $admin = $this->makeUser(RoleKey::Admin);
 
@@ -78,6 +97,6 @@ class IntegrationHealthCheckTest extends TestCase
             ->postJson('/api/v1/admin/integrations/zoom/health-check')
             ->assertOk();
 
-        $response->assertJsonPath('data.status', 'degraded');
+        $response->assertJsonPath('data.status', 'idle');
     }
 }

@@ -130,14 +130,9 @@ class IntegrationController extends Controller
         $missing = $this->missingCredentials($provider);
         $enabled = $this->settings->bool('integrations.'.$provider->value.'_enabled', false);
 
-        // Excludes 'health_check' itself: a "degraded" result recorded a
-        // failed health_check row, which then sat inside the next check's own
-        // lookback window — one bad moment could keep this stuck on
-        // "degraded" for a full day afterward, self-reinforcing regardless of
-        // whether the actual provider had recovered.
         $recent = IntegrationEvent::query()
             ->where('provider', $provider->value)
-            ->where('action', '!=', 'health_check')
+            ->signalsConnectionHealth()
             ->where('occurred_at', '>=', now()->subDay())
             ->get(['status']);
 

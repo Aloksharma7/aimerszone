@@ -58,6 +58,7 @@ class AdminAttentionService
         $zoomFailures = IntegrationEvent::query()
             ->where('provider', IntegrationProvider::Zoom->value)
             ->where('status', 'failed')
+            ->signalsConnectionHealth()
             ->where('occurred_at', '>=', now()->subDay())
             ->count();
 
